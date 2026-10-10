@@ -6,7 +6,7 @@
 插件的全部网络流量限于本机回环地址（`127.0.0.1`），**不依赖外部网络，无需任何 API 密钥，亦不产生调用费用**。
 
 > **原作者**：@奇迹与你（<https://github.com/wonderandyou/dsh-qwen-paint>）
-> **优化版作者**：@yanfei0725　｜　**许可协议**：MIT
+> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT
 
 ---
 
@@ -553,5 +553,5 @@ LoRA 与缓存节点现在**无条件**接在模型链上。最小可行回退�
 ## 作者
 
 **原作者：@奇迹与你**　｜　<https://github.com/wonderandyou/dsh-qwen-paint>
-**优化版：@yanfei0725**
+**优化版：@yanfei0725**　｜　<https://github.com/yanfei0725/dsh-qwen-paint>
 
