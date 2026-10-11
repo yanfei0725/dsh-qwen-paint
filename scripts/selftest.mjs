@@ -118,38 +118,38 @@ const ctx = {
   sessionProjections: { stateOf: () => ({ lastTurn: 7, openTurnStartSeq: 3 }) },
   effect(callback, label) { hostEffects.push({ label, dispose: callback() }); return () => {} },
   inject(services, callback) { injectedExtra.push(services); return callback(ctx) },
+  // ★ 2026-10-11：代码用 `ctx.get('sessionProjections')` 取服务（cordis 的 ctx 是 Proxy，
+  //   直接读未 inject 的属性会抛错，所以必须走 get）。mock 缺 `get` → 取不到 turn
+  //   → 交付事件不登记（是 mock 缺件，不是代码 bug）。
+  get(name) { return name === 'sessionProjections' ? ctx.sessionProjections : undefined },
   webServer: { register(route) { hostRoutes.push(route); return () => {} } },
 }
-let injectedServices = null
-const root = {
-  logger: fakeLogger,
-  inject(services, callback) {
-    injectedServices = services
-    return callback(ctx)
-  },
-}
-
 /* ================================================================ 开始断言 ==== */
 
 section('① 模块形状与服务名')
 check('导出 name === "qwen-paint"', mod.name === 'qwen-paint', mod.name)
 check('导出 apply 是函数', typeof mod.apply === 'function')
+// ★★ 2026-10-11 修正：本版 `apply` **直接用第一个参数注册**（不再 `root.inject(['tools'], cb)`），
+//    所以第一个参数必须是"富 ctx"（带 tools/on/effect/inject/webServer…），
+//    而不是旧 mock 那种"只包一层 inject、把富 ctx 藏在回调里"的壳。
+//    旧写法现在会 registered=0（工具一个都注册不上）→ 自测首节必挂、且后续断言连锁崩。
+check('导出 inject 声明了 tools（cordis 靠它等 tools 就绪后才调 apply）',
+  Array.isArray(mod.inject) && mod.inject.includes('tools'), mod.inject)
 
-mod.apply(root, {
+mod.apply(ctx, {
   comfyUrl: `http://127.0.0.1:${port}`,
   comfyOutputDir: comfyOut,
   outputDir: outDir,
   pollIntervalMs: 10,
   timeoutMs: 15000,
 })
-check('root.inject 收到了服务清单', Array.isArray(injectedServices), injectedServices)
-check('注入了 tools', injectedServices?.includes('tools'), injectedServices)
-check('注入了 sessionProjections（交付事件要用 turn）', injectedServices?.includes('sessionProjections'), injectedServices)
+const tool = registered.find((t) => t.name === 'draw_image') ?? {}
+check('注册了 draw_image（apply 直接注册，不经 root.inject）', tool.name === 'draw_image',
+  registered.map((t) => t.name))
+check('同时注册了两个诊断工具（list_available_models / accel_env）', registered.length === 3,
+  registered.map((t) => t.name))
 
 section('② 工具定义形状（register 的硬校验）')
-check('恰好注册了 1 个工具', registered.length === 1, registered.length)
-const tool = registered[0] ?? {}
-check('工具名是 draw_image', tool.name === 'draw_image', tool.name)
 check('有 description', typeof tool.description === 'string' && tool.description.length > 20)
 check('output 是对象', typeof tool.output === 'object' && tool.output !== null)
 check('output.render 是函数（register 强校验）', typeof tool.output.render === 'function')
@@ -242,7 +242,41 @@ check('★ 节点 13 窗口覆盖全程 0.0→1.0', wf['13']?.inputs?.start_perc
 check('★ 节点 13 predictor_error_limit=0.08', wf['13']?.inputs?.predictor_error_limit === 0.08)
 check('★ 节点 13 verbose 默认关（不要每步刷屏）', wf['13']?.inputs?.verbose === false)
 
-check('★★ 节点 8 KSampler 接 13:0（链子末端，不能还接 7）', JSON.stringify(wf['8']?.inputs?.model) === JSON.stringify(['13', 0]))
+// ★★ 2026-10-11 修正：链子末端新增两个加速节点
+//    （14 QwenImage21Speedup、17 ApplyRDNA3FlashAttention），KSampler 现在接的是
+//    **链子真正的末端**，不再是 13。原先写死"接 13:0"已过期 —— 是测试没跟上代码，不是 bug。
+//    ⇒ 改成**动态回溯**：从 KSampler 的 model 输入一路往回走，必须到 UNETLoader(1)，
+//      不断链、不回头。以后再加节点也不会误报。
+const chainPathOf = (g) => {
+  const seq = []
+  const seen = new Set()
+  let cur = '8'
+  while (cur !== undefined && !seen.has(cur)) {
+    seen.add(cur)
+    seq.push(cur)
+    const m = g[cur]?.inputs?.model
+    cur = Array.isArray(m) ? String(m[0]) : undefined
+  }
+  return seq
+}
+const chainPath = chainPathOf(wf)
+check(
+  '★★ 模型链从 KSampler 回溯到 UNETLoader(1)，首尾相连、不回头',
+  chainPath.at(-1) === '1' && ['11', '12', '7', '13'].every((id) => chainPath.includes(id)),
+  chainPath.map((id) => `${id}:${wf[id]?.class_type}`),
+)
+check(
+  '★★ KSampler 接的是链子末端，不是中间节点（7 / 13）',
+  !['7', '13'].includes(String(wf['8']?.inputs?.model?.[0])), wf['8']?.inputs?.model,
+)
+check(
+  '★★ 两个新加速节点在链上：14 Speedup(接 13) → 17 RDNA3 FA(接 14)',
+  wf['14']?.class_type === 'QwenImage21Speedup'
+  && JSON.stringify(wf['14']?.inputs?.model) === JSON.stringify(['13', 0])
+  && wf['17']?.class_type === 'ApplyRDNA3FlashAttention'
+  && JSON.stringify(wf['17']?.inputs?.model) === JSON.stringify(['14', 0]),
+  [wf['14']?.class_type, wf['17']?.class_type],
+)
 check('★★ 默认步数是 **8**（turbo8 就是八步蒸馏模型）', wf['8']?.inputs?.steps === 8, wf['8']?.inputs?.steps)
 check('★★ 用户手填 steps=25 也被强制钉回 8（forceTurbo8Steps 默认 true）', buildWorkflow({ ...DEFAULTS }, { prompt: '', width: 992, height: 992, steps: 25, seed: 1 })['8'].inputs.steps === 8)
 check(
@@ -262,23 +296,21 @@ check(
   buildWorkflow({ ...DEFAULTS, turbo8Lora: '' }, { prompt: '', width: 992, height: 992, seed: 1 })['11'].inputs.lora_name === 'turbo8_lora_step2500.safetensors',
 )
 
-// 整条链子的**连通性**：从 UNETLoader 一路能走到 KSampler，不断链、不回头。
-const chain = wf['1'] ? ['1', '11', '12', '7', '13', '8'] : []
-check(
-  '★★ 模型链 1→11→12→7→13→8 首尾相连（任意一环接错都会在这里露出来）',
-  chain.slice(1).every((id, i) => JSON.stringify(wf[id]?.inputs?.model) === JSON.stringify([chain[i], 0])),
-  chain.map((id) => `${id}:${wf[id]?.class_type}<-${JSON.stringify(wf[id]?.inputs?.model)}`),
-)
 check('★ 链子末端就是 KSampler', wf['8']?.class_type === 'KSampler')
 check('★ 没有游离的旧连线（节点 7 不再直接从 1 取模型）', JSON.stringify(wf['7']?.inputs?.model) !== JSON.stringify(['1', 0]))
 
 // ★ TE 总开关：介意闭源 .pyd 的人可以用它整条摘掉，而不是卸载插件目录。
 const wfNoTe = buildWorkflow({ ...DEFAULTS, teSpeedEnabled: false }, { prompt: 'x', width: 992, height: 992, steps: 8, seed: 1 })
 check('★ teSpeedEnabled=false 时**整个 13 号节点不存在**（不能留个空壳）', wfNoTe['13'] === undefined, wfNoTe['13'])
-check('★ 该模式下 KSampler 直接接 7:0（前缀缓存），链子仍然完整', JSON.stringify(wfNoTe['8']?.inputs?.model) === JSON.stringify(['7', 0]))
+check('★ 该模式下 KSampler 仍接链子末端（13 摘掉后是 14/17），且能回溯到 1',
+  (() => {
+    const seq = chainPathOf(wfNoTe)
+    return seq.at(-1) === '1' && !['7', '13'].includes(String(wfNoTe['8']?.inputs?.model?.[0]))
+  })())
 check('★ 该模式下加速链其余部分不动（LoRA/ModelSamplingFlux/缓存都还在）', wfNoTe['11']?.class_type === 'LoraLoaderModelOnly' && wfNoTe['12']?.class_type === 'ModelSamplingFlux' && wfNoTe['7']?.class_type === 'QwenImage21Cache')
 check('★ 该模式下没有 undefined 残留（会变成"无 class_type 的节点"被 ComfyUI 拒收）', Object.values(wfNoTe).every((n) => n !== undefined && typeof n.class_type === 'string'))
-check('★ 默认（不配）时 TE 仍然是接上的', wf['13']?.class_type === 'TESpeedQwenImage21' && JSON.stringify(wf['8']?.inputs?.model) === JSON.stringify(['13', 0]))
+check('★ 默认（不配）时 TE 仍然是接上的（13 在链上，且整链能回溯到 1）',
+  wf['13']?.class_type === 'TESpeedQwenImage21' && chainPath.includes('13') && chainPath.at(-1) === '1')
 
 section('⑦ 端到端：探活 → 提交 → 轮询 → 落盘 → 返回值')
 const exec = { signal: new AbortController().signal, callId: 'call-abc', agent: { session: fakeSession } }
@@ -422,7 +454,8 @@ fakeReact.useRef = () => ({ current: fakeSeat })
 fakeReact.useEffect = (fn) => { effectCleanup = fn() }
 const dockVnode = dockOptions === undefined ? null : clientRegistrations[1].component()
 check('状态指示器渲染出座位 span', dockVnode?.props?.className === 'dshqp-seat', dockVnode?.props)
-check('座位里挂了圆点 + 文字两个元素', fakeSeat.children.length === 2, fakeSeat.children.length)
+// ★ 2026-10-11 修正：座位现在挂 3 个元素（圆点 + 文字 + 优化徽标），不再是 2 个。
+check('座位里挂了圆点 + 文字 + 优化徽标三个元素', fakeSeat.children.length === 3, fakeSeat.children.length)
 check('圆点带上了状态的 data 属性', fakeSeat.children[0]?.attrs?.['data-state'] !== undefined, fakeSeat.children[0]?.attrs)
 if (typeof effectCleanup === 'function') effectCleanup()
 check('清理函数把座位文字清空（停轮询）', fakeSeat.textContent === '', fakeSeat.textContent)
@@ -568,7 +601,9 @@ const { makeComfyStatus, makeIdleShutdown, portOf, isLocalRequest } = mod.__inte
 check('portOf 解析出端口', portOf('http://127.0.0.1:8188') === 8188, portOf('http://127.0.0.1:8188'))
 check('portOf 对坏 URL 退回 8188', portOf('不是URL') === 8188)
 
-const idleCfg = { ...DEFAULTS, comfyUrl: `http://127.0.0.1:${port}`, statusCacheMs: 0 }
+// ★ 2026-10-11：加 queueCacheMs=0 —— queueBusy 有自己的短缓存（生产默认 2000ms），
+//   置 0 才能连续断言"忙/闲"两种状态（否则第二次调用命中缓存、测不出变化）。
+const idleCfg = { ...DEFAULTS, comfyUrl: `http://127.0.0.1:${port}`, statusCacheMs: 0, queueCacheMs: 0 }
 const liveStatus = makeComfyStatus(idleCfg)
 check('探活：假 ComfyUI 在线', (await liveStatus.probe(true)) === true)
 check('队列为空 → 不忙', (await liveStatus.queueBusy()) === false)
@@ -741,9 +776,10 @@ const itemsOf = (kind) => menuNode.children.filter((it) => it.getAttribute('data
 const itemOf = (kind, value) =>
   itemsOf(kind).find((it) => it.getAttribute('data-value') === String(value)) ?? null
 const heads = menuNode.children.filter((it) => String(it.className).includes('dshqp-menu-head'))
+// ★ 2026-10-11 修正：菜单标题从 3 块扩到 6 块（后端 / 自动关闭 / 生图判断 / 优化 / 生图动画 / 流光）。
 check(
-  '菜单分成三块标题（自动关闭 / 生图动画 / 流光）',
-  heads.length === 3 && heads[2].textContent === '流光 · 抄自月匠',
+  '菜单含 6 块标题，且最后一块是流光',
+  heads.length === 6 && heads[5].textContent === '流光 · 抄自月匠',
   heads.map((h) => h.textContent),
 )
 check('自动关闭组 5 项', itemsOf('idle').length === 5, itemsOf('idle').length)
@@ -1095,9 +1131,15 @@ check(
   '★ 落盘前会校验尺寸，不符就报错（不再静默产出错图）',
   /readPngSize\(bytes\)[\s\S]{0,300}?throw new Error/u.test(hostCode),
 )
+// ★ 2026-10-11 修正：尺寸校验不再"只对文生图做" —— 现在 readPngSize **总**被调用：
+//   图生图用它**覆盖** outWidth/outHeight（文件名/返回值跟着变对），文生图用它**校验**。
 check(
-  '★ 尺寸校验只对文生图做（图生图输出尺寸由 sqrt(W*H) 决定，校验会误报）',
-  /\breference === ''\s*\)?\s*\{[\s\S]{0,300}?readPngSize/u.test(hostCode),
+  '★ 图生图：用实测 PNG 尺寸覆盖 outWidth/outHeight（不再拿请求值冒充实际值）',
+  /reference !== ''\s*&&\s*actual !== null[\s\S]{0,120}?outWidth = actual\.width/u.test(hostCode),
+)
+check(
+  '★ 文生图：实测尺寸与生效尺寸不符就报错（不静默产出错图）',
+  /reference === ''[\s\S]{0,400}?尺寸不对/u.test(hostCode),
 )
 
 section('㉑ 生图意图优先级 + 每次只生一张（主人 2026-10-08）')
@@ -1106,15 +1148,19 @@ section('㉑ 生图意图优先级 + 每次只生一张（主人 2026-10-08）')
    ⚠ 有个绕不开的事实：客户端插件**看不到用户消息**，它能感知的最早事件就是"工具开始跑"，
    所以动画起点的早晚完全取决于**模型多快调用 draw_image** —— 提示词越狠，动画来得越早。 */
 const hostSrc = readFileSync(path.join(ROOT, 'lib', 'index.js'), 'utf8')
-check('★ systemPrompt 里点明这是【最高优先级】的判断', hostSrc.includes('【最高优先级】'))
+// ★ 2026-10-11 修正：提示词改成"按策略生成"（buildDrawIntentPrompt），
+//   旧文案「【最高优先级】」已被 auto 档的 lead 取代。
+check('★ systemPrompt 里点明生图意图是"优先要判断的一件事"', hostSrc.includes('【生图】判断用户是不是想生成图片'))
 check(
   '★ 要求「第一个动作就是调用 draw_image」（不给思考留时间）',
-  hostSrc.includes('你的第一个动作就是调用 draw_image'),
+  hostSrc.includes('第一个动作就是调用 draw_image'),
 )
 check('★ 要求「一次只生一张图」', hostSrc.includes('一次只生一张图'))
+// ★ 2026-10-11 修正：加了 count（默认 1）批量，所以是 slice(0, count) —— 默认仍只落一张。
 check(
-  '★ 代码层面也保证只落一张（不能只靠提示词这个"期望"）',
-  hostSrc.includes('images.slice(0, 1)'),
+  '★ 代码层面按 count 只落前 N 张（count 默认 1，守住"默认只生一张"）',
+  hostSrc.includes('images.slice(0, count)')
+  && hostSrc.includes('Math.max(1, Math.min(4, Math.trunc(args.count)))'),
 )
 check(
   '★ 注释里写明了「为什么立刻调工具 = 立刻切动画」（免得以后有人以为客户端能更早感知）',
