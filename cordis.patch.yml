@@ -135,18 +135,18 @@
         #     实际路径（或改用 registry 里现成的 tag）：
         #       ① 下载 pipe（约 16 GB，注意排除重复的单文件副本）：
         #          hf download black-forest-labs/FLUX.2-klein-4B ^
-        #            --local-dir X:\hipfire/models/flux-klein-pipe ^
+        #            --local-dir X:/hipfire/models/flux-klein-pipe ^
         #            --exclude "flux-2-klein-4b.safetensors" "*.jpg" "*.png" "*.webp"
         #       ② 打包成 3 个 hfq 组件（约 20+ 分钟，单核慢）：
-        #          hipfire-quantize --flux-pipe X:\hipfire/models/flux-klein-pipe ^
-        #            --output X:\hipfire/models/flux-klein.hfq
+        #          hipfire-quantize --flux-pipe X:/hipfire/models/flux-klein-pipe ^
+        #            --output X:/hipfire/models/flux-klein.hfq
         #          → flux-klein-transformer.hfq (45) / -qwen3.hfq (46) / -vae.hfq (43)
-        #       ③ 把下面这行改成 'X:\hipfire/models/flux-klein-transformer.hfq'
+        #       ③ 把下面这行改成 'X:/hipfire/models/flux-klein-transformer.hfq'
         #
         #     也可以直接用 registry 里现成的（但 FLUX.1 schnell 需 ~24.3 GB 显存，
         #     RX 7900 XT 的 20 GB 装不下；仅 gfx1151 统一内存等机型可用）：
         #       hipfireImgModel: 'flux.schnell:1'
-        # hipfireImgModel: 'X:\hipfire/models/flux-klein-transformer.hfq'
+        # hipfireImgModel: 'X:/hipfire/models/flux-klein-transformer.hfq'
         #
         #   hipfireExe: hipfire 可执行文件。**留空 = 自动探测**（依次查
         #     HIPFIRE_EXE → HIPFIRE_HOME/{,engine/,bin/} → PATH → C–K 各盘常见位置）。
@@ -233,3 +233,32 @@
         blockCacheThresholdMode: 'two_stage'   # 前段 0.03 / 后段 0.15，稳一点
         blockCacheSplitRatio: 0.35
         blockCacheLateThreshold: 0.15
+
+        # ── ★ 2026-10-11：A 卡专属优化（可选，默认**关**）────────────────────────
+        # 与 N 卡/I 卡的「厂商专属优化」同一套思路：只在适用显卡上、由用户自己决定开不开。
+        # 两项都是**质量中性**的（换后端 / 改加载时机，不改计算结果）。
+        # ⚠ 都是**启动参数** ⇒ 改完必须**重启 ComfyUI** 才生效。
+        # ⚠ 也可以直接在优化面板里点开关（同样是内存态，重载 DSH 会回到这里的值）。
+        #
+        # ① 换用本代的替代注意力内核：
+        #      · 6000 系（RDNA2）→ --use-quad-cross-attention
+        #      · 7000 / 9000 系   → --use-ck-attention
+        #    不设 = 走本代默认路径（7000 是 quad、6000/9000 是 pytorch-cross）。
+        # amdKernel: false
+        #
+        # ② --async-offload（异步权重卸载）：ComfyUI 的 help 原文写着它
+        #    "Enabled by default on Nvidia" —— 即 **N 卡默认开、A 卡默认关**，
+        #    这里把它给 A 卡补上（只改权重加载的时机，与计算重叠）。
+        # amdAsyncOffload: false
+
+        # ── ★ 2026-10-11：N 卡 SageAttention（40 系 Ada / 50 系 Blackwell 专属）────
+        # 三档：
+        #   'auto'（默认）—— **后台自检确认 sageattention 已装**时才挂 --use-sage-attention；
+        #                    状态未知时**不加**（保守），下次启动按自检结果决定。
+        #   true           —— 强制挂。**确定装好了再设** —— 没装会让 ComfyUI 起不来。
+        #   false          —— 永不挂。
+        # ⚠ `--use-sage-attention` 是**硬依赖**参数（sageattention 不在就起不来），
+        #   所以默认是 auto 而不是 true。
+        # ⚠ 50 系（Blackwell / sm_120）需要**支持 sm_120 的** Triton / SageAttention 构建，
+        #   老版本不认这代卡；装了不匹配的版本反而会让 ComfyUI 起不来 —— 那时设成 false 即可恢复。
+        # nvidiaSageAttention: 'auto'
