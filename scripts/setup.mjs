@@ -21,6 +21,10 @@
  *   node scripts/setup.mjs --verify        已存在的模型也重算一遍 SHA256（慢，但最稳）
  *   node scripts/setup.mjs --comfy D:\ComfyUI   指定 ComfyUI 目录
  *   node scripts/setup.mjs --download-comfy     顺带下载 ComfyUI 官方便携包
+ *   node scripts/setup.mjs --tier full|lite     直接指定主模型档位（★ 2026-10-11）
+ *       · 不指定时：**交互式终端会弹一句问你**（显存多选 1，显存少选 2）；
+ *         非交互环境则默认 full（与之前完全一致）。
+ *       · full = int8 主模型（画质最好）；lite = GGUF Q4_K_M（约 4.2 GB，给 8GB 小卡）。
  * ============================================================================
  */
 
@@ -44,42 +48,103 @@ const CHECK_ONLY = has('--check')
 /** --check 只比大小（秒回）；--verify 才真的重算 SHA256（13 GB 要等一会儿）。 */
 const FORCE_VERIFY = has('--verify')
 const WANT_COMFY = has('--download-comfy')
+/**
+ * ★ 2026-10-11：**平台标志** —— macOS 走的是完全不同的一条路
+ *   （ComfyUI 官方对 Apple Silicon 只提供"手动安装"，没有便携包，也没有 Mac 专属启动参数）。
+ *   ⚠ 不能沿用 Linux 那条：`systemctl` / `lspci` / `rocm-smi` 在 macOS 上都没有。
+ */
+const IS_MAC = process.platform === 'darwin'
 
 /* ------------------------------------------------ 模型清单（官方值，别手改） ---- */
 
 /**
- * ⚠ 这三条是**从 ModelScope 官方文件列表 API 抄下来的**，`size` 与 `sha256` 必须成对使用。
+ * ⚠ 这些 `size` 与 `sha256` 全部**从 ModelScope 官方文件列表 API 抄下来的**，必须成对使用。
  *   要更新版本时，重新取一次 API：
- *   https://modelscope.cn/api/v1/models/Comfy-Org/Qwen-Image-2.1
+ *     https://www.modelscope.cn/api/v1/models/<owner>/<repo>/repo/files?Revision=master&Root=
+ *     · 主模型（int8）与 CLIP/VAE ：Comfy-Org/Qwen-Image-2.1
+ *     · GGUF 主模型（小显存档）   ：unsloth/Qwen-Image-2.1-GGUF
+ *
+ * ★★★ 2026-10-11：**分成两档**（见 `TIERS`）——
+ *   · `full`（默认）：int8 主模型，**与之前完全一致**（保证老用户的适配不被破坏）；
+ *   · `lite`        ：GGUF Q4_K_M 主模型（约 4.2 GB），给 8GB 这类小显存卡用。
+ *   ⚠ CLIP 与 VAE **两档共用** —— GGUF 只换主模型，不动文本编码器与 VAE。
  */
-const MODELS = [
-  {
-    dir: 'diffusion_models',
-    name: 'qwen_image_2.1_int8_convrot.safetensors',
-    size: 7256783064,
-    sha256: 'cb74113cb03faecd79611b01fd7fd642f0aa60d6f0b95086abee214d75eaa57d',
-    note: 'UNet（出图主模型）',
+const UNET_FULL = {
+  dir: 'diffusion_models',
+  name: 'qwen_image_2.1_int8_convrot.safetensors',
+  size: 7256783064,
+  sha256: 'cb74113cb03faecd79611b01fd7fd642f0aa60d6f0b95086abee214d75eaa57d',
+  note: 'UNet（出图主模型 · int8）',
+}
+/**
+ * GGUF 档主模型（小显存）。
+ *   · 校验值来自 unsloth/Qwen-Image-2.1-GGUF 的官方文件列表 API（**不是估算**）；
+ *   · 放 `models/unet` —— 这是 ComfyUI-GGUF 官方 README 指定的目录
+ *     （它的 `unet_gguf` 也会回落查 `diffusion_models`，放哪边都能被列出）；
+ *   · 加载它需要 **ComfyUI-GGUF** 自定义节点（city96），否则工作流会被直接拒收。
+ */
+const UNET_LITE = {
+  dir: 'unet',
+  name: 'qwen-image-2.1-Q4_K_M.gguf',
+  size: 4199565024,
+  sha256: '631d532e7ca71e8d90a87c71d3699761a812039d22e3370e87498d87754660fe',
+  note: 'UNet（出图主模型 · GGUF Q4_K_M，小显存档）',
+}
+const CLIP_MODEL = {
+  dir: 'text_encoders',
+  name: 'qwen3vl_8b_w4a8.safetensors',
+  size: 6312105364,
+  sha256: '7754425e55e7bea2bfde4dde59a4cc236cb44e5ee9c215ea66ef8d47012824eb',
+  note: 'CLIP / 文本编码器（type=qwen_image）',
+}
+const VAE_MODEL = {
+  dir: 'vae',
+  name: 'qwen_image_2.1_vae_bf16.safetensors',
+  size: 675509688,
+  sha256: 'bb21f7473051e1ac368515dd3f2e15cd44d7a11748ee8823e1ddca3e4876b7c9',
+  note: 'VAE',
+}
+
+/** 两个档位。`full` 是**默认**，行为与之前完全一致。 */
+const TIERS = {
+  full: {
+    id: 'full',
+    label: '完整档（int8 主模型，画质最好）',
+    unet: UNET_FULL,
+    hint: '显存 ≥ 8 GB 的机器选它 —— 这就是之前一直在用的那个模型。',
   },
-  {
-    dir: 'text_encoders',
-    name: 'qwen3vl_8b_w4a8.safetensors',
-    size: 6312105364,
-    sha256: '7754425e55e7bea2bfde4dde59a4cc236cb44e5ee9c215ea66ef8d47012824eb',
-    note: 'CLIP / 文本编码器（type=qwen_image）',
+  lite: {
+    id: 'lite',
+    label: '轻量档（GGUF Q4_K_M，约 4.2 GB）',
+    unet: UNET_LITE,
+    hint: '显存较小（8 GB 及以下，如 RTX 5060）选它；需另装 ComfyUI-GGUF 节点。',
   },
-  {
-    dir: 'vae',
-    name: 'qwen_image_2.1_vae_bf16.safetensors',
-    size: 675509688,
-    sha256: 'bb21f7473051e1ac368515dd3f2e15cd44d7a11748ee8823e1ddca3e4876b7c9',
-    note: 'VAE',
-  },
-]
+}
+const DEFAULT_TIER = 'full'
+/** 某一档要下的三个文件（主模型随档位变，CLIP/VAE 共用）。 */
+const modelsFor = (tier) => [(TIERS[tier] ?? TIERS[DEFAULT_TIER]).unet, CLIP_MODEL, VAE_MODEL]
 
 const REPO = 'Comfy-Org/Qwen-Image-2.1'
 /** ModelScope 官方下载前缀（resolve/<revision>/<仓库内路径>）。 */
 const REPO_BASE = `https://modelscope.cn/models/${REPO}/resolve/master/`
 const REPO_PAGE = `https://modelscope.cn/models/${REPO}`
+/** GGUF 档的仓库（主模型从这里下）。 */
+const GGUF_REPO = 'unsloth/Qwen-Image-2.1-GGUF'
+const GGUF_REPO_BASE = `https://modelscope.cn/models/${GGUF_REPO}/resolve/master/`
+const GGUF_REPO_PAGE = `https://modelscope.cn/models/${GGUF_REPO}`
+/** 某个模型该从哪个仓库下 —— GGUF 走 GGUF 仓库，其余走 Comfy-Org。 */
+const repoBaseOf = (model) => (/\.gguf$/iu.test(model.name) ? GGUF_REPO_BASE : REPO_BASE)
+
+/**
+ * `--tier` 的**提前校验**（★ 2026-10-11）。
+ * ⚠ 必须放在这里而不是 ② 段：否则打错字要等"显卡检测 + ComfyUI 查找"跑完才报错，
+ *   用户白等一轮。
+ */
+const TIER_ARG = valueOf('--tier')
+if (TIER_ARG !== null && !TIERS[TIER_ARG]) {
+  console.error(`✗ --tier 只能是 ${Object.keys(TIERS).join(' / ')}，收到的是「${TIER_ARG}」`)
+  process.exit(1)
+}
 
 const COMFY_RELEASE = 'https://github.com/comfyanonymous/ComfyUI/releases/latest/download/ComfyUI_windows_portable_nvidia.7z'
 const COMFY_REPO = 'https://github.com/comfyanonymous/ComfyUI'
@@ -88,6 +153,37 @@ const COMFY_REPO = 'https://github.com/comfyanonymous/ComfyUI'
 
 const gb = (bytes) => `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
 const mb = (bytes) => `${(bytes / 1024 / 1024).toFixed(0)} MB`
+
+/**
+ * 把主模型文件名写进 `cordis.patch.yml` 的 `config:` 段（★ 2026-10-11）。
+ *
+ * ## 为什么必须写
+ * 运行期是靠**模型名后缀**决定用哪个加载器的（`.gguf` → `UnetLoaderGGUF`，
+ * 见 `lib/index.js` 的 `unetLoaderFor`）。用户下载时选了哪一档，配置就得如实反映 ——
+ * 否则会出现"下的是 GGUF、加载器却还是原生 UNETLoader"的错配（工作流会被 ComfyUI 拒收）。
+ *
+ * ## 安全约定
+ *   · **幂等**：已有 `unet:` 行就替换，没有就插在 `config:` 之后；
+ *   · 结构对不上（找不到 `config:`）→ 返回 false，**绝不硬改** ——
+ *     宁可让用户手动设一行，也不能把配置文件写坏。
+ */
+function writeConfigUnet(file, unetName) {
+  try {
+    const text = fs.readFileSync(file, 'utf8')
+    const line = `        unet: '${unetName}'`
+    const existing = /^ {8}unet: .*$/mu
+    if (existing.test(text)) {
+      fs.writeFileSync(file, text.replace(existing, line), 'utf8')
+      return true
+    }
+    const anchor = /^( {6}config:[ \t]*)$/mu
+    if (!anchor.test(text)) return false
+    fs.writeFileSync(file, text.replace(anchor, `$1\n${line}`), 'utf8')
+    return true
+  } catch {
+    return false
+  }
+}
 
 function which(exe) {
   const res = spawnSync('where.exe', [exe], { encoding: 'utf8' })
@@ -154,10 +250,39 @@ const GFX_TABLE = [
 
 /** 从显卡名判定厂商。 */
 function classifyVendor(joined) {
+  // ★ 2026-10-11：Apple Silicon（MPS）。型号形如 "Apple M1/M2/M3/M4 [Pro|Max|Ultra]"。
+  if (/apple\s+m\d|\bM\d\s*(Pro|Max|Ultra)\b|Apple.*GPU/iu.test(joined)) return 'apple'
   if (/NVIDIA|GeForce|RTX\s*\d|GTX\s*\d|Quadro/iu.test(joined)) return 'nvidia'
   if (/AMD|Radeon|RX\s*\d|Vega/iu.test(joined)) return 'amd'
   if (/Intel/iu.test(joined)) return 'intel'
   return 'unknown'
+}
+
+/**
+ * ★★★ 2026-10-11 新增：**macOS 的显卡探测**。
+ *
+ * ⚠ macOS **没有** WMI / 注册表 / dxdiag —— 下面 detectGpu 里那六条 Windows 路径
+ *   在 Mac 上**一条都用不了**（这正是之前 macOS 上"查不到显卡"的原因）。
+ *   这里用两条 macOS 原生命令：
+ *     · `system_profiler SPDisplaysDataType` → 输出里的 `Chipset Model: Apple M3 Pro`
+ *     · `sysctl -n machdep.cpu.brand_string` → Apple Silicon 上直接给出 `Apple M3 Pro`
+ *     两条互为兜底（system_profiler 偶发很慢 / 被限制时还有 sysctl）。
+ */
+function gpuNamesFromMac() {
+  const names = []
+  const sp = spawnSync('system_profiler', ['SPDisplaysDataType'], { encoding: 'utf8' })
+  if (sp.status === 0 && sp.stdout) {
+    for (const line of String(sp.stdout).split(/\r?\n/u)) {
+      const m = line.match(/^\s*Chipset Model:\s*(.+)$/iu)
+      if (m) names.push(m[1].trim())
+    }
+  }
+  const cpu = spawnSync('sysctl', ['-n', 'machdep.cpu.brand_string'], { encoding: 'utf8' })
+  if (cpu.status === 0 && cpu.stdout) {
+    const t = String(cpu.stdout).trim()
+    if (t !== '') names.push(t)
+  }
+  return [...new Set(names)]
 }
 
 /**
@@ -249,7 +374,9 @@ function wmiNames(exe, argv) {
 
 function detectGpu() {
   const PS = (cmd) => ['-NoProfile', '-NonInteractive', '-Command', cmd]
-  const providers = [
+  // ★ 2026-10-11：**macOS 只走它自己那一条** —— 下面六条全是 Windows 专有
+  //   （注册表 / CIM / WMI / wmic / dxdiag），在 macOS 上一条都跑不了。
+  const providers = IS_MAC ? [['macOS system_profiler / sysctl', gpuNamesFromMac]] : [
     // ★ 先试不碰 WMI 的那条 —— 在 WMI 被锁的机器上只有它能活
     ['注册表（不经过 WMI）', gpuNamesFromRegistry],
     ['PowerShell + CIM', () => wmiNames('powershell.exe',
@@ -329,7 +456,12 @@ function findComfyDir() {
     'C:\\ComfyUI',
     path.join(os.homedir(), 'ComfyUI'),
     path.join(os.homedir(), 'Documents', 'ComfyUI'),
-    path.join(process.env.USERPROFILE ?? '', 'Desktop', 'ComfyUI'),
+    // ★ 2026-10-11 修：原来写的是 `process.env.USERPROFILE ?? ''` ——
+    //   macOS / Linux 上 USERPROFILE **不存在** ⇒ 拼出的是**相对路径** `Desktop/ComfyUI`
+    //   （相对当前工作目录，几乎必然落空，属于"看着像候选、其实永远不会命中"）。
+    //   改用 `os.homedir()`：Windows 上它 == USERPROFILE（行为不变），
+    //   而 macOS / Linux 上会变成**真实候选** `~/Desktop/ComfyUI`。
+    path.join(os.homedir(), 'Desktop', 'ComfyUI'),
   ].filter((item) => typeof item === 'string' && item !== '')
   for (const dir of candidates) {
     if (looksLikeComfy(dir)) return { dir: path.resolve(dir), from: dir === explicit ? '参数指定' : '自动找到' }
@@ -580,7 +712,11 @@ if (gpu.names.length === 0) {
   console.log('      · N 卡（或不确定） ：node scripts/setup.mjs --nvidia')
   console.log('      · AMD Radeon       ：node scripts/setup.mjs --amd')
   console.log('      · 已经有 ComfyUI   ：node scripts/setup.mjs --comfy <目录>')
-  console.log('    （想知道自己是什么卡：按 Win+R 输入 dxdiag，看「显示」那一页）')
+  if (IS_MAC) {
+    console.log('    （macOS 自查：`system_profiler SPDisplaysDataType` 看「Chipset Model」）')
+  } else {
+    console.log('    （想知道自己是什么卡：按 Win+R 输入 dxdiag，看「显示」那一页）')
+  }
   console.log('')
   console.log('  ⚠ 如果上面清一色是「拒绝访问 / Access denied」：那是**权限或沙箱**把 WMI 和注册表一起锁了。')
   console.log('    请**在普通 cmd 窗口里自己跑**下面这条（别在受限的沙箱 / 工具环境里跑）：')
@@ -595,6 +731,7 @@ if (gpu.via !== null && gpu.via !== undefined && !gpu.via.startsWith('--')) {
 const VENDOR_LABEL = {
   nvidia: 'NVIDIA → 走 ComfyUI 官方便携包（CUDA）',
   amd: 'AMD → 走 ROCm 路线（下面单独说明）',
+  apple: 'Apple Silicon → 官方**手动安装**（pytorch nightly + python main.py）',
   intel: 'Intel 核显 → 基本跑不动，建议换台机器',
   unknown: '⚠ 认出了显卡名字，但认不出是哪家',
 }
@@ -608,6 +745,31 @@ if (gpu.vendor === 'unknown') {
 
 /* ① ComfyUI */
 let comfyDir = null
+if (gpu.vendor === 'apple') {
+  // ★★★ 2026-10-11 新增：**macOS（Apple Silicon）** 这条路。
+  //   为什么不能沿用别的分支：ComfyUI 官方对 Apple Silicon **只给"手动安装"**
+  //   （装 pytorch nightly + 按 Manual Installation 装依赖 + `python main.py`），
+  //   **没有 macOS 便携包**，也**没有 Mac 专属启动参数** —— 所以插件不替用户装 ComfyUI。
+  console.log('\n① 找 ComfyUI …')
+  const found = findComfyDir()
+  comfyDir = found.dir
+  if (comfyDir !== null) {
+    console.log(`  ✓ ${comfyDir}（${found.from}）`)
+  } else {
+    console.log('  ✗ 没找到已装的 ComfyUI。')
+    console.log('')
+    console.log('  macOS 请按 **ComfyUI 官方「Apple Mac silicon」** 的步骤装：')
+    console.log('    1) 装 **pytorch nightly**（Apple 的 Metal 加速指南）：')
+    console.log('       https://developer.apple.com/metal/pytorch/')
+    console.log('    2) 按 ComfyUI 官方「Manual Installation」装依赖')
+    console.log('    3) 启动：`python main.py` —— **官方没有 Mac 专属启动参数**，直接跑即可')
+    console.log('')
+    console.log('  ⚠ 插件**不替你自动装 ComfyUI**（官方没有 macOS 便携包）。')
+    console.log('     装好之后用 `--comfy <你的 ComfyUI 目录>` 重跑本脚本，')
+    console.log('     就能继续「下模型 + 挂插件」这两步。')
+    process.exit(0)
+  }
+}
 if (gpu.vendor === 'amd') {
   // A 卡：先试 ROCm 路线；没走通（或用户取消 / --check）就退回"本机已有的 ComfyUI"
   const amdRoot = valueOf('--comfy') ?? path.join(os.homedir(), 'ComfyUI-rocm')
@@ -623,7 +785,7 @@ if (gpu.vendor === 'amd') {
     }
   }
 }
-if (comfyDir === null && gpu.vendor !== 'amd') {
+if (comfyDir === null && gpu.vendor !== 'amd' && gpu.vendor !== 'apple') {
   // ↓↓↓ 这一段是 NVIDIA 那条路，与 0.1.0 完全一致，一个字没动 ↓↓↓
   console.log('\n① 找 ComfyUI …')
   const found = findComfyDir()
@@ -690,7 +852,35 @@ if (comfyDir === null) {
 
 /* ② 三个模型 */
 const modelsRoot = modelsRootOf(comfyDir)
+
+// ★★★ 2026-10-11：**模型档位选择**（小显存适配）。
+//   主人要求：下载时**弹一句让用户二选一** —— 显存多就用原来的 int8，显存少就用小一档。
+//   规则：
+//     · `--tier full|lite` 显式指定 → 用它（非交互 / 无人值守用这个）
+//     · 交互式终端（且不是 --check）→ 弹一句询问，**直接回车 = 老路（full）**
+//     · 非交互且没指定              → 用默认 full —— **保证老流程一字不变**
+//   ⚠ `--check` 只报告、绝不改任何东西，所以那一档下不写配置、也不问。
+const tierArg = TIER_ARG
+let tier = DEFAULT_TIER
+if (tierArg !== null) {
+  // ⚠ 合法性已在文件上方（TIERS 定义处）提前校验过，这里直接用
+  tier = tierArg
+} else if (process.stdin.isTTY && !CHECK_ONLY) {
+  console.log('\n  主模型有两个档位，请选一个（**直接回车 = 1，与之前完全一样**）：')
+  console.log(`    1) ${TIERS.full.label}`)
+  console.log(`       ${TIERS.full.hint}`)
+  console.log(`    2) ${TIERS.lite.label}`)
+  console.log(`       ${TIERS.lite.hint}`)
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  const answer = await rl.question('  请选择 [1/2]（回车 = 1）：')
+  rl.close()
+  const pick = answer.trim().toLowerCase()
+  tier = (pick === '2' || pick === 'lite') ? 'lite' : 'full'
+}
+const MODELS = modelsFor(tier)
+
 console.log(`\n② 检查千问 Qwen-Image 2.1 模型（放到 ${modelsRoot}）…`)
+console.log(`  档位：${TIERS[tier].label}`)
 
 let needDownload = 0
 let allOk = true
@@ -734,19 +924,21 @@ if (CHECK_ONLY) {
   console.log(allOk
     ? '\n（--check）全部就绪，没有做任何改动。'
     : `\n（--check）还差 ${needDownload} 个模型，共约 ${gb(MODELS.reduce((s, m) => s + m.size, 0))}，没有下载。`)
-  console.log(`  去掉 --check 重跑就会自动下载。来源：${REPO_PAGE}`)
+  console.log(`  去掉 --check 重跑就会自动下载。来源：`
+    + `${/\.gguf$/iu.test(MODELS[0].name) ? GGUF_REPO_PAGE : REPO_PAGE}（主模型）`
+    + ' + https://modelscope.cn/models/Comfy-Org/Qwen-Image-2.1（CLIP / VAE）')
   process.exit(allOk ? 0 : 1)
 }
 
 if (needDownload === 0) {
   console.log('  ✓ 三个模型都已就绪')
 } else {
-  console.log(`\n  需要下载 ${needDownload} 个文件，来源：${REPO_PAGE}（Comfy Org 官方仓库）`)
+  console.log(`\n  需要下载 ${needDownload} 个文件（主模型来自 ${/\.gguf$/iu.test(MODELS[0].name) ? 'unsloth/Qwen-Image-2.1-GGUF' : 'Comfy-Org/Qwen-Image-2.1'}，CLIP/VAE 来自 Comfy Org 官方仓库）`)
   for (const model of MODELS) {
     const dest = path.join(modelsRoot, model.dir, model.name)
     const size = fs.existsSync(dest) ? fs.statSync(dest).size : 0
     if (size === model.size) continue
-    const url = `${REPO_BASE}${model.dir}/${model.name}`
+    const url = `${repoBaseOf(model)}${model.dir}/${model.name}`
     console.log(`\n  ↓ ${model.name}（${gb(model.size)}）`)
     const got = await downloadWithCurl(url, dest)
     const finalSize = fs.existsSync(dest) ? fs.statSync(dest).size : 0
@@ -774,6 +966,27 @@ if (needDownload === 0) {
       continue
     }
     console.log(`\r  ✓ ${model.name} 校验通过（SHA256 与 ${REPO} 一致）`.padEnd(64))
+  }
+}
+
+/* ②b 把选定的档位写进插件配置（★ 2026-10-11）—— 否则运行期不知道该用哪个加载器 */
+if (!CHECK_ONLY && allOk) {
+  const wrote = writeConfigUnet(path.join(ROOT, 'cordis.patch.yml'), MODELS[0].name)
+  if (wrote) {
+    console.log(`\n②b 已把主模型档位写进 cordis.patch.yml：unet = ${MODELS[0].name}`)
+  } else {
+    console.log('\n②b ⚠ 没能自动写入 cordis.patch.yml（结构可能被改过）—— 请手动改一行：')
+    console.log(`      unet: '${MODELS[0].name}'`)
+  }
+  // ★★★ 2026-10-11 补：选了轻量档就必须装 ComfyUI-GGUF —— 否则**出图会被 ComfyUI 直接拒收**。
+  //   原先这句只出现在"选择时的选项文字"里，选完就再也看不到了 —— 用户很容易漏掉，
+  //   然后出图失败还以为是插件坏了。（插件面板上也会再提醒一次，但这里给出可照做的命令。）
+  if (tier === 'lite') {
+    console.log('')
+    console.log('  ⚠ **还差一步**：轻量档用 .gguf 主模型，需要 **ComfyUI-GGUF** 自定义节点才能加载。')
+    console.log('     把它克隆到 ComfyUI 的 custom_nodes 下，然后重启 ComfyUI：')
+    console.log('       git clone https://github.com/city96/ComfyUI-GGUF "<你的ComfyUI>/custom_nodes/ComfyUI-GGUF"')
+    console.log('     **没装的话出图会被 ComfyUI 直接拒收**（插件会在优化面板上提醒你）。')
   }
 }
 
