@@ -172,5 +172,408 @@ console.log('\n=== 16. 优化面板按显卡过滤（N 卡上不该出现 RDNA3 
   ok('16. client 有对应样式类', CLIENT_SRC.includes('.qwen-paint-opt-filtered'))
 }
 
+console.log('\n=== 17. 模型档位（小显存适配） ===')
+{
+  const { buildWorkflow, DEFAULTS: DEF, unetLoaderFor, unetLoaderNode, MODEL_TIERS, resolvePlan } = mod.__internal
+  const GGUF = 'qwen-image-2.1-Q4_K_M.gguf'
+
+  // ---- 默认路径必须与旧版**一字不差** ----
+  const wfDef = buildWorkflow({ ...DEF }, { prompt: 'x', width: 992, height: 992, seed: 1 })
+  ok('17. 默认仍是原生 UNETLoader', wfDef['1']?.class_type === 'UNETLoader', wfDef['1'])
+  ok('17. 默认仍带 weight_dtype=default', wfDef['1']?.inputs?.weight_dtype === 'default')
+  ok('17. 默认主模型名不变', wfDef['1']?.inputs?.unet_name === 'qwen_image_2.1_int8_convrot.safetensors',
+    wfDef['1']?.inputs?.unet_name)
+
+  // ---- 两个加载器的输入形状**不同**（混用会被 ComfyUI 拒收）----
+  ok('17. .gguf → UnetLoaderGGUF', unetLoaderFor(GGUF) === 'UnetLoaderGGUF')
+  ok('17. 非 .gguf → UNETLoader', unetLoaderFor('a.safetensors') === 'UNETLoader')
+  ok('17. 空/未定义 → UNETLoader（保守）', unetLoaderFor(undefined) === 'UNETLoader')
+  const ggufNode = unetLoaderNode(GGUF)
+  ok('17. GGUF 节点只传 unet_name', JSON.stringify(Object.keys(ggufNode.inputs)) === JSON.stringify(['unet_name']),
+    ggufNode.inputs)
+  ok('17. GGUF 节点**不**带 weight_dtype（多传会报 unexpected input）', ggufNode.inputs.weight_dtype === undefined)
+  const safeNode = unetLoaderNode('a.safetensors')
+  ok('17. 原生节点带 unet_name + weight_dtype',
+    JSON.stringify(Object.keys(safeNode.inputs)) === JSON.stringify(['unet_name', 'weight_dtype']), safeNode.inputs)
+
+  // ---- 档位表 ----
+  ok('17. MODEL_TIERS 有 full / lite 两档', MODEL_TIERS.full && MODEL_TIERS.lite)
+  ok('17. full 用原生加载器', MODEL_TIERS.full.loader === 'UNETLoader')
+  ok('17. lite 用 GGUF 加载器', MODEL_TIERS.lite.loader === 'UnetLoaderGGUF')
+  ok('17. lite 的主模型是真实存在的 GGUF 文件名', MODEL_TIERS.lite.unet === GGUF, MODEL_TIERS.lite.unet)
+
+  // ---- resolvePlan 会把加载器带出来 ----
+  const planGguf = resolvePlan({ ...DEF, unet: GGUF }, null)
+  ok('17. cfg.unet=.gguf 时 plan.unetLoader = UnetLoaderGGUF', planGguf.unetLoader === 'UnetLoaderGGUF',
+    planGguf.unetLoader)
+  const planDef = resolvePlan({ ...DEF }, null)
+  ok('17. 默认 plan.unetLoader = UNETLoader', planDef.unetLoader === 'UNETLoader', planDef.unetLoader)
+
+  // ---- setup.mjs：分档 + 官方校验值 + 写配置 ----
+  const SETUP = readFileSync(path.join(ROOT, 'scripts', 'setup.mjs'), 'utf8')
+  ok('17. setup 有 TIERS 两档', SETUP.includes("const TIERS = {") && SETUP.includes('lite:'))
+  ok('17. 默认档是 full（老流程不变）', SETUP.includes("const DEFAULT_TIER = 'full'"))
+  ok('17. GGUF 走独立仓库（unsloth）', SETUP.includes("const GGUF_REPO = 'unsloth/Qwen-Image-2.1-GGUF'"))
+  ok('17. GGUF 的 sha256 是 ModelScope 官方值（非估算）',
+    SETUP.includes('631d532e7ca71e8d90a87c71d3699761a812039d22e3370e87498d87754660fe'))
+  ok('17. GGUF 的 size 与官方一致（4199565024）', SETUP.includes('4199565024'))
+  ok('17. --tier 提前校验（不用等显卡检测）', SETUP.includes('const TIER_ARG = valueOf(\'--tier\')'))
+  ok('17. 非交互且未指定时用默认档（不会卡住）', SETUP.includes('process.stdin.isTTY && !CHECK_ONLY'))
+  ok('17. 下载后把档位写进 cordis.patch.yml', SETUP.includes('writeConfigUnet(path.join(ROOT'))
+
+  // ---- 真实执行 writeConfigUnet（不是只看源码文本）----
+  const fnSrc = SETUP.match(/function writeConfigUnet\(file, unetName\) \{[\s\S]*?\n\}/)
+  ok('17. 能取出 writeConfigUnet 源码', fnSrc !== null)
+  if (fnSrc) {
+    const fsMod = await import('node:fs')
+    const osMod = await import('node:os')
+    const writeConfigUnet = new Function('fs', `${fnSrc[0]}\nreturn writeConfigUnet`)(fsMod)
+    const dir = await import('node:fs/promises').then((m) => m.mkdtemp(`${osMod.tmpdir()}/qwp-tier-`))
+    const f = `${dir}/cordis.patch.yml`
+    // ① 无 unet 行 → 插在 config: 之后
+    await fsMod.promises.writeFile(f, "- insert:\n    - id: qwen-paint\n      config:\n        comfyUrl: 'x'\n")
+    ok('17. ① 插入成功', writeConfigUnet(f, GGUF) === true)
+    let t = await fsMod.promises.readFile(f, 'utf8')
+    ok('17. ① 插到了 config: 之后、且缩进 8 空格', /^ {6}config:\n {8}unet: 'qwen-image-2\.1-Q4_K_M\.gguf'$/mu.test(t), t)
+    // ② 已有 unet 行 → 原地替换（幂等，不重复插入）
+    ok('17. ② 再写一次仍成功', writeConfigUnet(f, 'a.safetensors') === true)
+    t = await fsMod.promises.readFile(f, 'utf8')
+    ok('17. ② 是替换不是追加（只有一行 unet）', (t.match(/^ {8}unet:/gmu) ?? []).length === 1, t)
+    ok('17. ② 值已更新', t.includes("unet: 'a.safetensors'"))
+    // ③ 结构对不上 → 返回 false，**不硬改**
+    const f2 = `${dir}/broken.yml`
+    await fsMod.promises.writeFile(f2, 'no-config-here: true\n')
+    ok('17. ③ 找不到 config: → 返回 false（不硬改）', writeConfigUnet(f2, GGUF) === false)
+    ok('17. ③ 文件内容未被改动', (await fsMod.promises.readFile(f2, 'utf8')) === 'no-config-here: true\n')
+  }
+}
+
+console.log('\n=== 18. A 卡专属优化（可选，质量中性；9000/7000/6000 各按代数给内核） ===')
+{
+  const { describeOptimization, FULL_CAPS, DEFAULTS: DEF } = mod.__internal
+  const capsWith = (gpuName) => ({
+    ...FULL_CAPS,
+    nodes: { ...FULL_CAPS.nodes },
+    models: { unet: 'u', clip: 'c', vae: 'v', turbo8Lora: 'turbo8_lora_step2500.safetensors' },
+    notes: [],
+    gpu: gpuName === '' ? null : { name: gpuName, vramGB: 20 },
+  })
+  const names = (opt) => opt.detail.map((d) => d.name)
+  const isOpt = (d) => d.optional === true
+
+  // ---- 默认关 ----
+  ok('18. amdKernel 默认关', DEF.amdKernel === false)
+  ok('18. amdAsyncOffload 默认关', DEF.amdAsyncOffload === false)
+
+  // ---- 只在 AMD 上出现 ----
+  const amd = describeOptimization({ ...DEF }, capsWith('AMD Radeon RX 7900 XTX'))
+  ok('18. AMD 上出现「专属内核」项', names(amd).some((n) => n.includes('A 卡专属内核')), names(amd))
+  ok('18. AMD 上出现「异步卸载」项', names(amd).some((n) => n.includes('异步卸载')))
+  ok('18. 这两项都带 optional 标记', amd.detail.filter(isOpt).length === 2)
+  ok('18. 两项默认都是 off', amd.detail.filter(isOpt).every((d) => d.state === 'off'))
+  ok('18. 两项都带可点开关', amd.detail.filter(isOpt).every((d) => d.toggle?.canToggle === true))
+
+  const nv = describeOptimization({ ...DEF }, capsWith('NVIDIA GeForce RTX 5060'))
+  ok('18. N 卡上**不出现** A 卡专属项', !names(nv).some((n) => n.includes('A 卡专属') || n.includes('异步卸载')),
+    names(nv))
+  // ★ 2026-10-11：N 卡自己有一项可选（SageAttention，见第 19 节），所以这里是 1 而不是 0；
+  //   关键不变式是「**没有 A 卡的**那两项」。
+  ok('18. N 卡上可选档只有 SageAttention（1 项），没有 A 卡的两项',
+    nv.detail.filter(isOpt).length === 1 && names(nv).some((n) => n.includes('SageAttention')),
+    nv.detail.filter(isOpt).map((d) => d.name))
+
+  const unknown = describeOptimization({ ...DEF }, capsWith(''))
+  ok('18. 认不出显卡 → 也不显示 A 卡专属项（不猜）',
+    !names(unknown).some((n) => n.includes('A 卡专属') || n.includes('异步卸载')))
+
+  // ---- 可选档**不拉低** level（这是引入 optional 的目的）----
+  ok('18. 可选档默认关时，AMD 仍报"优化已启用"（不因可选项变成"部分启用"）',
+    amd.level === 'full' && amd.ok === true, [amd.level, amd.summary])
+  ok('18. 可选档不进 reasons（不是"缺了什么"）',
+    !amd.reasons.some((r) => String(r).includes('A 卡专属') || String(r).includes('异步卸载')), amd.reasons)
+  ok('18. stats 有独立的 optional 桶', amd.stats.optional === 2, amd.stats)
+  ok('18. stats 各桶之和 = total（可选档单独一桶，不重复计）',
+    amd.stats.on + amd.stats.available + amd.stats.off + amd.stats.blocked
+    + amd.stats.superseded + amd.stats.optional === amd.stats.total, amd.stats)
+
+  // ---- 打开后 → state 变 on，且**仍不影响** level 判定（它本来就 optional）----
+  const on = describeOptimization({ ...DEF, amdKernel: true, amdAsyncOffload: true }, capsWith('AMD Radeon RX 7900 XTX'))
+  ok('18. 打开后两项 state = on', on.detail.filter(isOpt).every((d) => d.state === 'on'))
+  ok('18. 打开后 toggle.on 也同步', on.detail.filter(isOpt).every((d) => d.toggle.on === true))
+
+  // ---- 每代给的内核 flag 不同（按代数）----
+  const HOST_SRC = HOST
+  ok('18. AMD_KERNEL_FLAG 覆盖 6000/7000/9000 三代',
+    /amd_rdna2: '--use-quad-cross-attention'/.test(HOST_SRC)
+    && /amd_rdna3: '--use-ck-attention'/.test(HOST_SRC)
+    && /amd_rdna4: '--use-ck-attention'/.test(HOST_SRC))
+  ok('18. 6000 系给的是 quad（RDNA2 无 AOTriton/CK 覆盖）',
+    /amd_rdna2: '--use-quad-cross-attention'/.test(HOST_SRC))
+  ok('18. 只有显式打开 amdKernel 才替换默认内核',
+    HOST_SRC.includes('if (kernelFlag && cfg.amdKernel === true)'))
+  ok('18. 异步卸载只对 A 卡加', HOST_SRC.includes("startsWith('amd') && cfg.amdAsyncOffload === true"))
+  ok('18. 异步卸载用的是真实参数 --async-offload', HOST_SRC.includes("'--async-offload'"))
+
+  // ---- 撤回：不再有"降载/牺牲性能"那一套 ----
+  ok('18. 已撤回 --cache-none（那是拿性能换空间，不是优化）', !HOST_SRC.includes("'--cache-none'"))
+  ok('18. 已撤回给 A 卡加码 --vram-headroom 的"减负档"', !HOST_SRC.includes("'--vram-headroom', '0.5', '--reserve-vram', '0.5'"))
+
+  // ---- 状态端点两个开关 + 客户端总账 ----
+  ok('18. 状态端点处理 ?amdkernel=', HOST_SRC.includes("['amdkernel', 'amdKernel'"))
+  ok('18. 状态端点处理 ?asyncoffload=', HOST_SRC.includes("['asyncoffload', 'amdAsyncOffload'"))
+  const CLIENT_SRC = readFileSync(path.join(ROOT, 'lib', 'client.js'), 'utf8')
+  ok('18. 客户端总账单独报"可选（默认关）"', CLIENT_SRC.includes('项可选（默认关）'))
+  const YML = readFileSync(path.join(ROOT, 'cordis.patch.yml'), 'utf8')
+  ok('18. cordis.patch.yml 里写明了两个可选键（注释形式，默认关）',
+    YML.includes('# amdKernel: false') && YML.includes('# amdAsyncOffload: false'))
+}
+
+console.log('\n=== 19. N 卡 40/50 系强化（SageAttention，硬依赖 ⇒ 确认了才挂） ===')
+{
+  const { describeOptimization, FULL_CAPS, DEFAULTS: DEF, nvidiaGenOf } = mod.__internal
+  const capsWith = (gpuName) => ({
+    ...FULL_CAPS,
+    nodes: { ...FULL_CAPS.nodes },
+    models: { unet: 'u', clip: 'c', vae: 'v', turbo8Lora: 'turbo8_lora_step2500.safetensors' },
+    notes: [],
+    gpu: gpuName === '' ? null : { name: gpuName, vramGB: 24 },
+  })
+  const find = (opt) => opt.detail.find((d) => d.toggle?.key === 'sagesa')
+
+  // ---- 代系识别 ----
+  ok('19. RTX 5060 → blackwell', nvidiaGenOf('NVIDIA GeForce RTX 5060') === 'blackwell')
+  ok('19. RTX 5090 → blackwell', nvidiaGenOf('NVIDIA GeForce RTX 5090') === 'blackwell')
+  ok('19. RTX 4070 → ada', nvidiaGenOf('NVIDIA GeForce RTX 4070 Ti') === 'ada')
+  ok('19. RTX 4090 → ada', nvidiaGenOf('NVIDIA GeForce RTX 4090') === 'ada')
+  ok('19. 老卡（3090）→ other（不硬套）', nvidiaGenOf('NVIDIA GeForce RTX 3090') === 'other')
+  ok('19. 认不出 → other', nvidiaGenOf('') === 'other')
+
+  // ---- 默认 auto ----
+  ok("19. nvidiaSageAttention 默认 'auto'（不是 true —— 硬依赖不能盲挂）",
+    DEF.nvidiaSageAttention === 'auto')
+
+  // ---- 面板：仅 NVIDIA 显示 ----
+  const nv = describeOptimization({ ...DEF }, capsWith('NVIDIA GeForce RTX 5060'))
+  const it = find(nv)
+  ok('19. N 卡出现 SageAttention 项', it !== undefined)
+  ok('19. 该项带 optional 标记（默认不拉低 level）', it?.optional === true)
+  ok('19. 该项默认 off（自检未跑完时保守不加）', it?.state === 'off', it?.state)
+  ok('19. 该项有可点开关', it?.toggle?.canToggle === true)
+  ok('19. 50 系提示里点明需要 sm_120 构建',
+    String(it?.whyOff).includes('sm_120') || String(it?.toggle?.hint).includes('sm_120'))
+
+  const amd = describeOptimization({ ...DEF }, capsWith('AMD Radeon RX 7900 XTX'))
+  ok('19. A 卡上**不出现** SageAttention 项', find(amd) === undefined)
+  const intel = describeOptimization({ ...DEF }, capsWith('Intel(R) Arc(TM) B580 Graphics'))
+  ok('19. I 卡上不出现', find(intel) === undefined)
+  const unknown = describeOptimization({ ...DEF }, capsWith(''))
+  ok('19. 认不出显卡 → 不显示（不猜）', find(unknown) === undefined)
+
+  // ---- 配置显式开启 / 关闭 ----
+  const forced = describeOptimization({ ...DEF, nvidiaSageAttention: true }, capsWith('NVIDIA GeForce RTX 5060'))
+  ok('19. nvidiaSageAttention=true → state = on', find(forced)?.state === 'on')
+  ok('19. 强制开启时 toggle.on 同步', find(forced)?.toggle?.on === true)
+  const off = describeOptimization({ ...DEF, nvidiaSageAttention: false }, capsWith('NVIDIA GeForce RTX 5060'))
+  ok('19. nvidiaSageAttention=false → state = off', find(off)?.state === 'off')
+  ok('19. 强制关闭时 whyOff 说明"被配置关了"', String(find(off)?.whyOff).includes('被配置关'))
+
+  // ---- 源码层：门控逻辑必须"确认了才挂" ----
+  ok('19. auto 档只在自检确认已装时才挂（SAGE_READY === true）',
+    HOST.includes('mode === true || (mode !== false && SAGE_READY === true)'))
+  ok('19. 确认没装时开关置灰（切了会让 ComfyUI 起不来）',
+    HOST.includes('canToggle: SAGE_READY !== false'))
+  ok('19. 只对 NVIDIA 生效', HOST.includes("String(gpu.id ?? '') === 'nvidia'"))
+  ok('19. 自检结果写回 SAGE_READY', HOST.includes('SAGE_READY = sage.installed === true'))
+  ok('19. 状态端点处理 ?sagesa=', HOST.includes("['sagesa', 'nvidiaSageAttention'"))
+  ok('19. 用的是真实参数 --use-sage-attention', HOST.includes("'--use-sage-attention'"))
+  // ---- 安全红线：绝不默认开 --fast ----
+  ok('19. ★ 绝不使用 --fast（本机 help 原文：untested / 可能掉质量 / 可能崩）',
+    !/'--fast'/u.test(HOST))
+  const YML2 = readFileSync(path.join(ROOT, 'cordis.patch.yml'), 'utf8')
+  ok('19. cordis.patch.yml 写明三档（注释形式，默认 auto）',
+    YML2.includes("# nvidiaSageAttention: 'auto'") && YML2.includes('硬依赖'))
+}
+
+console.log('\n=== 20. macOS（Apple Silicon）适配 ★ 2026-10-11 ===')
+{
+  const { vendorIdOf, MODEL_TIERS, IS_MAC } = mod.__internal
+  ok('20. IS_MAC 已定义且导出', IS_MAC === false || IS_MAC === true)
+
+  // ---- 厂商识别 ----
+  ok('20. "Apple M3 Pro" → apple', vendorIdOf('Apple M3 Pro') === 'apple', vendorIdOf('Apple M3 Pro'))
+  ok('20. "Apple M1 Max" → apple', vendorIdOf('Apple M1 Max') === 'apple')
+  ok('20. "Apple M4" → apple', vendorIdOf('Apple M4') === 'apple')
+  ok('20. "Apple M2 Ultra" → apple', vendorIdOf('Apple M2 Ultra') === 'apple')
+  // ★ 分数必须低于 NVIDIA/AMD 的明确型号：装了 eGPU / 同时报出独显时，
+  //   要按"真正在算图的那张卡"处理，而不是把整机当 Apple。
+  ok('20. ★ 同时报出 Radeon RX 7900 时优先按 A 卡（apple 分数更低）',
+    vendorIdOf('Radeon RX 7900 XTX | Apple M3') === 'amd_rdna3',
+    vendorIdOf('Radeon RX 7900 XTX | Apple M3'))
+  ok('20. ★ 同时报出 RTX 4090 时优先按 N 卡',
+    vendorIdOf('NVIDIA GeForce RTX 4090 | Apple M3') === 'nvidia')
+  ok('20. 普通 Intel Mac 的 CPU 串不会被当成 apple',
+    vendorIdOf('Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz') === 'intel')
+
+  // ---- 档案：Apple 不加任何 CUDA/ROCm 专用内核参数 ----
+  const src2 = readFileSync(path.join(ROOT, 'lib', 'index.js'), 'utf8')
+  ok('20. 有 apple 厂商档案', /apple: \{\s*\n\s*id: 'apple'/u.test(src2))
+  ok('20. ★ apple 档案 args 为空（MPS 上 CUDA/ROCm 那套都不适用）',
+    /apple: \{[\s\S]{0,600}?args: \[\]/u.test(src2))
+  ok('20. apple 档案不带任何 packs（不引第三方内核）',
+    /apple: \{[\s\S]{0,900}?packs: \[\]/u.test(src2))
+  ok('20. apple 档案明确写了"统一内存"', /apple: \{[\s\S]{0,900}?统一内存/u.test(src2))
+
+  // ---- 档位表仍然完整（macOS 也能用小显存档）----
+  ok('20. 模型档位表不受影响（lite 仍可用）', MODEL_TIERS.lite?.loader === 'UnetLoaderGGUF')
+
+  // ---- setup.mjs 的 macOS 分支 ----
+  const SETUP2 = readFileSync(path.join(ROOT, 'scripts', 'setup.mjs'), 'utf8')
+  ok('20. setup 有 IS_MAC', SETUP2.includes("const IS_MAC = process.platform === 'darwin'"))
+  ok('20. setup 有 macOS 显卡探测（system_profiler + sysctl）',
+    SETUP2.includes('function gpuNamesFromMac') && SETUP2.includes('machdep.cpu.brand_string'))
+  ok('20. setup 的 classifyVendor 认得 apple', /apple\\s\+m\\d/u.test(SETUP2) || SETUP2.includes('apple\\s+m\\d'))
+  ok('20. setup 有 apple 的 VENDOR_LABEL', SETUP2.includes('Apple Silicon → 官方**手动安装**'))
+  ok('20. setup 在 macOS 上只走 mac 那一条探测（不落 Windows 六条）',
+    SETUP2.includes('IS_MAC ? [[') && SETUP2.includes("['macOS system_profiler / sysctl', gpuNamesFromMac]"))
+  ok('20. setup 有 apple 的 ① 分支（找 ComfyUI + 官方安装指引）',
+    SETUP2.includes("if (gpu.vendor === 'apple')"))
+  ok('20. ★ setup 不替 macOS 用户下 Windows 便携包（NVIDIA 那条路已排除 apple）',
+    SETUP2.includes("gpu.vendor !== 'amd' && gpu.vendor !== 'apple'"))
+  ok('20. setup 的 macOS 指引含官方 Metal 指南链接',
+    SETUP2.includes('developer.apple.com/metal/pytorch'))
+  ok('20. ★ 没有把 mac 当 Linux 处理（setuid/setsid 不是硬用）',
+    !/IS_MAC[\s\S]{0,80}setsid --fork/u.test(src2))
+}
+
+console.log('\n=== 21. 隐患排查所修 9 条（★ 2026-10-11） ===')
+{
+  const { describeOptimization, nvidiaGenOf, FULL_CAPS, DEFAULTS: DEF, MODEL_TIERS } = mod.__internal
+  const capsWith = (g, over) => ({
+    ...FULL_CAPS,
+    nodes: { ...FULL_CAPS.nodes },
+    models: { unet: 'u', clip: 'c', vae: 'v', turbo8Lora: 'turbo8_lora_step2500.safetensors' },
+    notes: [],
+    gpu: g === '' ? null : { name: g, vramGB: 24 },
+    ...(over ?? {}),
+  })
+
+  // ① 探测失败时 stats 不再重复计数
+  const pf = describeOptimization({ ...DEF }, capsWith('AMD Radeon RX 7900 XTX', { probeFailed: true }))
+  ok('21.① 探测失败：unknown + optional = total（不重复计数）',
+    pf.stats.unknown + pf.stats.optional === pf.stats.total, pf.stats)
+  ok('21.① 探测失败：unknown 已排除可选项',
+    pf.stats.unknown === pf.detail.filter((d) => d.optional !== true).length, pf.stats)
+
+  // ② RTX 5000 Ada 不再被误判成 Blackwell
+  ok('21.② "RTX 5000 Ada" → ada（Ada 架构专业卡，不是 Blackwell）',
+    nvidiaGenOf('NVIDIA RTX 5000 Ada') === 'ada', nvidiaGenOf('NVIDIA RTX 5000 Ada'))
+  ok('21.② 消费级 50 系仍判 blackwell',
+    nvidiaGenOf('NVIDIA GeForce RTX 5090') === 'blackwell' && nvidiaGenOf('NVIDIA RTX 5060') === 'blackwell')
+  ok('21.② RTX 4000 Ada 仍是 ada', nvidiaGenOf('NVIDIA RTX 4000 Ada') === 'ada')
+
+  // ③ 四个返回点都有 warnings，且只挑 ⚠ 开头的
+  const nv = describeOptimization({ ...DEF }, capsWith('NVIDIA GeForce RTX 5060'))
+  ok('21.③ 正常路径有 warnings 字段', Array.isArray(nv.warnings))
+  const withNotes = describeOptimization({ ...DEF },
+    capsWith('NVIDIA GeForce RTX 5060', { notes: ['⚠ 严重缺口', '常规说明：跳过某环节'] }))
+  ok('21.③ 只把 ⚠ 开头的提升为 warning', JSON.stringify(withNotes.warnings) === JSON.stringify(['⚠ 严重缺口']),
+    withNotes.warnings)
+  ok('21.③ disabled / idle 也有 warnings（形状一致）',
+    Array.isArray(describeOptimization({ ...DEF, enabled: false }, null).warnings)
+    && Array.isArray(describeOptimization({ ...DEF }, null).warnings))
+  ok('21.③ 探测失败路径也有 warnings',
+    Array.isArray(describeOptimization({ ...DEF }, capsWith('', { probeFailed: true })).warnings))
+
+  // ④ disabled / idle 的 stats 补齐 optional
+  const dis = describeOptimization({ ...DEF, enabled: false }, null)
+  const idle = describeOptimization({ ...DEF }, null)
+  ok('21.④ disabled.stats 有 optional 键', 'optional' in dis.stats, dis.stats)
+  ok('21.④ idle.stats 有 optional 键', 'optional' in idle.stats, idle.stats)
+  ok('21.④ 四个返回点的 stats 键集合一致',
+    ['on', 'available', 'off', 'blocked', 'optional', 'total'].every((k) => k in dis.stats && k in idle.stats && k in pf.stats && k in nv.stats))
+
+  // ⑤ 客户端渲染 warnings
+  const CLIENT2 = readFileSync(path.join(ROOT, 'lib', 'client.js'), 'utf8')
+  ok('21.⑤ 客户端渲染 opt.warnings', CLIENT2.includes('Array.isArray(opt?.warnings)'))
+  ok('21.⑤ 有对应样式类', CLIENT2.includes('.qwen-paint-opt-warning'))
+  ok('21.⑤ 渲染在 reasons 之后（置顶显眼）',
+    CLIENT2.indexOf('qwen-paint-opt-reason') < CLIENT2.indexOf('qwen-paint-opt-warning'))
+
+  // ⑥ setup 选完 lite 后有明确的后续步骤
+  const SETUP3 = readFileSync(path.join(ROOT, 'scripts', 'setup.mjs'), 'utf8')
+  ok('21.⑥ setup 在 lite 档下提示要装 ComfyUI-GGUF',
+    SETUP3.includes("if (tier === 'lite')") && SETUP3.includes('git clone https://github.com/city96/ComfyUI-GGUF'))
+
+  // ⑦ 状态端点对 sagesa 有服务端护栏
+  ok('21.⑦ 已确认没装时服务端拒绝打开 sagesa',
+    HOST.includes("key === 'nvidiaSageAttention' && want && SAGE_READY === false"))
+
+  // ⑧ MODEL_TIERS 无死字段
+  ok('21.⑧ MODEL_TIERS 不再带未被使用的 hint', !('hint' in MODEL_TIERS.full) && !('hint' in MODEL_TIERS.lite))
+
+  // ⑨ 可移植性测试的厂商列表含 apple
+  const PORT = readFileSync(path.join(ROOT, 'scripts', '_portability_test.mjs'), 'utf8')
+  ok('21.⑨ 可移植性测试的厂商列表含 apple', PORT.includes("'intel', 'apple', 'unknown'"))
+}
+
+console.log('\n=== 22. 第二轮隐患排查所修（★ 2026-10-11，0.1.4） ===')
+{
+  const { describeOptimization, FULL_CAPS, DEFAULTS: DEF } = mod.__internal
+  const capsWith = (g, over) => ({
+    ...FULL_CAPS,
+    nodes: { ...FULL_CAPS.nodes },
+    models: { unet: 'u', clip: 'c', vae: 'v', turbo8Lora: 'turbo8_lora_step2500.safetensors' },
+    notes: [],
+    gpu: g === '' ? null : { name: g, vramGB: 24 },
+    ...(over ?? {}),
+  })
+  const AMD = 'AMD Radeon RX 7900 XTX'
+
+  // ① 探测失败时 warnings 与 reasons 不再重复
+  const probeNote = '⚠ 能力探测有 6/12 项未成功，本次按"能力齐全"处理，且不缓存结果'
+  const pfOnly = describeOptimization({ ...DEF }, capsWith(AMD, { probeFailed: true, notes: [probeNote] }))
+  ok('22.① 探测失败：与 reasons 重复的那句不再进 warnings', pfOnly.warnings.length === 0, pfOnly.warnings)
+  ok('22.① 但 reasons 仍在（信息没丢）', pfOnly.reasons.length > 0)
+  const pfMixed = describeOptimization({ ...DEF },
+    capsWith(AMD, { probeFailed: true, notes: [probeNote, '⚠ 配置的是 GGUF 主模型，但没有 UnetLoaderGGUF 节点'] }))
+  ok('22.① 其余 ⚠ note 照常保留（不误伤）',
+    pfMixed.warnings.length === 1 && pfMixed.warnings[0].includes('UnetLoaderGGUF'), pfMixed.warnings)
+
+  // ② 可选项打开后，总账文案必须反映真实状态（不能还说"默认关"）
+  const allOff = describeOptimization({ ...DEF }, capsWith(AMD))
+  const oneOn = describeOptimization({ ...DEF, amdKernel: true }, capsWith(AMD))
+  const bothOn = describeOptimization({ ...DEF, amdKernel: true, amdAsyncOffload: true }, capsWith(AMD))
+  ok('22.② 都关：optional=2 / optionalOn=0', allOff.stats.optional === 2 && allOff.stats.optionalOn === 0, allOff.stats)
+  ok('22.② 开一个：optionalOn=1', oneOn.stats.optionalOn === 1, oneOn.stats)
+  ok('22.② 都开：optionalOn=2（否则总账会自相矛盾地说"默认关"）', bothOn.stats.optionalOn === 2, bothOn.stats)
+  ok('22.② optionalOn 是 optional 的子计数（不影响"各桶之和 = total"）',
+    allOff.stats.on + allOff.stats.available + allOff.stats.off + allOff.stats.blocked
+    + allOff.stats.superseded + allOff.stats.optional === allOff.stats.total)
+
+  // ③ optionalOn 在四个返回点都存在（形状一致）
+  ok('22.③ disabled / idle / 正常 / 探测失败 都有 optionalOn',
+    ['optionalOn'].every((k) => k in describeOptimization({ ...DEF, enabled: false }, null).stats
+      && k in describeOptimization({ ...DEF }, null).stats
+      && k in allOff.stats
+      && k in pfOnly.stats))
+
+  // ④ 客户端按 optionalOn 决定文案
+  const CLIENT3 = readFileSync(path.join(ROOT, 'lib', 'client.js'), 'utf8')
+  ok('22.④ 客户端读 optionalOn', CLIENT3.includes('stats.optionalOn'))
+  ok('22.④ 已开时显示"已开 N 项"', CLIENT3.includes('项可选（已开 '))
+
+  // ⑤ INSTALL.md 补上 macOS（主安装文档以前一处都没提）
+  const INSTALL2 = readFileSync(path.join(ROOT, 'INSTALL.md'), 'utf8')
+  ok('22.⑤ INSTALL.md 有 macOS 章节', INSTALL2.includes('macOS（Apple Silicon）'))
+  ok('22.⑤ INSTALL.md 含官方 Metal 指南链接', INSTALL2.includes('developer.apple.com/metal/pytorch'))
+
+  // ⑥ findComfyDir 不再拼出相对路径（macOS/Linux 上 USERPROFILE 不存在）
+  const SETUP4 = readFileSync(path.join(ROOT, 'scripts', 'setup.mjs'), 'utf8')
+  ok('22.⑥ findComfyDir 用 os.homedir() 而不是 USERPROFILE ?? \'\'',
+    SETUP4.includes("path.join(os.homedir(), 'Desktop', 'ComfyUI')"))
+  ok('22.⑥ 源码里不再有 USERPROFILE ?? \'\' 的活代码（注释不算）',
+    !/^\s+path\.join\(process\.env\.USERPROFILE \?\? ''/mu.test(SETUP4))
+}
+
 console.log(`\n=== 结果：${fail === 0 ? '全部通过' : `${fail} 项失败`} ===`)
 process.exit(fail === 0 ? 0 : 1)
