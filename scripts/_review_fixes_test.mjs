@@ -126,5 +126,51 @@ console.log('\n=== 14. selftest.mjs 与代码契约对齐（原先首节即崩�
 console.log('\n=== 15. queueBusy 的短缓存 TTL 可配置（默认行为不变） ===')
 ok('15. 用 cfg.queueCacheMs ?? 2000（生产仍 2 秒）', HOST.includes('cfg.queueCacheMs ?? 2000'))
 
+console.log('\n=== 16. 优化面板按显卡过滤（N 卡上不该出现 RDNA3 优化） ===')
+{
+  // 主人反馈：「怎么 5060 还能弹出来 AMD R3 的优化呢？识别是哪个显卡，
+  //   就把不能用的优化直接隐藏掉。」根因：RDNA3 FA 那一项只看"节点装没装"、不看显卡。
+  const { describeOptimization, genericOptimizations, FULL_CAPS, DEFAULTS: DEF } = mod.__internal
+  const FA = 'RDNA3 FlashAttention（无损）'
+  const capsWith = (gpuName) => ({
+    ...FULL_CAPS,
+    nodes: { ...FULL_CAPS.nodes },
+    models: { unet: 'u', clip: 'c', vae: 'v', turbo8Lora: 'turbo8_lora_step2500.safetensors' },
+    notes: [],
+    gpu: gpuName === '' ? null : { name: gpuName, vramGB: 16 },
+  })
+  const names = (opt) => opt.detail.map((d) => d.name)
+
+  const nv = describeOptimization({ ...DEF }, capsWith('NVIDIA GeForce RTX 5060'))
+  ok('16. N 卡（5060）：detail 里**没有** RDNA3 FA', !names(nv).includes(FA), names(nv))
+  ok('16. N 卡：filtered 里点名了它（不静默消失）', Array.isArray(nv.filtered) && nv.filtered.includes(FA), nv.filtered)
+  ok('16. N 卡：gpu.vendor === nvidia', nv.gpu?.vendor === 'nvidia', nv.gpu)
+  ok('16. N 卡：stats.total 与 detail 长度一致（统计没算进被藏项）', nv.stats.total === nv.detail.length, [nv.stats.total, nv.detail.length])
+
+  const amd = describeOptimization({ ...DEF }, capsWith('AMD Radeon RX 7900 XTX (gfx1100)'))
+  ok('16. RDNA3 卡：detail 里**有** RDNA3 FA', names(amd).includes(FA), names(amd))
+  ok('16. RDNA3 卡：filtered 为空', amd.filtered.length === 0, amd.filtered)
+
+  const rdna4 = describeOptimization({ ...DEF }, capsWith('AMD Radeon RX 9070 XT'))
+  ok('16. RDNA4 卡：也隐藏（该节点只认 gfx1100）', !names(rdna4).includes(FA), names(rdna4))
+
+  const intel = describeOptimization({ ...DEF }, capsWith('Intel(R) Arc(TM) B580 Graphics'))
+  ok('16. I 卡：隐藏', !names(intel).includes(FA), names(intel))
+
+  const unknown = describeOptimization({ ...DEF }, capsWith(''))
+  ok('16. 认不出显卡 → **不隐藏**（守住"认不出就不猜"的约定）', names(unknown).includes(FA), names(unknown))
+  ok('16. 认不出显卡 → gpu 为 null', unknown.gpu === null, unknown.gpu)
+
+  const gnv = genericOptimizations(capsWith('NVIDIA GeForce RTX 5060'), { ...DEF })
+  ok('16. generic（check_acceleration 用）在 N 卡上也不列 RDNA3 行',
+    !gnv.some((l) => l.includes('RDNA3 FlashAttention')), gnv)
+  const gamd = genericOptimizations(capsWith('AMD Radeon RX 7900 XTX'), { ...DEF })
+  ok('16. generic 在 RDNA3 卡上保留该行', gamd.some((l) => l.includes('RDNA3 FlashAttention')), gamd)
+
+  const CLIENT_SRC = readFileSync(path.join(ROOT, 'lib', 'client.js'), 'utf8')
+  ok('16. client 会渲染"已按显卡识别隐藏"的提示', CLIENT_SRC.includes('已按显卡识别隐藏'))
+  ok('16. client 有对应样式类', CLIENT_SRC.includes('.qwen-paint-opt-filtered'))
+}
+
 console.log(`\n=== 结果：${fail === 0 ? '全部通过' : `${fail} 项失败`} ===`)
 process.exit(fail === 0 ? 0 : 1)
