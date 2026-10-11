@@ -28,6 +28,8 @@ const assert = (name, cond, extra) => {
 console.log('=== 1. 平台判断入口 ===')
 assert('有 IS_WINDOWS', /const IS_WINDOWS = process\.platform === 'win32'/u.test(src))
 assert('有 IS_LINUX', /const IS_LINUX = process\.platform === 'linux'/u.test(src))
+// ★ 2026-10-11：macOS 也是**一等平台**（之前 IS_MAC 只定义、从未被使用 —— 等于没适配）
+assert('有 IS_MAC', /const IS_MAC = process\.platform === 'darwin'/u.test(src))
 assert('有 runShell 统一入口', /async function runShell\(/u.test(src))
 
 console.log('\n=== 2. Windows 专有命令必须都在平台分支里 ===')
@@ -81,11 +83,36 @@ assert('存活查询有 Windows 分支（Get-Process）', src.includes("Get-Proc
 assert('存活查询有 POSIX 分支（kill -0）', src.includes('kill -0 ${pid}'))
 
 console.log('\n=== 5. 显卡厂商覆盖（A/N/I + 各代系）===')
-for (const key of ['amd_rdna2', 'amd_rdna3', 'amd_rdna4', 'amd', 'nvidia', 'intel_battlemage', 'intel_alchemist', 'intel', 'unknown']) {
+for (const key of ['amd_rdna2', 'amd_rdna3', 'amd_rdna4', 'amd', 'nvidia', 'intel_battlemage', 'intel_alchemist', 'intel', 'apple', 'unknown']) {
   assert(`厂商档案含 ${key}`, src.includes(`${key}: {`))
 }
 assert('Windows 用 WMI 取显卡', src.includes('Win32_VideoController'))
 assert('PCI vendor id 兜底映射', src.includes("'0x1002'") && src.includes("'0x10de'") && src.includes("'0x8086'"))
+
+console.log('\n=== 5b. macOS（Apple Silicon）适配 ★ 2026-10-11 ===')
+assert('有 macOS GPU 探测命令', src.includes('GPU_PROBE_MAC') && src.includes('system_profiler'))
+assert('macOS 探测含 sysctl 兜底', src.includes('machdep.cpu.brand_string'))
+// ★ 关键：不能把 macOS 落到 Linux 那条 —— nvidia-smi / rocm-smi / lspci 在 macOS 上都不存在，
+//   落过去的结果就是"探测永远为空 → 一律 unknown"（这正是之前 macOS 没被适配的实际表现）。
+assert('★ 探测命令**三路分派**（Windows / macOS / Linux）',
+  src.includes('IS_WINDOWS ? GPU_PROBE_WIN : (IS_MAC ? GPU_PROBE_MAC : GPU_PROBE_LINUX)'))
+assert('有 apple 厂商档案', src.includes('apple: {'))
+assert('★ apple 档案不加任何 CUDA/ROCm 专用内核参数（MPS 上不适用）',
+  /apple: \{[\s\S]{0,500}?args: \[\]/u.test(src))
+assert('★ Apple 显式跳过离散显存驻留参数（统一内存没有独立显存）',
+  src.includes("if (gpu.id === 'apple')"))
+assert('有 macOS 显存探测（PyTorch MPS）',
+  src.includes('GPU_VRAM_PROBE_PY_MAC') && src.includes('recommended_max_memory'))
+// ★ 2026-10-11 修的真 bug：显存探测那行原来**没有平台闸** ——
+//   `&` 是 PowerShell 的调用运算符，在 POSIX 的 sh 里是**后台运算符** ⇒ Linux/macOS 上语法错、
+//   被 catch 吞掉 ⇒ vramGB 恒为 0 ⇒ 驻留参数永不生效。
+assert('★ 显存探测按平台分叉（POSIX 下 `&` 是后台运算符，会语法错）',
+  src.includes('const pyProbe = IS_MAC ? GPU_VRAM_PROBE_PY_MAC : GPU_VRAM_PROBE_PY')
+  && src.includes('? `& "${py}" -c "${pyProbe}"`')
+  && src.includes('${shq(py)} -c ${shq(pyProbe)}'))
+// macOS **没有 setsid** —— 启动路径必须是"能力探测 + nohup 兜底"，不能硬用 setsid
+assert('★ 启动路径对 macOS 安全（setsid 走能力探测，没有就退回 nohup）',
+  src.includes('command -v setsid') && src.includes('nohup sh -c'))
 
 console.log('\n=== 6. pid 定位（跨平台的同一个坑）===')
 assert('有 resolveChildPid', src.includes('async function resolveChildPid'))
@@ -211,7 +238,7 @@ console.log('\n★ 跨平台回归锁（本轮新修）')
 }
 
 // ── A3：Windows 扫描器不许硬编码盘符 ─────────────────────────────────
-//   修前：`'C:\ComfyUI','D:\ComfyUI','E:\ComfyUI','F:\ComfyUI','G:\ComfyUI','X:\ComfyUI'`
+//   修前：`'<盘符>:\ComfyUI' 之类的示例目录`
 //        —— 装在第 7 个盘或改了盘符就漏（只能靠名字含 comfy 的兜底）。
 {
   const idx = src.indexOf('const COMFY_SEARCH_WIN = [')
