@@ -61,6 +61,7 @@ node scripts/setup.mjs --check         只看差什么，绝不下载、绝不�
 node scripts/setup.mjs --verify        已存在的模型也重算一遍 SHA256（慢，但最稳）
 node scripts/setup.mjs --comfy D:\ComfyUI     指定 ComfyUI 目录
 node scripts/setup.mjs --download-comfy       顺带下载 ComfyUI 官方便携包
+node scripts/setup.mjs --tier full|lite       直接指定主模型档位（★ 2026-10-11）
 ```
 
 它会依次做三件事：
@@ -71,6 +72,21 @@ node scripts/setup.mjs --download-comfy       顺带下载 ComfyUI 官方便携�
 3. **把插件挂进 DSH profile**（内部调用 `scripts/install.mjs`，失败会自动回滚）
 
 跑完**彻底退出 DSH 再重新打开**即可。
+
+### 主模型两个档位（★ 2026-10-11 新增，给 8GB 这类小显存卡）
+
+第 2 步之前会**问一句**选哪个（**直接回车 = 1，与之前完全一样**）：
+
+| 选项 | 主模型 | 大小 | 适合 |
+|---|---|---|---|
+| **1）完整档**（默认） | `qwen_image_2.1_int8_convrot.safetensors` | 约 7.26 GB | 显存 ≥ 8 GB —— 之前一直在用的那个 |
+| **2）轻量档** | `qwen-image-2.1-Q4_K_M.gguf` | 约 **4.2 GB** | 显存较小（8 GB 及以下，如 **RTX 5060**） |
+
+- **CLIP / VAE 两档共用**，只换主模型。
+- 轻量档要额外装 **[ComfyUI-GGUF](https://github.com/city96/ComfyUI-GGUF)** 到 `custom_nodes`
+  后重启 ComfyUI（插件会探测；没装不会静默降级，会明确提示）。
+- 选定后写进 `cordis.patch.yml` 的 `unet`；插件**按文件名后缀自动选加载器**，不用再配别的。
+- 脚本 / CI 里不指定 `--tier` 时**默认完整档** —— 老流程一字不变。
 
 ### 显卡：N 卡和 A 卡走两条路（0.1.1 新增）
 
@@ -159,6 +175,27 @@ winget install --id=Python.Python.3.12 -e
 ### 体积与时间
 
 约 **13.3 GB**。脚本每 3 秒打一行进度（已下字节数 + 速度），不会让你干等。
+
+### macOS（Apple Silicon）★ 2026-10-11 新增
+
+ComfyUI 官方对 Apple Silicon（**M1–M4**）**只提供手动安装**（没有便携包），所以流程不一样：
+
+1. 装 **pytorch nightly** —— 按 Apple 的 Metal 加速指南：<https://developer.apple.com/metal/pytorch/>
+2. 按 ComfyUI 官方「Manual Installation」装依赖
+3. 启动：`python main.py` —— **官方没有 Mac 专属启动参数**，直接跑即可
+
+然后：
+
+```
+node scripts/setup.mjs --comfy <你的 ComfyUI 目录>
+```
+
+就能继续「下模型 + 挂插件」这两步（脚本在 macOS 上**不会**去下 Windows 便携包）。
+
+> ⚠ 插件在 Apple Silicon 上**不加任何 CUDA / ROCm 专用内核参数**
+> （`--use-sage-attention` / `--use-quad-cross-attention` / `--use-ck-attention` 在 MPS 上都不适用）。
+> ⚠ **统一内存没有独立显存** ⇒ `--highvram` / `--reserve-vram` 这套驻留参数**显式跳过**。
+> ⚠ 官方文档**没有提 Intel Mac**（老 Intel 机型 + 核显基本跑不动）。
 
 ---
 
