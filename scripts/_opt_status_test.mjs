@@ -49,10 +49,14 @@ console.log('=== 1. 全部就位 → 报"优化已启用" ===')
   // 2026-10-09：新增 BlockCache T8 → 4 项变 5 项；
   //   再新增「显存驻留」→ 5 项变 6 项；
   //   二次修正又新增「互斥三选一策略（wrapper）」→ 6 项变 7 项；
-  //   2026-10-10 再新增「RDNA3 FlashAttention」→ 7 项变 8 项。
-  assert('八项明细都在', r.detail.length === 8)
+  //   2026-10-10 再新增「RDNA3 FlashAttention」→ 7 项变 8 项；
+  //   ★ 2026-10-11 新增两项 **A 卡专属可选优化**（专属内核 + 异步卸载，仅 AMD 显示）→ 8 项变 10 项。
+  //     它们带 `optional: true`，**不计入**"优化是否完整"的判定（见 stats.optional）。
+  assert('十项明细都在（8 项常规 + 2 项 A 卡可选）', r.detail.length === 10)
   assert('含「互斥三选一策略（wrapper）」项',
     r.detail.some((d) => d.name.includes('互斥三选一策略')))
+  assert('★ A 卡两项带 optional 标记（默认关、不拉低 level）',
+    r.detail.filter((d) => d.optional === true).length === 2)
   // ★ 二次修正：wrapper 按尺寸切换后，summary 不能无条件写"+ BlockCache"
   //   （小尺寸实际挂 TE+Speedup），必须说明"按尺寸"。
   assert('★ summary 说明按尺寸自动（不是恒定 BlockCache）', r.summary.includes('按尺寸'))
@@ -64,8 +68,8 @@ console.log('=== 1. 全部就位 → 报"优化已启用" ===')
   // ★ 二次修正：默认配置下 BlockCache 生效 ⇒ TE-Speed/Speedup 按尺寸让位，
   //   必须**计入统计**，不能凭空消失（否则面板总账 total=7 只报 5 项已启用）。
   assert('★ 默认配置：2 项按尺寸让位（TE-Speed + Speedup）', r.stats.superseded === 2)
-  assert('★ 默认配置：没有项目被吞（on + superseded = total）',
-    r.stats.on + r.stats.superseded === r.stats.total)
+  assert('★ 默认配置：没有项目被吞（on + superseded + optional = total）',
+    r.stats.on + r.stats.superseded + r.stats.optional === r.stats.total)
 }
 
 console.log('\n=== 2. 没装 turbo8 LoRA → 必须说清"叫什么、放哪" ===')
@@ -287,7 +291,7 @@ console.log('\n=== 11. 四态（on/available/off/blocked）语义 ★★★ 2026
   // （turbo8 / 前缀缓存 / TE-Speed / Speedup / 显存驻留），
   // 外加「互斥三选一策略（wrapper）」恒为 on → 共 7 项、6 on / 1 off。
   // 注意 off 与 blocked 的区别：off = 改配置就能开（本用例正是这种）。
-  assert('全齐 → 八项明细（含 wrapper + FA）', rFull.detail.length === 8)
+  assert('全齐 → 十项明细（8 常规 + 2 项 A 卡可选）', rFull.detail.length === 10)
   assert('全齐 → 七项 on + BlockCache 一项 off（被配置关）',
     rFull.detail.filter((d) => d.state === 'on').length === 7
     && rFull.detail.find((d) => d.name.includes('BlockCache'))?.state === 'off')
@@ -354,12 +358,19 @@ console.log('\n=== 11. 四态（on/available/off/blocked）语义 ★★★ 2026
       assert(`${label}：${item.name} 有 name`, typeof item.name === 'string' && item.name !== '')
     }
     // stats 必须与实际分布对得上（否则界面那行"总账"就是错的）
+    // ★ 2026-10-11：可选档（`optional`）在 stats 里**单独一桶**，所以 tally 也要把它剔出来，
+    //   否则"默认关的可选项"会被算进 off，与 stats.off 对不上。
     const tally = { on: 0, available: 0, off: 0, blocked: 0, unknown: 0, superseded: 0 }
-    for (const item of r.detail) tally[item.state] += 1
+    let optCount = 0
+    for (const item of r.detail) {
+      if (item.optional === true) { optCount += 1; continue }
+      tally[item.state] += 1
+    }
     assert(`${label}：stats 与 detail 实际分布一致`,
       tally.on === r.stats.on && tally.available === r.stats.available
       && tally.off === r.stats.off && tally.blocked === r.stats.blocked
       && tally.superseded === (r.stats.superseded ?? 0))
+    assert(`${label}：stats.optional 与实际一致`, optCount === (r.stats.optional ?? 0))
     assert(`${label}：stats.total = detail 条数`, r.stats.total === r.detail.length)
   }
 
@@ -379,7 +390,11 @@ console.log('\n=== 11. 四态（on/available/off/blocked）语义 ★★★ 2026
   assert('⑥ 探测失败 → 没有任何一项被说成 on（防假报告）',
     rProbe.detail.every((d) => d.on === false))
   assert('⑥ 探测失败 → stats.on = 0', rProbe.stats.on === 0)
-  assert('⑥ 探测失败 → stats.unknown = 8（含 wrapper + FA 共 8 项）', rProbe.stats.unknown === 8)
+  // ★ 2026-10-11 修 bug 后：`unknown` **排除可选项**（否则与 `optional` 重复计数，
+  //   客户端总账会出现"共 10 项：10 项未确认 · 2 项可选"这种自相矛盾的显示）。
+  assert('⑥ 探测失败 → stats.unknown = 8（10 项里扣掉 2 项 A 卡可选）', rProbe.stats.unknown === 8)
+  assert('⑥ 探测失败 → unknown + optional = total（不重复计数）',
+    rProbe.stats.unknown + rProbe.stats.optional === rProbe.stats.total)
   assert('⑥ 探测失败 → 每项都给了重试指引',
     rProbe.detail.every((d) => String(d.action).includes('重新检测')))
 }
