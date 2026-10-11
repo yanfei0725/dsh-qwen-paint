@@ -189,6 +189,18 @@ node scripts/install.mjs --uninstall 卸载
 
 ⚠ 目录要放在**固定位置**（例如 `~/Documents/dsh-qwen-paint`），**别放临时目录**。
 
+### 方式 C（兜底）：官方 Plugin Manager 因**网络**装不上时
+
+如果 DSH 内置的 **Plugin Manager** 在装依赖那一步失败，典型报错是
+`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`，或访问 `registry.npmmirror.org` 超时 / 证书不被信任 ——
+**这不是插件的问题**，是 pnpm 的供应链校验连不上源（受限网络、企业代理、证书链不完整时常见）。
+
+此时**直接用方式 B 的 `scripts/install.mjs`** 即可：它与官方 Plugin Manager 做的事**等价** ——
+link 进 profile + 写进 bundle 清单 + **入口 import 验证** + 失败**自动回滚**，
+而且**不依赖任何包管理器网络请求**（本插件零运行时依赖）。
+
+> 一句话：`install.mjs` 就是为这种情况准备的官方等价兜底路径。
+
 ---
 
 ## 五、怎么验证装好了
