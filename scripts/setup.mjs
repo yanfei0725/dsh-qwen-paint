@@ -722,6 +722,22 @@ for (const model of MODELS) {
   allOk = false
 }
 
+/* --check：到此为止 —— 只报告，**绝不下载、绝不改任何东西**。
+   ⚠⚠ 这一段**必须放在下载循环之前**。
+   早期版本把它写在循环之后，结果 `--check` 只会在"下完之后"才判断 ——
+   等于根本没拦：`--check` 照样会开下，实测误建过 2.4 GB 半成品。
+   修法：把早退提到 `if (needDownload === 0)` 之前，循环只在"真的要下"时才进。 */
+if (CHECK_ONLY) {
+  console.log(needDownload === 0
+    ? '  ✓ 三个模型都已就绪'
+    : `  · 还差 ${needDownload} 个模型，共约 ${gb(MODELS.reduce((s, m) => s + m.size, 0))}`)
+  console.log(allOk
+    ? '\n（--check）全部就绪，没有做任何改动。'
+    : `\n（--check）还差 ${needDownload} 个模型，共约 ${gb(MODELS.reduce((s, m) => s + m.size, 0))}，没有下载。`)
+  console.log(`  去掉 --check 重跑就会自动下载。来源：${REPO_PAGE}`)
+  process.exit(allOk ? 0 : 1)
+}
+
 if (needDownload === 0) {
   console.log('  ✓ 三个模型都已就绪')
 } else {
@@ -759,15 +775,6 @@ if (needDownload === 0) {
     }
     console.log(`\r  ✓ ${model.name} 校验通过（SHA256 与 ${REPO} 一致）`.padEnd(64))
   }
-}
-
-/* --check：到此为止 —— 只报告，绝不改任何东西（连插件都不装） */
-if (CHECK_ONLY) {
-  console.log(allOk
-    ? '\n（--check）全部就绪，没有做任何改动。'
-    : `\n（--check）还差 ${needDownload} 个模型，共约 ${gb(MODELS.reduce((s, m) => s + m.size, 0))}，没有下载。`)
-  console.log(`  去掉 --check 重跑就会自动下载。来源：${REPO_PAGE}`)
-  process.exit(allOk ? 0 : 1)
 }
 
 /* ③ 插件本体 */
