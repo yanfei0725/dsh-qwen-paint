@@ -42,7 +42,11 @@ const cases = [
   ['AMD Radeon Graphics | NVIDIA GeForce RTX 4090', 'nvidia'],
   ['Intel UHD Graphics | NVIDIA GeForce RTX 3080', 'nvidia'],
   ['AMD Radeon(TM) Graphics', 'amd'],
-  ['Apple M2', 'unknown'],
+  // ★ 2026-10-11：macOS 适配后 Apple Silicon 不再落到 unknown（有专属档案 apple）
+  ['Apple M2', 'apple'],
+  ['Apple M3 Pro', 'apple'],
+  // 混装：Apple 的分数**低于**独显明确型号 ⇒ 必须按真正在算图的那张卡处理
+  ['Radeon RX 7900 XTX | Apple M3', 'amd_rdna3'],
   ['', 'unknown'],
 ]
 for (const [name, want] of cases) {
