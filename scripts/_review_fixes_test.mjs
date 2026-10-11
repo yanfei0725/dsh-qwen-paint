@@ -12,6 +12,10 @@
  *   8. ensureComfyUp 无视 launch.phase（失败后空等 + 覆盖失败原因）
  *   9. 图生图 width/height 用请求值冒充实际值
  *  10. client 开关点后卡在"切换中…"
+ *  11. 拉起后端后最小化窗口（Win11/Windows Terminal 下原先无效）
+ *  12. setup.mjs `--check` 早退写在下载循环之后（"只看不下载"实际会开下）
+ *  13. selftest.mjs 与代码契约脱节（apply 改成立即注册后，首节即崩）
+ *  14. queueBusy 短缓存 TTL 写死 → 做成 cfg.queueCacheMs 可配置（默认 2 秒不变）
  */
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -94,6 +98,33 @@ console.log('\n=== 12. 拉起后端后最小化窗口（Win11/Windows Terminal �
   ok('12. ps1 注释保持纯 ASCII（PS5.1 无 BOM 按 ANSI 读，中文会解析错位）',
     HOST.includes("'# 2026-10-10 KEY FIX (window never got minimized):'"))
 }
+
+console.log('\n=== 13. setup.mjs --check 不再"边看边下" ===')
+{
+  // 原 bug：--check 的早退判断写在**下载循环之后** ⇒ "只看不下载"实际会开下
+  //（实测误建过 2.4 GB 半成品）。修法：把早退提到下载循环之前。
+  const SETUP = readFileSync(path.join(ROOT, 'scripts', 'setup.mjs'), 'utf8')
+  const atCheck = SETUP.indexOf('if (CHECK_ONLY) {')
+  // 第一个 `for (const model of MODELS)` 是**只读探测**循环；下载循环在 `if (needDownload === 0)` 之后。
+  const dlLoop = SETUP.indexOf('for (const model of MODELS) {', SETUP.indexOf('if (needDownload === 0) {'))
+  ok('13. --check 早退出现在下载循环之前', atCheck > 0 && dlLoop > 0 && atCheck < dlLoop)
+  ok('13. --check 分支内不再出现下载调用', !/if \(CHECK_ONLY\) \{[\s\S]{0,500}?downloadWithCurl/u.test(SETUP))
+}
+
+console.log('\n=== 14. selftest.mjs 与代码契约对齐（原先首节即崩） ===')
+{
+  // 根因：本版 apply **直接用第一个参数注册**（不再 root.inject(['tools'], cb)），
+  //   而旧 mock 把富 ctx 藏在 inject 回调里 ⇒ 工具一个都注册不上、自测首节必挂。
+  const SELFTEST = readFileSync(path.join(ROOT, 'scripts', 'selftest.mjs'), 'utf8')
+  ok('14. apply 直接用富 ctx（不再经 root.inject）', SELFTEST.includes('mod.apply(ctx, {'))
+  ok('14. mock 提供 ctx.get（代码用 ctx.get 取 sessionProjections）',
+    SELFTEST.includes("get(name) { return name === 'sessionProjections' ? ctx.sessionProjections : undefined }"))
+  ok('14. 工作流链改成动态回溯（不再写死 1→11→12→7→13→8）', SELFTEST.includes('chainPathOf'))
+  ok('14. 不再断言"恰好注册 1 个工具"（现在是 3 个）', !SELFTEST.includes('恰好注册了 1 个工具'))
+}
+
+console.log('\n=== 15. queueBusy 的短缓存 TTL 可配置（默认行为不变） ===')
+ok('15. 用 cfg.queueCacheMs ?? 2000（生产仍 2 秒）', HOST.includes('cfg.queueCacheMs ?? 2000'))
 
 console.log(`\n=== 结果：${fail === 0 ? '全部通过' : `${fail} 项失败`} ===`)
 process.exit(fail === 0 ? 0 : 1)
