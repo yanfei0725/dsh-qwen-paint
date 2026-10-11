@@ -28,7 +28,8 @@ const cases = [
   ['AMD Radeon RX 7900 XT', 'amd_rdna3'],
   ['AMD Radeon RX 9070 XT', 'amd_rdna4'],
   ['AMD Radeon RX 6800 XT', 'amd_rdna2'],
-  ['Apple M2 Max', 'unknown'],
+  // ★ 2026-10-11：macOS 适配后 Apple Silicon 有专属档案了（此前是 unknown）
+  ['Apple M2 Max', 'apple'],
   ['', 'unknown'],
   // ★ 混合机型：独显优先于核显（"AMD 核显 | NVIDIA 独显"必须判 nvidia）
   ['AMD Radeon Graphics | NVIDIA GeForce RTX 4090', 'nvidia'],
