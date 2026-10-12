@@ -29,8 +29,11 @@
       "immediately": true
     },
     "compatibility": {
-      "dsh": ">=1.0.0",
-      "node": ">=18.0.0"
+      "dsh": ">=0.2.0-rc.2",
+      "node": ">=18.0.0",
+      "dshReleases": {
+        "0.2.0-rc.2": "compatible"
+      }
     },
     "build": {
       "strategy": "none",
