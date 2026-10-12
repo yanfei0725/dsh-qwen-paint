@@ -500,7 +500,12 @@ console.log('\n=== 12. 界面侧：徽标可点 + 菜单入口 + 四态渲染 �
   //        ② 残留的 `abort(signal.reason)` / `throw signal.reason` 必须为 0 处。
   assert('⑫ host 有 toError 规范化', /function toError\(/u.test(host))
   assert('⑫ host 有 cancelReason 规范化', /function cancelReason\(/u.test(host))
-  assert('⑫ host 把 toError/cancelReason 导出了', /export const __internal = \{[\s\S]{0,200}toError,/u.test(host))
+  // ★ 2026-10-12：这条原先是**源码文本**断言（`/export const __internal = \{[\s\S]{0,200}toError,/`），
+  //   钉的是 `__internal` 的**字面量写法**。后来为修循环 import 的 TDZ，`__internal`
+  //   改成惰性 Proxy（属性访问时才求值），写法一变这条就假失败 —— 属于「断言过期」，
+  //   不是功能坏了。**改成行为断言**（真去问模块要这两个导出），比钉文本更强也更稳。
+  assert('⑫ host 把 toError/cancelReason 导出了',
+    typeof I.toError === 'function' && typeof I.cancelReason === 'function')
   // ⚠ 必须在**去掉注释之后**再数 —— 否则会数到解释这个 bug 的那两行文档注释本身
   //   （文档里就是要原样引用 `controller.abort(signal.reason)` 这个坏写法）。
   const hostNoComments = host
