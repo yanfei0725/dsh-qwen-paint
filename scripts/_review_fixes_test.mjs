@@ -23,7 +23,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const mod = await import(pathToFileURL(path.join(ROOT, 'lib', 'index.js')).href)
-const { safeStem, DEFAULTS } = mod.__internal
+const { safeStem, DEFAULTS, GPU_PROFILES } = mod.__internal
 const HOST = ['index.js', 'config.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
 const CLIENT = readFileSync(path.join(ROOT, 'lib', 'client.js'), 'utf8')
 const HIPFIRE = readFileSync(path.join(ROOT, 'lib', 'hipfire-img.js'), 'utf8')
@@ -425,11 +425,21 @@ console.log('\n=== 20. macOS（Apple Silicon）适配 ★ 2026-10-11 ===')
   // ---- 档案：Apple 不加任何 CUDA/ROCm 专用内核参数 ----
   const src2 = ['index.js', 'config.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
   ok('20. 有 apple 厂商档案', /apple: \{\s*\n\s*id: 'apple'/u.test(src2))
-  ok('20. ★ apple 档案 args 为空（MPS 上 CUDA/ROCm 那套都不适用）',
-    /apple: \{[\s\S]{0,600}?args: \[\]/u.test(src2))
-  ok('20. apple 档案不带任何 packs（不引第三方内核）',
-    /apple: \{[\s\S]{0,900}?packs: \[\]/u.test(src2))
-  ok('20. apple 档案明确写了"统一内存"', /apple: \{[\s\S]{0,900}?统一内存/u.test(src2))
+  // ★★★ 2026-10-12 改：下面三条原本断言「apple 档案 `args: []`」——
+  //   那断言的恰恰是**要修掉的旧状态**（Mac 上什么都不加 = 零优化）。
+  //   现在改成**行为断言**（直接问 `GPU_PROFILES.apple`），比钉源码文本更稳也更准：
+  //   Mac 上"不能加"的只是 **CUDA / ROCm 专属内核**；而
+  //   `--use-pytorch-cross-attention` 恰恰是把它切到 Metal SDPA 的开关
+  //   （依据：ComfyUI 源码 `ENABLE_PYTORCH_ATTENTION` 的自动开启条件里**没有 MPS**）。
+  ok('20. ★ apple 档案**不挂**任何 CUDA/ROCm 专属内核（MPS 上不存在这些后端）',
+    !GPU_PROFILES.apple.args.some((a) => /--use-(sage|quad|ck|flash)-/u.test(a)),
+    GPU_PROFILES.apple.args)
+  ok('20. ★ apple 档案挂 --use-pytorch-cross-attention（Mac 上真正切到 Metal SDPA 的开关）',
+    GPU_PROFILES.apple.args.includes('--use-pytorch-cross-attention'), GPU_PROFILES.apple.args)
+  ok('20. ★ apple 档案带 MPS 算子回退环境变量（PYTORCH_ENABLE_MPS_FALLBACK=1）',
+    GPU_PROFILES.apple.env?.PYTORCH_ENABLE_MPS_FALLBACK === '1', GPU_PROFILES.apple.env)
+  ok('20. apple 档案不带任何 packs（不引第三方内核）', GPU_PROFILES.apple.packs.length === 0)
+  ok('20. apple 档案的 label 写明"统一内存"', GPU_PROFILES.apple.label.includes('统一内存'))
 
   // ---- ★ 2026-10-12：档位表已撤，只剩"按文件后缀选加载器"这一件事 ----
   ok('20. 档位表保留（用户要求）', src2.includes('const MODEL_TIERS = {'))

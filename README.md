@@ -44,9 +44,19 @@
 | AMD RDNA3（RX 7000） | `Radeon RX 7xxx`              | `--use-quad-cross-attention`    | A 卡专属内核（可选）、异步卸载（可选）                      |
 | AMD RDNA4（RX 9000） | `Radeon RX 9xxx`              | `--use-pytorch-cross-attention` | A 卡专属内核（可选）、异步卸载（可选）                      |
 | AMD RDNA2（RX 6000） | `Radeon RX 6xxx`              | `--use-pytorch-cross-attention` | A 卡专属内核（可选）、异步卸载（可选）                      |
-| Apple Silicon ★      | `Apple M1`–`M4`               | 不指定（PyTorch MPS 默认路径）   | 无（MPS 上 CUDA/ROCm 那套都不适用）                       |
+| AMD RDNA1（RX 5000）★ | `Radeon RX 5xxx`              | `--use-pytorch-cross-attention` | A 卡专属内核（可选）、异步卸载（可选）                      |
+| Apple Silicon ★      | `Apple M1`–`M5`               | `--use-pytorch-cross-attention` | MPS 算子回退（默认开）、取消显存水位上限（可选）                 |
+| Intel Mac + AMD 独显 ★ | `Radeon Pro 5xxxM` 等         | `--use-pytorch-cross-attention` | 同上（macOS 上 AMD 显卡**走 Metal，不走 ROCm**）        |
+| Intel Mac（核显）★     | `Intel Iris` / `UHD Graphics` | 不指定                             | MPS 算子回退（默认开）                             |
 
 各类硬件的参数与加速组件相互独立，不会交叉套用。
+
+> ★ **平台闸（2026-10-12 新增）**：显卡判定在**平台**这一维上再收一次口。
+> 同一个型号名在不同平台能用的计算栈完全不同 ——
+> Windows/Linux 上的 `Radeon RX 7900 XT` 走 ROCm（quad / CK 那套），
+> 而 **macOS 上的 AMD 显卡只有 Metal/MPS 一条路**（Apple 不提供 ROCm）；
+> Windows/Linux 上的 `Intel Arc` 走 XPU + IPEX，而 **macOS 上根本没有 XPU 后端**。
+> 不收口就会出现"Intel Mac 被建议装 IPEX"这类**照着做必然失败**的建议。
 
 #### A 卡专属优化（可选，默认关）★ 2026-10-11 新增
 
@@ -56,11 +66,11 @@
 
 | 开关          | 作用                | 按代系给什么                                                                                                  |
 | ----------- | ----------------- | ------------------------------------------------------------------------------------------------------- |
-| **A 卡专属内核** | 换用本代的替代注意力内核      | 6000 → `--use-quad-cross-attention`；7000 / 9000 → `--use-ck-attention`                                  |
+| **A 卡专属内核** | 换用本代的替代注意力内核      | 5000 / 6000 → `--use-quad-cross-attention`；7000 / 9000 → `--use-ck-attention`                            |
 | **A 卡异步卸载** | `--async-offload` | ComfyUI 的 help 原文写着它 *"Enabled by default on Nvidia"* —— 即 **N 卡默认开、A 卡默认关**，这里给 A 卡补上（只改权重加载的时机，与计算重叠） |
 
 > ⚠ 两个都是**启动参数** ⇒ 改完**必须重启 ComfyUI** 才生效（面板提示里也写了）。  
-> ⚠ 6000 / 9000 我们**没有硬件实测**，所以一律默认关 —— 属可选档，不合适就关回去。  
+> ⚠ 5000 / 6000 / 9000 我们**没有硬件实测**，所以一律默认关 —— 属可选档，不合适就关回去。  
 > ⚠ 也**不会**因为默认关而把面板显示成"优化部分启用"：它们被标记为**可选**，  
 > 单独计入总账的「N 项可选（默认关）」。  
 > 想永久生效：把 `amdKernel` / `amdAsyncOffload` 写进 `cordis.patch.yml`（面板开关是内存态）。
@@ -71,30 +81,62 @@
 
 - **Windows**：经 WMI 派生进程（宿主重启不会连带终止 ComfyUI），显卡信息取自 PowerShell；
 - **Linux**：以 `setsid` / `nohup` 脱离会话，显卡信息取自 `nvidia-smi` / `rocm-smi` / `lspci` 及 `/sys`；
-- **macOS（Apple Silicon）★ 2026-10-11 新增**：显卡信息取自 `system_profiler` / `sysctl`，
+- **macOS（Apple Silicon / Intel Mac）★ 2026-10-11 新增，2026-10-12 补上真正的优化**：
+  显卡信息取自 `system_profiler` / `sysctl`，
   进程脱离会话**先探测 `setsid` 是否存在**（**macOS 没有这个命令**），没有就退回 `nohup`。
 
 #### macOS 怎么用
 
-ComfyUI 官方对 Apple Silicon（M1–M4）**只提供手动安装**（没有便携包），所以：
+ComfyUI 官方对 Apple Silicon（M1–M5）**只提供手动安装**（没有便携包），所以：
 
 1. 装 **pytorch nightly** —— 按 Apple 的 Metal 加速指南：<https://developer.apple.com/metal/pytorch/>
 2. 按 ComfyUI 官方「Manual Installation」装依赖
-3. 启动：`python main.py` —— **官方没有 Mac 专属启动参数**，直接跑即可
+3. 启动：`python main.py`（插件会自动补上下面那条参数，你**不需要**手写）
 
 然后 `node scripts/setup.mjs --comfy <你的 ComfyUI 目录>` 就能继续「下模型 + 挂插件」两步。
 （插件**不会**替 macOS 用户去下 Windows 便携包。）
 
-> ⚠ 插件在 Apple Silicon 上**不加任何 CUDA / ROCm 专用内核参数**
+#### macOS 上插件到底做了什么（★ 2026-10-12）
+
+先说清**为什么之前是"零优化"**：ComfyUI 在 MPS 上**不会自动**启用 PyTorch SDPA ——
+它的 `ENABLE_PYTORCH_ATTENTION` 自动开启条件里只有 NVIDIA / Intel XPU / Ascend / MLU
+和一批 AMD gfx 代号，**没有任何一条与 MPS 相关**。于是 Mac 上会落到
+`attention_sub_quad`（那个给 CPU / 低显存场景准备的次二次实现），
+**根本没走 Metal 的融合内核**。
+
+现在插件会做两件事：
+
+| 做什么 | 怎么做的 | 依据 |
+| --- | --- | --- |
+| **切到 Metal 融合 SDPA** | 启动参数加 `--use-pytorch-cross-attention` | ComfyUI 源码 `comfy/model_management.py` 里 `ENABLE_PYTORCH_ATTENTION` 无 MPS 分支（可自行复核） |
+| **兜住未实现的算子** | 注入环境变量 `PYTORCH_ENABLE_MPS_FALLBACK=1` | PyTorch 官方 "MPS Environment Variables" 文档 |
+
+另有**一个可选档**（默认关）：`PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0` ——
+取消 MPS 分配器的硬上限（官方默认 **1.7**），让大模型在小内存 Mac 上**可能跑得起来**。
+默认关是因为官方明确写了：取消硬上限后若发生系统级 OOM，*"may cause system failure"* ——
+那是"用稳定性换可用性"的取舍，得你自己权衡。
+
+> ⚠ 插件在 Mac 上**不加任何 CUDA / ROCm 专用内核参数**
 > （`--use-sage-attention` / `--use-quad-cross-attention` / `--use-ck-attention` 在 MPS 上都不适用）。
-> ⚠ **统一内存没有独立显存** ⇒ `--highvram` / `--reserve-vram` 这套驻留参数**显式跳过**，
-> 面板会如实说明"不适用于统一内存"。
-> ⚠ 官方文档**没有提 Intel Mac**（老 Intel 机型 + 核显基本跑不动）。
+> ⚠ **统一内存没有独立显存** ⇒ `--highvram` / `--reserve-vram` 这套驻留参数**显式跳过**
+> （ComfyUI 源码里 MPS 的 `vram_state` 被强制成 `SHARED`，这组参数根本不参与），
+> 面板会如实说明"为什么没有这一项"。
+> ⚠ `--force-fp16` / `--force-non-blocking` **也不加** —— ComfyUI 对 MPS 本来就是 fp16、
+> 且源码里 `device_supports_non_blocking()` 对 MPS 恒为 False（原注释：*"mps doesn't support non blocking"*）。
+> ⚠ **Intel Mac**：没有 CUDA / ROCm / XPU 任何一条厂商计算栈。
+> 带 AMD 独显的机型走 MPS（识别为「Intel Mac + AMD 独显」）；
+> 只有 Intel 核显的机型实际上只能跑 CPU，**出图会非常慢** —— 这是硬件事实，不粉饰。
+> ⚠ 上述 Mac 优化**没有真机实测**（开发机是 Windows + ROCm）。
+> 依据是 ComfyUI 与 PyTorch 的源码/官方文档（都可复核），但"能快多少"给不出数字。
+> 想回到"一个参数都不加"：把 `comfyAttentionBackend` 设为 `default`。
 
 ### 四、可运维性
 
 - 面板与工具如实报告每一项优化的真实状态（已启用 / 可启用 / 不可启用 / 按尺寸让位）。
-- 随附 **20 套**回归测试，覆盖三厂商判定、**三平台**分支（Windows / Linux / macOS）、工作流接线、取消与超时、可移植性及打包完整性。
+- 随附 **22 套**回归测试，覆盖四厂商判定、**三平台**分支（Windows / Linux / macOS）、
+  工作流接线、取消与超时、可移植性及打包完整性。
+  其中 `_mac_env_test.mjs` 会**真起一个 `sh` 跑一遍**启动命令，
+  验证 macOS 的环境变量确实注入到了子进程（而不是"看起来像"）。
 
 ---
 
@@ -405,6 +447,14 @@ AMD 用户先 `node scripts/setup.mjs --check` 看计划，确认后 `--yes` 执
 ⚠ 三条必读：**A 卡可能静默出错**（跑完必须人眼看图）、**别升 ROCm 10.0**  
 （HIP 7.15 会破坏权重，脚本锁 7.2.1）、模型**禁止商用**。
 
+> ★ **RX 5000 系列（RDNA1 / gfx101x）单独说一句**：这一代**不在 ROCm 官方支持矩阵内** ——
+> PyTorch 官方 ROCm 轮子没有编译 gfx101x，通常需要 `HSA_OVERRIDE_GFX_VERSION`
+> （或自行按 gfx1010 / gfx1012 重新编译 PyTorch）才能让 PyTorch 认卡。
+> 这属于**环境搭建**层面的事，插件不改也不该改（改驱动/编译轮子的风险远大于收益），
+> 只在识别到这一代时把这件事写进面板提示，免得你"装完发现认不到卡"。
+> 注意力后端上它与 RDNA2 同样走保守的 `--use-pytorch-cross-attention`
+> （ROCm 的 AOTriton 融合内核只覆盖 RDNA3 / 3.5 / 4，CK SDPA 也不覆盖 gfx101x）。
+
 完整说明见 [INSTALL.md](INSTALL.md) 的「AMD Radeon 用户」一节。
 
 ### 只装插件本体
@@ -576,13 +626,18 @@ node scripts/selftest.mjs
 
 | 字段 | 默认 | 适用 | 说明 |
 | --- | --- | --- | --- |
-| `amdKernel` | `false` | AMD | 换用本代的替代注意力内核：**6000 → `--use-quad-cross-attention`**，**7000 / 9000 → `--use-ck-attention`** |
+| `amdKernel` | `false` | AMD | 换用本代的替代注意力内核：**5000 / 6000 → `--use-quad-cross-attention`**，**7000 / 9000 → `--use-ck-attention`** |
 | `amdAsyncOffload` | `false` | AMD | `--async-offload`（ComfyUI 在 **N 卡上默认开、A 卡上默认关**，这里给 A 卡补上） |
 | `nvidiaSageAttention` | `'auto'` | NVIDIA | `'auto'` = 自检确认 sageattention **已装**才挂 `--use-sage-attention`；`true` 强制挂（**确定装好了再设**，没装会让 ComfyUI 起不来）；`false` 永不挂 |
+| `appleMpsFallback` | `true` | macOS | 注入 `PYTORCH_ENABLE_MPS_FALLBACK=1`：MPS 未实现的算子自动回退 CPU，而不是让整次出图抛错（**质量中性**，只影响"本来就会失败"的路径） |
+| `appleMpsUnlimitedMem` | `false` | macOS | 注入 `PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0`：取消 MPS 分配器硬上限（官方默认 1.7），大模型在小内存 Mac 上**可能就能跑**。⚠ 系统级 OOM 会连系统一起拖垮，官方原文 *"may cause system failure"* |
 | `comfyAttentionBackend` | `'auto'` | 全部 | 手动接管注意力后端：`quad` / `pytorch` / `ck` / `default`（`auto` = 按显卡自动选） |
 
 > ⚠ 前三个都是**启动参数** ⇒ 改完**必须重启 ComfyUI** 才生效。
-> ⚠ Apple Silicon 上这些**都不会生效**（MPS 没有这些内核），插件也**不会**给统一内存加 `--highvram` 那套。
+> ⚠ 两个 `appleMps*` 是**注入给 ComfyUI 进程的环境变量**（不是命令行参数）⇒ 同样需重启 ComfyUI；
+> 且**只在 macOS 生效** —— 其它平台改它们会被服务端直接拒绝（没有 MPS 后端，改了也不会发生什么）。
+> ⚠ Mac 上**不会**挂 `--use-sage-attention` / `--use-quad-cross-attention` / `--use-ck-attention`
+> （MPS 没有这些内核），也**不会**给统一内存加 `--highvram` 那套（MPS 的 `vram_state` 恒为 `SHARED`，加了不参与）。
 
 ### 加速链（★ 2026-10-08 新增，默认全开）
 

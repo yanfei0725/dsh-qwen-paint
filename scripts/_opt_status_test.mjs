@@ -565,7 +565,10 @@ console.log('\n=== 12. 界面侧：徽标可点 + 菜单入口 + 四态渲染 �
   // 记下总数（39 = 31 个 `}` 收尾 + 8 个 `)` 收尾）作为基线 —— 数字变了说明有人加了新的拼接点，
   // 应该先确认那处**不会**收到非 Error 值（或者干脆改用 toError）。
   const rawFallbacks = (host.match(/message \?\? error/gu) ?? []).length
-  assert(`⑫ error?.message ?? error 拼接点基线仍为 ${rawFallbacks} 处（基线 41）`, rawFallbacks === 41)
+  // ★ 2026-10-12：41 → 42。新增的 1 处在 config.js 的 macOS「补探」分支
+  //   （`log?.('info', ...${error?.message ?? error})`）—— 收的同样是 catch 到的值，
+  //   与既有各处同源；已确认**不是**新引入的"对象被 String 化"风险点。
+  assert(`⑫ error?.message ?? error 拼接点基线仍为 ${rawFallbacks} 处（基线 42）`, rawFallbacks === 42)
 }
 
 console.log(`\n=== 结果：${fail === 0 ? '全部通过' : `${fail} 项失败`} ===`)

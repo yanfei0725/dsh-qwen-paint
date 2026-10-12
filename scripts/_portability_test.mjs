@@ -97,10 +97,22 @@ assert('macOS 探测含 sysctl 兜底', src.includes('machdep.cpu.brand_string')
 assert('★ 探测命令**三路分派**（Windows / macOS / Linux）',
   src.includes('IS_WINDOWS ? GPU_PROBE_WIN : (IS_MAC ? GPU_PROBE_MAC : GPU_PROBE_LINUX)'))
 assert('有 apple 厂商档案', src.includes('apple: {'))
-assert('★ apple 档案不加任何 CUDA/ROCm 专用内核参数（MPS 上不适用）',
-  /apple: \{[\s\S]{0,500}?args: \[\]/u.test(src))
-assert('★ Apple 显式跳过离散显存驻留参数（统一内存没有独立显存）',
-  src.includes("if (gpu.id === 'apple')"))
+// ★★★ 2026-10-12 改：原断言是「apple 档案 `args: []`」—— 那正是**要修掉的旧状态**
+//   （Mac 上一个参数都不加 = 没有任何优化）。
+//   现在 Mac 挂的是**通用**的 `--use-pytorch-cross-attention`（依据：ComfyUI 源码里
+//   `ENABLE_PYTORCH_ATTENTION` 没有 MPS 分支 ⇒ 不显式指定就落到次二次实现）；
+//   而 **CUDA / ROCm 专属内核依旧一个都不能挂**（MPS 上不存在这些后端）—— 这条不变。
+// ⚠ 这里**只能看 `args:` 那一行**，不能在整个档案块里搜参数名 ——
+//   档案的注释里**故意列举**了"不加哪些参数"（`--use-sage-attention` 等），
+//   整块搜会把注释也命中，得到假失败（第一版就是这么挂的）。
+const appleArgs = /apple: \{[\s\S]{0,4000}?args: (\[[^\]]*\])/u.exec(src)?.[1] ?? ''
+assert('★ apple 档案只挂通用 SDPA，不挂任何 CUDA/ROCm 专属内核（MPS 上不适用）',
+  appleArgs.includes('--use-pytorch-cross-attention') && !/--use-(sage|quad|ck|flash)-/u.test(appleArgs),
+  appleArgs)
+assert('★ apple 档案注入 MPS 算子回退环境变量（PYTORCH_ENABLE_MPS_FALLBACK）',
+  /apple: \{[\s\S]{0,4000}?env: \{ PYTORCH_ENABLE_MPS_FALLBACK/u.test(src))
+assert('★ macOS **整个平台**跳过离散显存驻留参数（MPS 上 vram_state 恒为 SHARED）',
+  /if \(IS_MAC\) \{\s*\n\s*const label = GPU_PROFILES/u.test(src))
 assert('有 macOS 显存探测（PyTorch MPS）',
   src.includes('GPU_VRAM_PROBE_PY_MAC') && src.includes('recommended_max_memory'))
 // ★ 2026-10-11 修的真 bug：显存探测那行原来**没有平台闸** ——

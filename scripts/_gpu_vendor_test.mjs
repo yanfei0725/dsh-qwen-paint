@@ -12,7 +12,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const mod = await import(pathToFileURL(path.join(ROOT, 'lib', 'index.js')).href)
-const { vendorIdOf, GPU_PROFILES, ACCEL_PACKS, packAppliesToOs, buildWorkflow, DEFAULTS } = mod.__internal
+const { vendorIdOf, GPU_PROFILES, ACCEL_PACKS, packAppliesToOs, buildWorkflow, DEFAULTS, describeOptimization } = mod.__internal
 
 let fail = 0
 const ok = (name, cond) => { console.log(`  ${cond ? 'OK  ' : 'FAIL'} ${name}`); if (!cond) fail += 1 }
@@ -28,8 +28,20 @@ const cases = [
   ['AMD Radeon RX 7900 XT', 'amd_rdna3'],
   ['AMD Radeon RX 9070 XT', 'amd_rdna4'],
   ['AMD Radeon RX 6800 XT', 'amd_rdna2'],
-  // ★ 2026-10-11：macOS 适配后 Apple Silicon 有专属档案了（此前是 unknown）
+  // ★★★ 2026-10-12 新增：**RDNA1（RX 5000 系列）** —— 此前没有规则，
+  //   会落到泛化的 `amd`（"未识别具体架构" + 被套上 quad）。
+  ['AMD Radeon RX 5700 XT', 'amd_rdna1'],
+  ['AMD Radeon RX 5600 XT', 'amd_rdna1'],
+  ['AMD Radeon RX 5500 XT', 'amd_rdna1'],
+  // 2026-10-11：macOS 适配后 Apple Silicon 有专属档案了（此前是 unknown）
   ['Apple M2 Max', 'apple'],
+  // ★★★ 2026-10-12：M1–M5 **全代次**都要认得出（`m\d` 覆盖 M1–M9，新代次无需改代码）
+  ['Apple M1', 'apple'],
+  ['Apple M1 Max', 'apple'],
+  ['Apple M3 Pro', 'apple'],
+  ['Apple M4', 'apple'],
+  ['Apple M5', 'apple'],
+  ['Apple M9 Ultra', 'apple'],
   ['', 'unknown'],
   // ★ 混合机型：独显优先于核显（"AMD 核显 | NVIDIA 独显"必须判 nvidia）
   ['AMD Radeon Graphics | NVIDIA GeForce RTX 4090', 'nvidia'],
@@ -54,6 +66,25 @@ ok('AMD RDNA4 → pytorch-cross-attention（换 CK 内核）',
 ok('AMD RDNA2 → pytorch-cross-attention（保守）',
   GPU_PROFILES.amd_rdna2.args.join(' ') === '--use-pytorch-cross-attention')
 ok('unknown → 一个参数都不加（保证能起来）', GPU_PROFILES.unknown.args.length === 0)
+// ★★★ 2026-10-12：RDNA1 与 RDNA2 同属"没有厂商级融合注意力内核"的一代
+ok('★ AMD RDNA1（RX 5000）→ pytorch-cross-attention（无 AOTriton / CK 覆盖，保守）',
+  GPU_PROFILES.amd_rdna1.args.join(' ') === '--use-pytorch-cross-attention')
+ok('★ AMD RDNA1 的档案里写明了 HSA_OVERRIDE_GFX_VERSION（不在 ROCm 官方支持矩阵内）',
+  String(GPU_PROFILES.amd_rdna1.note).includes('HSA_OVERRIDE_GFX_VERSION'))
+ok('★ AMD RDNA1 **不**拿 quad（那是"可选内核"，不是默认路径）',
+  !GPU_PROFILES.amd_rdna1.args.includes('--use-quad-cross-attention'))
+// ★★★ 2026-10-12：Mac 四档 —— 都走 Metal/MPS，args 必须一致且只挂通用 SDPA
+ok('★ Mac 四档的 args 完全一致（macOS 上只有 Metal/MPS 一条路，与具体芯片无关）',
+  ['apple', 'mac_amd', 'mac_mps', 'intel_mac'].every((id) =>
+    id === 'intel_mac'
+      ? GPU_PROFILES[id].args.length === 0
+      : GPU_PROFILES[id].args.join(' ') === '--use-pytorch-cross-attention'))
+ok('★ Intel Mac **一个参数都不加**（macOS 上没有 XPU，装 IPEX 是白折腾）',
+  GPU_PROFILES.intel_mac.args.length === 0 && GPU_PROFILES.intel_mac.packs.length === 0)
+ok('★ 三个"有 MPS"的 Mac 档都带 PYTORCH_ENABLE_MPS_FALLBACK',
+  ['apple', 'mac_amd', 'mac_mps'].every((id) =>
+    GPU_PROFILES[id].env?.PYTORCH_ENABLE_MPS_FALLBACK === '1'))
+ok('★ Mac 四档都**不引第三方加速包**', ['apple', 'mac_amd', 'mac_mps', 'intel_mac'].every((id) => GPU_PROFILES[id].packs.length === 0))
 
 console.log('\n=== ③ 每家拿到的**专用加速包**各不相同 ===')
 ok('NVIDIA 的包含 triton-windows + sageattention + nunchaku',
@@ -95,6 +126,71 @@ ok('★ 节点没装（nodes 无 rdna3fa）→ 不挂', !faNode(buildWorkflow({ 
 ok('★ 配置关掉（rdna3FlashAttention=false）→ 不挂',
   !faNode(buildWorkflow({ ...DEFAULTS, rdna3FlashAttention: false }, { prompt: 'x', width: 992, height: 992, seed: 1 },
     { level: 'full', gpu: { name: 'AMD Radeon RX 7900 XT' }, nodes: { turbo8: true, prefixCache: true, teSpeed: true, speedup: true, blockCache: true, rdna3fa: true } })))
+
+console.log('\n=== ⑥ macOS 平台闸：同一张卡在 Mac 上走 Metal，**不走** ROCm / CUDA / XPU ===')
+// 依据：macOS 上 Apple 只提供 Metal / MPS —— 没有 ROCm、没有 CUDA、也没有 XPU 后端。
+// 不收这道口，就会出现"Mac 上的 A 卡被建议挂 --use-ck-attention"、
+// "Intel Mac 被建议装 XPU + IPEX" 这类**照着做必然失败**的建议。
+// ⚠ 本机是 Windows ⇒ 用可注入的 platform 参数直接回归 darwin 分支（不必等真机）。
+ok('★ Apple M1–M5 全部 → apple',
+  ['Apple M1', 'Apple M2 Pro', 'Apple M3 Max', 'Apple M4', 'Apple M5'].every((n) => vendorIdOf(n, 'darwin') === 'apple'))
+ok('★ 未来代次（M9）无需改代码也识别', vendorIdOf('Apple M9 Ultra', 'darwin') === 'apple')
+ok('★ Intel Mac + AMD 独显 → mac_amd（走 Metal，**不套** ROCm 的 quad / ck）',
+  vendorIdOf('AMD Radeon Pro 5500M | Intel UHD Graphics 630', 'darwin') === 'mac_amd')
+ok('★ Intel Mac 核显 → intel_mac（**不是** intel，避免被建议装 XPU + IPEX）',
+  vendorIdOf('Intel Iris Plus Graphics', 'darwin') === 'intel_mac')
+ok('★ ComfyUI 在 Mac 上只报 "mps" → mac_mps（型号未识别，但仍走对 Mac 路径）',
+  vendorIdOf('mps', 'darwin') === 'mac_mps')
+ok('★ 什么都探不到 → unknown（不猜）', vendorIdOf('', 'darwin') === 'unknown')
+ok('★ 同一张 RX 7900 XT：Windows 走 ROCm 档 / macOS 走 Metal 档',
+  vendorIdOf('AMD Radeon RX 7900 XT', 'win32') === 'amd_rdna3'
+  && vendorIdOf('AMD Radeon RX 7900 XT', 'darwin') === 'mac_amd')
+ok('★ 同一张 Intel Arc A770：Windows 走 XPU 档 / macOS 走 intel_mac',
+  vendorIdOf('Intel(R) Arc(TM) A770 Graphics', 'win32') === 'intel_alchemist'
+  && vendorIdOf('Intel(R) Arc(TM) A770 Graphics', 'darwin') === 'intel_mac')
+ok('★ 平台闸**只在 darwin 生效**（Linux 判定必须一字不变）',
+  vendorIdOf('AMD Radeon RX 7900 XT', 'linux') === 'amd_rdna3'
+  && vendorIdOf('Apple M4', 'win32') === 'apple')
+
+console.log('\n=== ⑦ 面板：Mac 专属项 + RDNA1 提示（都用可注入 platform 回归） ===')
+const panelCaps = (name, vramGB = 16) => ({
+  level: 'full', probeFailed: false,
+  nodes: { qwen21: true, prefixCache: true, teSpeed: true, speedup: true, blockCache: true, rdna3fa: true, loraOnly: true },
+  models: { unet: 'u.safetensors', clip: 'c.safetensors', vae: 'v.safetensors', turbo8Lora: 'turbo8_lora_step2500.safetensors' },
+  gpu: { name, vramGB }, notes: [],
+})
+const mac = describeOptimization({ ...DEFAULTS }, panelCaps('Apple M4 Pro'), 'darwin')
+const macNames = mac.detail.map((d) => d.name)
+ok('★ Mac 上出现「macOS 平台路径」项（说明走了哪条路）', macNames.some((n) => n.includes('macOS 平台路径')))
+ok('★ Mac 上出现「MPS 算子回退兜底」项', macNames.some((n) => n.includes('MPS 算子回退兜底')))
+ok('★ Mac 上出现「MPS 取消显存水位上限」**可选档**',
+  mac.detail.some((d) => d.name.includes('MPS 取消显存水位上限') && d.optional === true))
+ok('★ 两个 Mac 开关都带**可点** toggle',
+  ['applempsfallback', 'applempsunlimited'].every((k) =>
+    mac.detail.some((d) => d.toggle?.key === k && d.toggle.canToggle === true)))
+ok('★ Mac 上**不把**「显存驻留」列成"不可启用"（MPS 上它根本不参与）',
+  !macNames.some((n) => n.includes('显存驻留')))
+ok('★ 但也不静默消失：如实写明"为什么没有这一项"',
+  mac.filtered.some((n) => n.includes('显存驻留')))
+ok('★ 配置齐全的 Mac → level=full（不因平台差异误报"部分启用"）',
+  mac.level === 'full' && mac.ok === true, mac.summary)
+ok('★ Mac 上 RDNA3 FA 被隐藏（gfx1100 专用，Mac 上不存在该节点）',
+  mac.filtered.some((n) => n.includes('RDNA3 FlashAttention')))
+// Mac 专属项只在 Mac 出现 —— N 卡上不许冒出来
+const nv = describeOptimization({ ...DEFAULTS }, panelCaps('NVIDIA GeForce RTX 4090', 24), 'win32')
+ok('★ 非 Mac 上**不出现**任何 Mac 专属项',
+  !nv.detail.some((d) => /MPS|平台路径/.test(d.name)) && !nv.filtered.some((n) => n.includes('显存驻留')))
+ok('★ 非 Mac 上「显存驻留」照常列出（没有被平台分支误伤）',
+  nv.detail.some((d) => d.name.includes('显存驻留')))
+// RDNA1 面板
+const r1 = describeOptimization({ ...DEFAULTS }, panelCaps('AMD Radeon RX 5700 XT', 8), 'win32')
+ok('★ RDNA1 的可选内核给 quad（该代没有 AOTriton / CK 覆盖）',
+  r1.detail.some((d) => d.name.includes('A 卡专属内核（可选）：--use-quad-cross-attention')))
+ok('★ RDNA1 上**不出现** RDNA3 的 FA 项（gfx1100 专用，别家卡挂上会崩）',
+  !r1.detail.some((d) => d.name.includes('RDNA3 FlashAttention'))
+  && r1.filtered.some((n) => n.includes('RDNA3 FlashAttention')))
+ok('★ RDNA1 仍带 A 卡的两项可选档（与 RDNA2/3/4 同等待遇）',
+  r1.detail.some((d) => d.toggle?.key === 'amdkernel') && r1.detail.some((d) => d.toggle?.key === 'asyncOffload'))
 
 console.log(`\n=== 结果：${fail === 0 ? '全部通过' : `${fail} 项失败`} ===`)
 process.exit(fail === 0 ? 0 : 1)
