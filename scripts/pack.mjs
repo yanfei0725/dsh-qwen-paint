@@ -77,7 +77,7 @@ const DIRS = ['lib', 'assets', 'scripts']
  *   **本地保留、不进包、不上 GitHub**。拆分与压缩的结果（lib/*.js、
  *   assets/loading.webp）才是要发布的东西。
  */
-const SKIP = /(^|[\\/])(node_modules|dist|\.git|_backup[^\\/]*|__pycache__)([\\/]|$)|\.(log|zip|tmp)$|\.bak[^\\/]*$|(^|[\\/])(_split_move|_dbg|_shrink_webp|_ref)\./iu
+const SKIP = /(^|[\\/])(node_modules|dist|\.git|_backup[^\\/]*|__pycache__)([\\/]|$)|\.(log|zip|tmp)$|\.bak[^\\/]*$|(^|[\\/])(_ref|_split_move|_dbg|_shrink_webp|_sync_publish|_push_github|_push_release|_verify_remote)\./iu
 
 /* ------------------------------------------------------------------ ① 组装 ---- */
 
@@ -153,6 +153,10 @@ const FORBIDDEN = [
     ? null
     : { re: new RegExp(LOCAL_USER.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'iu'), why: `本机用户名（${LOCAL_USER}）` },
   { re: /C:\\+Users\\+(?!<)/iu, why: 'Windows 用户目录绝对路径（真实用户名）' },
+  // ★ 2026-10-12 补：**正斜杠形态**。上面那条只拦 `C:\Users\x`，
+  //   但 Python/Node 脚本里常写 `C:/Users/x`（正斜杠）—— 实测被漏过。
+  //   `(?!<)` 同样放行文档里的 `C:/Users/<用户名>` 占位符。
+  { re: /C:[\\/]+Users[\\/]+(?!<)/iu, why: 'Windows 用户目录绝对路径（真实用户名，正斜杠形态）' },
   { re: new RegExp(`D:${'[\\\\/]+'}AI${'工作站'}`, 'iu'), why: '开发机工作目录' },
   { re: /AppData\\+Local\\+Temp/iu, why: '临时目录' },
   { re: /\.dsh[\\/]+sessions/iu, why: '会话记录路径' },
