@@ -46,13 +46,23 @@ try {
 // ---- 2. 必需字段（DSH 靠这些认插件）----
 const REQUIRED = [
   ['name', 'dsh-qwen-paint'],
-  ['version', '0.1.5'],
   ['main', 'lib/index.js'],
   ['type', 'module'],
 ]
 for (const [key, want] of REQUIRED) {
   if (pkg[key] === want) ok(`package.json ${key} = ${want}`)
   else bad(`package.json ${key}`, `应为 ${want}，实际 ${JSON.stringify(pkg[key])}`)
+}
+
+// ★ 2026-10-12：版本号**只校验格式**（合法 semver），不再写死具体数字。
+//   为什么改：版本号每次发布都会变（0.1.5 → 0.15.5 → …），写死会让每次升版都得
+//   机械改这一行 —— 久了就变成"照抄改一下"的橡皮图章，反而失去检查意义。
+//   而本测试真正要防的事故（package.json 被 vendor 覆盖成 `{"name":"vendor"}`）
+//   已由上面 name / main / type 三条 + 这里的格式校验一起兜住。
+if (/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(String(pkg.version ?? ''))) {
+  ok(`package.json version 是合法 semver（当前 ${pkg.version}）`)
+} else {
+  bad('package.json version', `不是合法 semver：${JSON.stringify(pkg.version)}`)
 }
 
 // ---- 3. dsh 段（插件能被 DSH 加载的关键）----

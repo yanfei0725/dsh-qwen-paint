@@ -259,6 +259,10 @@ console.log('\n=== 18. A 卡专属优化（可选，质量中性；9000/7000/600
   })
   const names = (opt) => opt.detail.map((d) => d.name)
   const isOpt = (d) => d.optional === true
+  // ⚠ 本节测的是「A 卡专属那两项」，所以按**名字**过滤，不数"所有 optional 项" ——
+  //   后者会随新增可选项而假失败（2026-10-12 加「极速档」时就撞过一次）。
+  const isAmdOpt = (d) => isOpt(d) && /A 卡/.test(d.name)
+  const isFast4 = (d) => d.name.includes('极速档')
 
   // ---- 默认关 ----
   ok('18. amdKernel 默认关', DEF.amdKernel === false)
@@ -268,18 +272,20 @@ console.log('\n=== 18. A 卡专属优化（可选，质量中性；9000/7000/600
   const amd = describeOptimization({ ...DEF }, capsWith('AMD Radeon RX 7900 XTX'))
   ok('18. AMD 上出现「专属内核」项', names(amd).some((n) => n.includes('A 卡专属内核')), names(amd))
   ok('18. AMD 上出现「异步卸载」项', names(amd).some((n) => n.includes('异步卸载')))
-  ok('18. 这两项都带 optional 标记', amd.detail.filter(isOpt).length === 2)
-  ok('18. 两项默认都是 off', amd.detail.filter(isOpt).every((d) => d.state === 'off'))
-  ok('18. 两项都带可点开关', amd.detail.filter(isOpt).every((d) => d.toggle?.canToggle === true))
+  ok('18. 这两项都带 optional 标记', amd.detail.filter(isAmdOpt).length === 2)
+  ok('18. 两项默认都是 off', amd.detail.filter(isAmdOpt).every((d) => d.state === 'off'))
+  ok('18. 两项都带可点开关', amd.detail.filter(isAmdOpt).every((d) => d.toggle?.canToggle === true))
 
   const nv = describeOptimization({ ...DEF }, capsWith('NVIDIA GeForce RTX 5060'))
   ok('18. N 卡上**不出现** A 卡专属项', !names(nv).some((n) => n.includes('A 卡专属') || n.includes('异步卸载')),
     names(nv))
   // ★ 2026-10-11：N 卡自己有一项可选（SageAttention，见第 19 节），所以这里是 1 而不是 0；
   //   关键不变式是「**没有 A 卡的**那两项」。
-  ok('18. N 卡上可选档只有 SageAttention（1 项），没有 A 卡的两项',
-    nv.detail.filter(isOpt).length === 1 && names(nv).some((n) => n.includes('SageAttention')),
-    nv.detail.filter(isOpt).map((d) => d.name))
+  // ★ 2026-10-12：「极速档」不是厂商专属、所有机器都显示，所以这里要把它排除掉再数。
+  ok('18. N 卡上厂商专属可选档只有 SageAttention（1 项），没有 A 卡的两项',
+    nv.detail.filter((d) => isOpt(d) && !isFast4(d)).length === 1
+    && names(nv).some((n) => n.includes('SageAttention')),
+    nv.detail.filter((d) => isOpt(d) && !isFast4(d)).map((d) => d.name))
 
   const unknown = describeOptimization({ ...DEF }, capsWith(''))
   ok('18. 认不出显卡 → 也不显示 A 卡专属项（不猜）',
@@ -290,15 +296,18 @@ console.log('\n=== 18. A 卡专属优化（可选，质量中性；9000/7000/600
     amd.level === 'full' && amd.ok === true, [amd.level, amd.summary])
   ok('18. 可选档不进 reasons（不是"缺了什么"）',
     !amd.reasons.some((r) => String(r).includes('A 卡专属') || String(r).includes('异步卸载')), amd.reasons)
-  ok('18. stats 有独立的 optional 桶', amd.stats.optional === 2, amd.stats)
+  // ★ 2026-10-12：不再写死 2 —— 改成**不变式**（桶数 == 明细里 optional 的条数），
+  //   这样以后再加可选项也不会假失败，且比魔数更强。
+  ok('18. stats 有独立的 optional 桶，且与明细条数一致',
+    amd.stats.optional === amd.detail.filter(isOpt).length && amd.stats.optional >= 2, amd.stats)
   ok('18. stats 各桶之和 = total（可选档单独一桶，不重复计）',
     amd.stats.on + amd.stats.available + amd.stats.off + amd.stats.blocked
     + amd.stats.superseded + amd.stats.optional === amd.stats.total, amd.stats)
 
   // ---- 打开后 → state 变 on，且**仍不影响** level 判定（它本来就 optional）----
   const on = describeOptimization({ ...DEF, amdKernel: true, amdAsyncOffload: true }, capsWith('AMD Radeon RX 7900 XTX'))
-  ok('18. 打开后两项 state = on', on.detail.filter(isOpt).every((d) => d.state === 'on'))
-  ok('18. 打开后 toggle.on 也同步', on.detail.filter(isOpt).every((d) => d.toggle.on === true))
+  ok('18. 打开后两项 state = on', on.detail.filter(isAmdOpt).every((d) => d.state === 'on'))
+  ok('18. 打开后 toggle.on 也同步', on.detail.filter(isAmdOpt).every((d) => d.toggle.on === true))
 
   // ---- 每代给的内核 flag 不同（按代数）----
   const HOST_SRC = HOST
@@ -548,7 +557,11 @@ console.log('\n=== 22. 第二轮隐患排查所修（★ 2026-10-11，0.1.4） =
   const allOff = describeOptimization({ ...DEF }, capsWith(AMD))
   const oneOn = describeOptimization({ ...DEF, amdKernel: true }, capsWith(AMD))
   const bothOn = describeOptimization({ ...DEF, amdKernel: true, amdAsyncOffload: true }, capsWith(AMD))
-  ok('22.② 都关：optional=2 / optionalOn=0', allOff.stats.optional === 2 && allOff.stats.optionalOn === 0, allOff.stats)
+  // ★ 2026-10-12：不再写死 optional=2 —— 改成不变式（桶数 == 明细里 optional 条数），
+  //   以后再加可选项不会假失败。关键不变式仍是"都关时 optionalOn=0"。
+  ok('22.② 都关：optional 桶与明细一致 / optionalOn=0',
+    allOff.stats.optional === allOff.detail.filter((d) => d.optional === true).length
+    && allOff.stats.optionalOn === 0, allOff.stats)
   ok('22.② 开一个：optionalOn=1', oneOn.stats.optionalOn === 1, oneOn.stats)
   ok('22.② 都开：optionalOn=2（否则总账会自相矛盾地说"默认关"）', bothOn.stats.optionalOn === 2, bothOn.stats)
   ok('22.② optionalOn 是 optional 的子计数（不影响"各桶之和 = total"）',

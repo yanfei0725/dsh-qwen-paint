@@ -52,11 +52,16 @@ console.log('=== 1. 全部就位 → 报"优化已启用" ===')
   //   2026-10-10 再新增「RDNA3 FlashAttention」→ 7 项变 8 项；
   //   ★ 2026-10-11 新增两项 **A 卡专属可选优化**（专属内核 + 异步卸载，仅 AMD 显示）→ 8 项变 10 项。
   //     它们带 `optional: true`，**不计入**"优化是否完整"的判定（见 stats.optional）。
-  assert('十项明细都在（8 项常规 + 2 项 A 卡可选）', r.detail.length === 10)
+  //   ★ 2026-10-12 再新增一项「极速档（4 步）」开关（也是 optional）→ 10 项变 11 项。
+  assert('十一项明细都在（8 项常规 + 2 项 A 卡可选 + 1 项极速档）', r.detail.length === 11)
   assert('含「互斥三选一策略（wrapper）」项',
     r.detail.some((d) => d.name.includes('互斥三选一策略')))
+  // ⚠ 这里**按名字过滤**，不数"所有 optional 项" —— 后者会随新增可选项而假失败
+  //   （加「极速档」时就撞过一次）。测的是"A 卡那两项"，就该只挑 A 卡的。
   assert('★ A 卡两项带 optional 标记（默认关、不拉低 level）',
-    r.detail.filter((d) => d.optional === true).length === 2)
+    r.detail.filter((d) => d.optional === true && /A 卡/.test(d.name)).length === 2)
+  assert('★ 极速档也带 optional 标记（默认关、不拉低 level）',
+    r.detail.some((d) => d.optional === true && d.name.includes('极速档')))
   // ★ 二次修正：wrapper 按尺寸切换后，summary 不能无条件写"+ BlockCache"
   //   （小尺寸实际挂 TE+Speedup），必须说明"按尺寸"。
   assert('★ summary 说明按尺寸自动（不是恒定 BlockCache）', r.summary.includes('按尺寸'))
@@ -291,7 +296,7 @@ console.log('\n=== 11. 四态（on/available/off/blocked）语义 ★★★ 2026
   // （turbo8 / 前缀缓存 / TE-Speed / Speedup / 显存驻留），
   // 外加「互斥三选一策略（wrapper）」恒为 on → 共 7 项、6 on / 1 off。
   // 注意 off 与 blocked 的区别：off = 改配置就能开（本用例正是这种）。
-  assert('全齐 → 十项明细（8 常规 + 2 项 A 卡可选）', rFull.detail.length === 10)
+  assert('全齐 → 十一项明细（8 常规 + 2 项 A 卡可选 + 1 项极速档）', rFull.detail.length === 11)
   assert('全齐 → 七项 on + BlockCache 一项 off（被配置关）',
     rFull.detail.filter((d) => d.state === 'on').length === 7
     && rFull.detail.find((d) => d.name.includes('BlockCache'))?.state === 'off')
@@ -486,12 +491,39 @@ console.log('\n=== 12. 界面侧：徽标可点 + 菜单入口 + 四态渲染 �
   //     · host 有 `?blockcache=on|off` 的处理分支（否则点了没反应）；
   //     · client 真的渲染了开关按钮并会发那个请求。
   assert('⑪ host 给 BlockCache 项挂了 toggle 字段', /key: 'blockcache'/u.test(host))
-  assert('⑪ host 有 ?blockcache= 处理分支', /blockCacheParam/u.test(host) && /searchParams\.get\('blockcache'\)/u.test(host))
+  // ★ 2026-10-12：实现改成走**大小写不敏感**的 queryLc 索引（修「死开关」），
+  //   所以这里不再钉 `searchParams.get('blockcache')` 那种写法。
+  assert('⑪ host 有 ?blockcache= 处理分支', /blockCacheParam/u.test(host) && /queryLc\.get\('blockcache'\)/u.test(host))
   assert('⑪ client 渲染了开关按钮', client.includes('qwen-paint-opt-switch'))
   assert('⑪ client 会发 ?blockcache= 请求', client.includes('toggle.key') && client.includes('qwen-paint/status.json?'))
   assert('⑪ client 如实告知"重启会还原"', client.includes('要永久保存'))
   // 开关必须在 A 层被规范化 —— 点开关绝不能顺带把面板关掉
   assert('⑪ 开关点击阻止冒泡（否则会顺手关掉面板）', client.includes('event.stopPropagation()'))
+  // ★★★ 2026-10-12（用户反馈回归）：「一点它就自动把界面关了」。
+  //   上一版切完开关直接 `closePanel()` ⇒ 用户看不到结果，以为开关是坏的。
+  //   现在必须**原地刷新**（重新拉状态 → openPanel），面板不消失。
+  assert('⑪ 切完开关**原地刷新**面板（不再"一点就关"）',
+    /fetch\('api\/qwen-paint\/status\.json'[\s\S]{0,240}openPanel\(/u.test(client))
+
+  // ★★★ 2026-10-12 **死开关**事故回归（真事故，实测抓到的）。
+  //   根因：开关的 `key` 是驼峰 `asyncOffload`，而端点监听的是全小写 `asyncoffload`；
+  //   `URLSearchParams` **区分大小写** ⇒ 点「A 卡异步卸载」**完全没反应**。
+  //   实测改前：`?asyncoffload=off` 生效、`?asyncOffload=on` 状态纹丝不动。
+  //   现在所有开关参数一律走 `queryLc`（小写索引），下面两条把它钉死：
+  //     ① 不能再出现大小写敏感的 `query.searchParams.get(param)` 写法；
+  //     ② 面板里**每个**开关的 key 都必须能被端点接受（大小写不敏感）。
+  assert('⑪ 开关参数一律走大小写不敏感索引（不再用 searchParams.get(param)）',
+    /queryLc\.get\(param\.toLowerCase\(\)\)/u.test(host) && !/query\.searchParams\.get\(param\)/u.test(host))
+  {
+    const accepted = new Set([
+      ...[...host.matchAll(/queryLc\.get\('([^']+)'\)/gu)].map((m) => m[1].toLowerCase()),
+      ...[...host.matchAll(/\['([a-z0-9]+)', '[A-Za-z]+', '[^']*'\]/gu)].map((m) => m[1].toLowerCase()),
+    ])
+    const keys = [...host.matchAll(/key: '([A-Za-z0-9]+)'/gu)].map((m) => m[1])
+    assert(`⑪ 每个开关的 key 都能被端点接受（共 ${keys.length} 个）`,
+      keys.length >= 4 && keys.every((k) => accepted.has(String(k).toLowerCase())),
+      `keys=${keys.join(',')} / accepted=${[...accepted].join(',')}`)
+  }
 
   // ⑫ ★★★ 2026-10-09 真事故回归：`Error: [object Object]` 绝不能再出现。
   //   根因：`controller.abort(signal.reason)` 把**普通对象**当 reason 转发，
