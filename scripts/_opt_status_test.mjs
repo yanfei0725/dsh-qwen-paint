@@ -46,14 +46,19 @@ console.log('=== 1. 全部就位 → 报"优化已启用" ===')
   assert('level = full', r.level === 'full')
   assert('ok = true', r.ok === true)
   assert('没有"未启用"原因', r.reasons.length === 0)
-  // 2026-10-09：新增 BlockCache T8 → 4 项变 5 项；
-  //   再新增「显存驻留」→ 5 项变 6 项；
-  //   二次修正又新增「互斥三选一策略（wrapper）」→ 6 项变 7 项；
-  //   2026-10-10 再新增「RDNA3 FlashAttention」→ 7 项变 8 项；
-  //   ★ 2026-10-11 新增两项 **A 卡专属可选优化**（专属内核 + 异步卸载，仅 AMD 显示）→ 8 项变 10 项。
-  //     它们带 `optional: true`，**不计入**"优化是否完整"的判定（见 stats.optional）。
-  //   ★ 2026-10-12 再新增一项「极速档（4 步）」开关（也是 optional）→ 10 项变 11 项。
-  assert('十一项明细都在（8 项常规 + 2 项 A 卡可选 + 1 项极速档）', r.detail.length === 11)
+  // ★★★ 2026-10-12 改：**不再数总数**。
+  //   原先这里是 `detail.length === 11`，每加一项就要改一次数字 ——
+  //   已经因为「极速档」撞过一次，这轮加「VAE 大图分块解码 / Spectrum 跳步」又撞一次。
+  //   ⇒ 改成**按名字断言关键项都在** + 一条**自洽不变式**（各桶之和 = total）。
+  //     后者比魔数强得多：它能在"新项没被正确归类"时立刻报警，而魔数只会说"数量不对"。
+  for (const nm of ['turbo8 八步蒸馏', '前缀 KV 缓存', 'BlockCache T8', 'RDNA3 FlashAttention',
+    '互斥三选一策略', '显存驻留', '极速档', 'VAE 大图分块解码', 'Spectrum 跳步加速']) {
+    assert(`明细含「${nm}」项`, r.detail.some((d) => d.name.includes(nm)))
+  }
+  assert('★ 明细总数与 stats 自洽（各桶之和 = total）',
+    r.stats.on + r.stats.available + r.stats.off + r.stats.blocked
+      + r.stats.superseded + r.stats.optional === r.stats.total,
+    JSON.stringify(r.stats))
   assert('含「互斥三选一策略（wrapper）」项',
     r.detail.some((d) => d.name.includes('互斥三选一策略')))
   // ⚠ 这里**按名字过滤**，不数"所有 optional 项" —— 后者会随新增可选项而假失败
@@ -296,10 +301,17 @@ console.log('\n=== 11. 四态（on/available/off/blocked）语义 ★★★ 2026
   // （turbo8 / 前缀缓存 / TE-Speed / Speedup / 显存驻留），
   // 外加「互斥三选一策略（wrapper）」恒为 on → 共 7 项、6 on / 1 off。
   // 注意 off 与 blocked 的区别：off = 改配置就能开（本用例正是这种）。
-  assert('全齐 → 十一项明细（8 常规 + 2 项 A 卡可选 + 1 项极速档）', rFull.detail.length === 11)
-  assert('全齐 → 七项 on + BlockCache 一项 off（被配置关）',
-    rFull.detail.filter((d) => d.state === 'on').length === 7
-    && rFull.detail.find((d) => d.name.includes('BlockCache'))?.state === 'off')
+  // ★ 2026-10-12 同上：不再数总数，改为**断言"这个 fixture 该报什么"**。
+  //   ⚠ 注意这个用例的 fixture 里 **BlockCache 是被配置关掉的（off）** ——
+  //     所以它**本来就不该报 full**，而应如实报"部分启用 + 给出可做之事"。
+  //     （我第一版把这里写成 `level === 'full'`，是我自己写错了，不是代码的问题。）
+  assert('全齐（但 BlockCache 被配置关）→ 如实报"部分启用"且给出原因',
+    rFull.level === 'turbo' && rFull.ok === false && rFull.reasons.length > 0,
+    JSON.stringify({ level: rFull.level, ok: rFull.ok, reasons: rFull.reasons }))
+  assert('全齐 → 明细总数与 stats 自洽',
+    rFull.detail.length === rFull.stats.total, JSON.stringify(rFull.stats))
+  assert('全齐 → BlockCache 一项是 off（被配置关，其余都在位）',
+    rFull.detail.find((d) => d.name.includes('BlockCache'))?.state === 'off')
   assert('全齐 → stats: on=7 / off=1 / blocked=0',
     rFull.stats.on === 7 && rFull.stats.off === 1 && rFull.stats.blocked === 0)
   assert('全齐 → 已启用项不带 action（没什么可做的）',

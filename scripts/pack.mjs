@@ -44,6 +44,10 @@ const ZIP = path.join(DIST, ZIP_NAME)
 const ROOT_FILES = [
   'package.json', 'cordis.patch.yml', 'LICENSE', 'README.md', 'INSTALL.md',
   '一键安装.cmd', '给DSH安装的话.md',
+  // ★ 2026-10-12：ComfyUI Registry 元数据（pyproject.toml）—— 让插件能被
+  //   ComfyUI-Manager / nodes.comfy.org 索引和发现。注意：本插件**不是**纯
+  //   ComfyUI custom_node（详见 pyproject.toml 头注释），Registry 仅做元数据抓取。
+  'pyproject.toml',
   // ★ 2026-10-09 新增：优化后的 Qwen-Image 工作流 JSON（turbo8 + TE-Speed + Speedup
   //   的完整节点图，供导入 ComfyUI / 手工比对用）。
   //   ⚠ 它此前**既不在这里、也不在 DIRS 里**，所以从没进过包。

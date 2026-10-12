@@ -6,9 +6,17 @@
 插件的全部网络流量限于本机回环地址（`127.0.0.1`），**不依赖外部网络，无需任何 API 密钥，亦不产生调用费用**。
 
 > **原作者**：@奇迹与你（<https://github.com/wonderandyou/dsh-qwen-paint>）  
-> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.1.4`
+> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.16.0`
 
 ---
+
+## 0.16.0 新增说明
+
+- **OOM 自动回退**：生图遇到显存不足时，自动将 VAE 解码切换为分块模式并重试一次；二次失败会保留错误原因并给出排查建议。需当前 ComfyUI 提供内置 `VAEDecodeTiled` 节点。
+- **SADA 探索性接入（默认关闭）**：先探测可选节点，只有节点存在且用户显式开启才加入工作流；本项目尚未安装该第三方节点，节点类型/输入及画质和速度收益未做真机验证，不自动下载。
+- **本机扩展 API**：新增 `/api/qwen-paint/health`、`/capabilities`、`/presets`、`/memory/recent`、`/memory/preference`，供本地工具集成；端点仅接受本机请求。
+- **记忆联动基础**：每次成功出图追加一条 JSONL 到输出目录 `.qwen-paint-memory.jsonl`，`dsh-auto-memory` 可从 recent 端点读取；偏好 GET/POST 目前只持久化，不自动改变生图参数。
+- **ComfyUI Registry 元数据**：加入 `pyproject.toml` 以供 Registry 索引发现。此仓库仍是 DSH 插件而非 ComfyUI Python custom node；元数据不代表已发布或已获 Registry 收录。
 
 ## 优化版说明
 

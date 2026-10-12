@@ -24,7 +24,7 @@ import { pathToFileURL } from 'node:url'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const idx = await import(pathToFileURL(path.join(ROOT, 'lib', 'index.js')).href)
-const { DEFAULTS, makeDrawTool, makeListModelsTool, makeAccelTool } = idx.__internal
+const { DEFAULTS, makeDrawTool, makeListModelsTool, makeAccelTool, makeUpscaleTool, makeEditTool } = idx.__internal
 
 const noop = () => {}
 const log = () => {}
@@ -41,6 +41,8 @@ const tools = [
   ['draw_image', makeDrawTool(ctx, cfg, log, null, noop)],
   ['list_available_models', makeListModelsTool(cfg, log)],
   ['check_acceleration', makeAccelTool(cfg, log)],
+  ['upscale_image', makeUpscaleTool(cfg, log)],
+  ['inpaint_image', makeEditTool(cfg, log)],
 ]
 
 for (const [label, tool] of tools) {

@@ -279,13 +279,13 @@ console.log('\n=== 18. A 卡专属优化（可选，质量中性；9000/7000/600
   const nv = describeOptimization({ ...DEF }, capsWith('NVIDIA GeForce RTX 5060'))
   ok('18. N 卡上**不出现** A 卡专属项', !names(nv).some((n) => n.includes('A 卡专属') || n.includes('异步卸载')),
     names(nv))
-  // ★ 2026-10-11：N 卡自己有一项可选（SageAttention，见第 19 节），所以这里是 1 而不是 0；
-  //   关键不变式是「**没有 A 卡的**那两项」。
-  // ★ 2026-10-12：「极速档」不是厂商专属、所有机器都显示，所以这里要把它排除掉再数。
-  ok('18. N 卡上厂商专属可选档只有 SageAttention（1 项），没有 A 卡的两项',
-    nv.detail.filter((d) => isOpt(d) && !isFast4(d)).length === 1
-    && names(nv).some((n) => n.includes('SageAttention')),
-    nv.detail.filter((d) => isOpt(d) && !isFast4(d)).map((d) => d.name))
+  // ★ 2026-10-12 改：**不再数"厂商专属可选项"的总数** —— 那个数字每加一项就变
+  //   （已因「极速档」「Spectrum 跳步」各撞过一次）。改为**按名字断言意图**：
+  //   N 卡上有 SageAttention，且**没有** A 卡那两项。
+  ok('18. N 卡上有 SageAttention 项、且**没有** A 卡的两项',
+    names(nv).some((n) => n.includes('SageAttention'))
+    && !names(nv).some((n) => /A 卡专属|异步卸载/u.test(n)),
+    names(nv))
 
   const unknown = describeOptimization({ ...DEF }, capsWith(''))
   ok('18. 认不出显卡 → 也不显示 A 卡专属项（不猜）',

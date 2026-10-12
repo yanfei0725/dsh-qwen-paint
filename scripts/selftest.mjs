@@ -146,7 +146,11 @@ mod.apply(ctx, {
 const tool = registered.find((t) => t.name === 'draw_image') ?? {}
 check('注册了 draw_image（apply 直接注册，不经 root.inject）', tool.name === 'draw_image',
   registered.map((t) => t.name))
-check('同时注册了两个诊断工具（list_available_models / accel_env）', registered.length === 3,
+check('注册了 5 个工具（draw + 2 诊断 + upscale + inpaint）', registered.length === 5,
+  registered.map((t) => t.name))
+check('两个诊断工具都在（list_available_models / check_acceleration）',
+  registered.some((t) => t.name === 'list_available_models')
+  && registered.some((t) => t.name === 'check_acceleration'),
   registered.map((t) => t.name))
 
 section('② 工具定义形状（register 的硬校验）')
@@ -780,9 +784,10 @@ const itemOf = (kind, value) =>
   itemsOf(kind).find((it) => it.getAttribute('data-value') === String(value)) ?? null
 const heads = menuNode.children.filter((it) => String(it.className).includes('dshqp-menu-head'))
 // ★ 2026-10-11 修正：菜单标题从 3 块扩到 6 块（后端 / 自动关闭 / 生图判断 / 优化 / 生图动画 / 流光）。
+//   2026-10-12 再扩：新增「预设（出图风格）」「工具」两块 —— 共 8 块，最后一块仍是流光。
 check(
-  '菜单含 6 块标题，且最后一块是流光',
-  heads.length === 6 && heads[5].textContent === '流光 · 抄自月匠',
+  '菜单含 8 块标题，且最后一块是流光',
+  heads.length === 8 && heads[7].textContent === '流光 · 抄自月匠',
   heads.map((h) => h.textContent),
 )
 check('自动关闭组 5 项', itemsOf('idle').length === 5, itemsOf('idle').length)
