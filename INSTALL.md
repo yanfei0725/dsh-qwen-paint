@@ -172,9 +172,22 @@ winget install --id=Python.Python.3.12 -e
 
 **直接重跑同一条命令**即可 —— 下载走 `curl -C -`，会从断点接着下，不会从头再来。
 
+### 主模型两个档位（小显存适配）
+
+装的时候会问一句：
+
+| 档位 | 主模型 | 体积 |
+|---|---|---|
+| **完整档**（默认，回车） | `qwen_image_2.1_int8_convrot.safetensors` | 6.8 GB |
+| **轻量档** | `qwen-image-2.1-UC-Q4_K_M.gguf`（GGUF Q4_K_M） | 4.3 GB |
+
+> 轻量档**必须另装 ComfyUI-GGUF 节点**（`git clone https://github.com/city96/ComfyUI-GGUF "<你的ComfyUI>/custom_nodes/ComfyUI-GGUF"`），
+> 否则出图会被 ComfyUI 直接拒收。该 GGUF 属 Uncensored 系，介意可装完后自行替换
+> `models/unet` 里的文件。
+
 ### 体积与时间
 
-约 **13.3 GB**。脚本每 3 秒打一行进度（已下字节数 + 速度），不会让你干等。
+约 **13.3 GB**（轻量档约 **10.8 GB**）。脚本每 3 秒打一行进度（已下字节数 + 速度），不会让你干等。
 
 ### macOS（Apple Silicon）★ 2026-10-11 新增
 

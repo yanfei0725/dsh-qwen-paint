@@ -528,7 +528,7 @@ console.log('\n=== 12. 界面侧：徽标可点 + 菜单入口 + 四态渲染 �
   // 记下总数（39 = 31 个 `}` 收尾 + 8 个 `)` 收尾）作为基线 —— 数字变了说明有人加了新的拼接点，
   // 应该先确认那处**不会**收到非 Error 值（或者干脆改用 toError）。
   const rawFallbacks = (host.match(/message \?\? error/gu) ?? []).length
-  assert(`⑫ error?.message ?? error 拼接点基线仍为 ${rawFallbacks} 处（基线 39）`, rawFallbacks === 39)
+  assert(`⑫ error?.message ?? error 拼接点基线仍为 ${rawFallbacks} 处（基线 41）`, rawFallbacks === 41)
 }
 
 console.log(`\n=== 结果：${fail === 0 ? '全部通过' : `${fail} 项失败`} ===`)

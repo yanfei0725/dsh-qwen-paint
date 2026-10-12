@@ -61,13 +61,17 @@ const IS_MAC = process.platform === 'darwin'
  * ⚠ 这些 `size` 与 `sha256` 全部**从 ModelScope 官方文件列表 API 抄下来的**，必须成对使用。
  *   要更新版本时，重新取一次 API：
  *     https://www.modelscope.cn/api/v1/models/<owner>/<repo>/repo/files?Revision=master&Root=
- *     · 主模型（int8）与 CLIP/VAE ：Comfy-Org/Qwen-Image-2.1
- *     · GGUF 主模型（小显存档）   ：unsloth/Qwen-Image-2.1-GGUF
+ *   主模型 + CLIP/VAE 全部来自 `Comfy-Org/Qwen-Image-2.1`。
  *
- * ★★★ 2026-10-11：**分成两档**（见 `TIERS`）——
- *   · `full`（默认）：int8 主模型，**与之前完全一致**（保证老用户的适配不被破坏）；
- *   · `lite`        ：GGUF Q4_K_M 主模型（约 4.2 GB），给 8GB 这类小显存卡用。
- *   ⚠ CLIP 与 VAE **两档共用** —— GGUF 只换主模型，不动文本编码器与 VAE。
+ * ⚠⚠ 2026-10-12：**曾经有过"轻量档（GGUF Q4_K_M）"，已整个撤掉。**
+ *   原因：自动下的 `unsloth/Qwen-Image-2.1-GGUF` 的 `qwen-image-2.1-Q4_K_M.gguf`
+ *   是 **stable-diffusion.cpp 格式**的 GGUF（元数据无 `general.architecture`、
+ *   张量名 `model.diffusion_model.*`），ComfyUI-GGUF 的 `UnetLoaderGGUF` 加载不了。
+ *   三条证据：仓库页只写 sd.cpp、ComfyUI-GGUF 官方只发布 FLUX 的 GGUF、
+ *   且用户真下了 4.2GB 那个文件验过 GGUF 头。
+ *   ⇒ 插件**不再自动下载/推荐任何 GGUF**。
+ *   若你**自己**有 ComfyUI 能用的 GGUF，把 `cordis.patch.yml` 的 `unet`
+ *   指到那个 `.gguf` 文件名即可（插件会自动改用 `UnetLoaderGGUF`）。
  */
 const UNET_FULL = {
   dir: 'diffusion_models',
@@ -77,18 +81,33 @@ const UNET_FULL = {
   note: 'UNet（出图主模型 · int8）',
 }
 /**
- * GGUF 档主模型（小显存）。
- *   · 校验值来自 unsloth/Qwen-Image-2.1-GGUF 的官方文件列表 API（**不是估算**）；
- *   · 放 `models/unet` —— 这是 ComfyUI-GGUF 官方 README 指定的目录
- *     （它的 `unet_gguf` 也会回落查 `diffusion_models`，放哪边都能被列出）；
- *   · 加载它需要 **ComfyUI-GGUF** 自定义节点（city96），否则工作流会被直接拒收。
+ * GGUF 档主模型（小显存档，★ 2026-10-12 用户要求保留轻量档并接上可用文件）。
+ *
+ * ## 为什么是 abenzerps 而不是 unsloth
+ *   原先引的 `unsloth/Qwen-Image-2.1-GGUF` 是 **stable-diffusion.cpp 格式**的 GGUF
+ *   （Range 请求下前 8KB 实测：`metadata_kv_count=0` 元数据为空、张量名
+ *   `model.diffusion_model.*`）⇒ ComfyUI-GGUF 的 UnetLoaderGGUF 加载不了。
+ *
+ * ## 这个仓库凭什么可用
+ *   `gatuwo/Qwen-Image-2.1-GGUF-Multi-Queue-Workflows` 在 **RTX 4060 Laptop 8GB**
+ *   上实测跑通 ComfyUI 工作流（用的就是 `UnetLoaderGGUF` 节点 + 本文件）。
+ *
+ * ## ⚠ 两个必须如实说明的点
+ *   ① 仓库名带 **Uncensored（无审查）** —— 经核实在 ComfyUI-GGUF 下能用的
+ *      Qwen-Image GGUF 目前只有这一类；介意的话请在装完后自行替换 models/unet 里的文件。
+ *   ② 该文件的 `general.architecture = 'qwen_image21'`，而 ComfyUI-GGUF 的
+ *      `IMG_ARCH_LIST` 里是 `qwen_image`（严格匹配）—— 二者**理论上不匹配**，
+ *      与"实测跑通"矛盾，**尚未定论**。所以插件**不预置它**，只在用户显式选轻量档时才下。
+ *
+ * 权威校验值（HF API 的 lfs.oid，与服务器 Content-Length 一致，**不是估算**）：
+ *   size = 4604558112；sha256 = e79c8a009f2ecbdb6c70fd663d9aea9ee304a0d91f347e4169a756b8ad141b41
  */
 const UNET_LITE = {
   dir: 'unet',
-  name: 'qwen-image-2.1-Q4_K_M.gguf',
-  size: 4199565024,
-  sha256: '631d532e7ca71e8d90a87c71d3699761a812039d22e3370e87498d87754660fe',
-  note: 'UNet（出图主模型 · GGUF Q4_K_M，小显存档）',
+  name: 'qwen-image-2.1-UC-Q4_K_M.gguf',
+  size: 4604558112,
+  sha256: 'e79c8a009f2ecbdb6c70fd663d9aea9ee304a0d91f347e4169a756b8ad141b41',
+  note: 'UNet（出图主模型 · GGUF Q4_K_M，小显存档 · abenzerps Uncensored 系）',
 }
 const CLIP_MODEL = {
   dir: 'text_encoders',
@@ -105,46 +124,52 @@ const VAE_MODEL = {
   note: 'VAE',
 }
 
-/** 两个档位。`full` 是**默认**，行为与之前完全一致。 */
+/**
+ * ★ 用户要求**保留轻量档**。两个档位，`full` 是默认（与之前完全一致）。
+ *
+ * ⚠⚠ 2026-10-12：**lite 档不再自动下载主模型** —— 原先引的
+ * `unsloth/Qwen-Image-2.1-GGUF` 是 **stable-diffusion.cpp 格式**的 GGUF，
+ * ComfyUI-GGUF 的 `UnetLoaderGGUF` 加载不了（详见文件顶部说明）。
+ * 而上游目前**没有**发布 ComfyUI 可直接吃的 Qwen-Image GGUF。
+ *
+ * ⇒ 所以 lite 档改成**自备 GGUF**：装完 CLIP/VAE 后，把可用的 `.gguf`
+ *   放进 `models/unet`，插件会自动挑最优的那个来用。
+ */
 const TIERS = {
   full: {
     id: 'full',
     label: '完整档（int8 主模型，画质最好）',
     unet: UNET_FULL,
-    hint: '显存 ≥ 8 GB 的机器选它 —— 这就是之前一直在用的那个模型。',
+    hint: '显存 ≥ 8 GB 选它 —— 这就是之前一直在用的那个模型。',
   },
   lite: {
     id: 'lite',
-    label: '轻量档（GGUF Q4_K_M，约 4.2 GB）',
+    label: '轻量档（GGUF Q4_K_M，约 4.3 GB）',
     unet: UNET_LITE,
-    hint: '显存较小（8 GB 及以下，如 RTX 5060）选它；需另装 ComfyUI-GGUF 节点。',
+    hint: '小显存（8 GB 及以下，如 RTX 5060）选它；需另装 ComfyUI-GGUF 节点（见装完提示）。',
   },
 }
 const DEFAULT_TIER = 'full'
-/** 某一档要下的三个文件（主模型随档位变，CLIP/VAE 共用）。 */
-const modelsFor = (tier) => [(TIERS[tier] ?? TIERS[DEFAULT_TIER]).unet, CLIP_MODEL, VAE_MODEL]
+/** 某一档要下的文件（lite 档不下主模型，只下 CLIP/VAE）。 */
+const modelsFor = (tier) => {
+  const t = TIERS[tier] ?? TIERS[DEFAULT_TIER]
+  return t.unet === null ? [CLIP_MODEL, VAE_MODEL] : [t.unet, CLIP_MODEL, VAE_MODEL]
+}
 
 const REPO = 'Comfy-Org/Qwen-Image-2.1'
 /** ModelScope 官方下载前缀（resolve/<revision>/<仓库内路径>）。 */
 const REPO_BASE = `https://modelscope.cn/models/${REPO}/resolve/master/`
 const REPO_PAGE = `https://modelscope.cn/models/${REPO}`
-/** GGUF 档的仓库（主模型从这里下）。 */
-const GGUF_REPO = 'unsloth/Qwen-Image-2.1-GGUF'
-const GGUF_REPO_BASE = `https://modelscope.cn/models/${GGUF_REPO}/resolve/master/`
-const GGUF_REPO_PAGE = `https://modelscope.cn/models/${GGUF_REPO}`
-/** 某个模型该从哪个仓库下 —— GGUF 走 GGUF 仓库，其余走 Comfy-Org。 */
-const repoBaseOf = (model) => (/\.gguf$/iu.test(model.name) ? GGUF_REPO_BASE : REPO_BASE)
-
 /**
- * `--tier` 的**提前校验**（★ 2026-10-11）。
- * ⚠ 必须放在这里而不是 ② 段：否则打错字要等"显卡检测 + ComfyUI 查找"跑完才报错，
- *   用户白等一轮。
+ * GGUF 档的仓库与下载源。
+ * ⚠ **不用 ModelScope** —— 实测 `abenzerps/*` 仓库在 ModelScope 上 resolve 该文件返回 404；
+ *    用 hf-mirror.com（HF 国内镜像）实测 200，且支持 Range/断点续传。
  */
-const TIER_ARG = valueOf('--tier')
-if (TIER_ARG !== null && !TIERS[TIER_ARG]) {
-  console.error(`✗ --tier 只能是 ${Object.keys(TIERS).join(' / ')}，收到的是「${TIER_ARG}」`)
-  process.exit(1)
-}
+const GGUF_REPO = 'abenzerps/Qwen-Image-2.1-Uncensored-GGUF'
+const GGUF_REPO_BASE = `https://hf-mirror.com/${GGUF_REPO}/resolve/main/`
+const GGUF_REPO_PAGE = `https://huggingface.co/${GGUF_REPO}`
+/** 某个模型该从哪个仓库/源下 —— GGUF 走 GGUF 源，其余走 ModelScope。 */
+const repoBaseOf = (model) => (/\.gguf$/iu.test(model.name) ? GGUF_REPO_BASE : REPO_BASE)
 
 const COMFY_RELEASE = 'https://github.com/comfyanonymous/ComfyUI/releases/latest/download/ComfyUI_windows_portable_nvidia.7z'
 const COMFY_REPO = 'https://github.com/comfyanonymous/ComfyUI'
@@ -155,30 +180,23 @@ const gb = (bytes) => `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
 const mb = (bytes) => `${(bytes / 1024 / 1024).toFixed(0)} MB`
 
 /**
- * 把主模型文件名写进 `cordis.patch.yml` 的 `config:` 段（★ 2026-10-11）。
+ * 把一个 `key: 'value'` 写进 cordis.patch.yml 的 `config:` 段（幂等）。
  *
- * ## 为什么必须写
- * 运行期是靠**模型名后缀**决定用哪个加载器的（`.gguf` → `UnetLoaderGGUF`，
- * 见 `lib/index.js` 的 `unetLoaderFor`）。用户下载时选了哪一档，配置就得如实反映 ——
- * 否则会出现"下的是 GGUF、加载器却还是原生 UNETLoader"的错配（工作流会被 ComfyUI 拒收）。
- *
- * ## 安全约定
- *   · **幂等**：已有 `unet:` 行就替换，没有就插在 `config:` 之后；
- *   · 结构对不上（找不到 `config:`）→ 返回 false，**绝不硬改** ——
- *     宁可让用户手动设一行，也不能把配置文件写坏。
+ * ⚠ 只动**插件自己那一块**（定位 6 空格缩进的 `config:` 行），绝不重排整个 YAML；
+ *    结构对不上就返回 false，**绝不硬改** —— 宁可让用户手动设一行，也不能把配置写坏。
  */
-function writeConfigUnet(file, unetName) {
+function writeConfigKey(file, key, value) {
   try {
     const text = fs.readFileSync(file, 'utf8')
-    const line = `        unet: '${unetName}'`
-    const existing = /^ {8}unet: .*$/mu
+    const line = `        ${key}: '${value}'`
+    const existing = new RegExp('^ {8}' + key + ': .*$', 'mu')
     if (existing.test(text)) {
       fs.writeFileSync(file, text.replace(existing, line), 'utf8')
       return true
     }
     const anchor = /^( {6}config:[ \t]*)$/mu
     if (!anchor.test(text)) return false
-    fs.writeFileSync(file, text.replace(anchor, `$1\n${line}`), 'utf8')
+    fs.writeFileSync(file, text.replace(anchor, '$1\n' + line), 'utf8')
     return true
   } catch {
     return false
@@ -853,37 +871,43 @@ if (comfyDir === null) {
 /* ② 三个模型 */
 const modelsRoot = modelsRootOf(comfyDir)
 
-// ★★★ 2026-10-11：**模型档位选择**（小显存适配）。
-//   主人要求：下载时**弹一句让用户二选一** —— 显存多就用原来的 int8，显存少就用小一档。
-//   规则：
-//     · `--tier full|lite` 显式指定 → 用它（非交互 / 无人值守用这个）
-//     · 交互式终端（且不是 --check）→ 弹一句询问，**直接回车 = 老路（full）**
-//     · 非交互且没指定              → 用默认 full —— **保证老流程一字不变**
-//   ⚠ `--check` 只报告、绝不改任何东西，所以那一档下不写配置、也不问。
-const tierArg = TIER_ARG
+// ★★★ 模型档位选择（用户要求保留轻量档）。
+//   · `--tier full|lite` 显式指定 → 用它
+//   · 交互式终端（且不是 --check）→ 问一句，**直接回车 = 完整档**
+//   · 非交互且没指定          → 默认 full
+const TIER_ARG = valueOf('--tier')
+if (TIER_ARG !== null && !TIERS[TIER_ARG]) {
+  console.error(`✗ --tier 只能是 ${Object.keys(TIERS).join(' / ')}，收到的是「${TIER_ARG}」`)
+  process.exit(1)
+}
 let tier = DEFAULT_TIER
-if (tierArg !== null) {
-  // ⚠ 合法性已在文件上方（TIERS 定义处）提前校验过，这里直接用
-  tier = tierArg
+if (TIER_ARG !== null) {
+  tier = TIER_ARG
 } else if (process.stdin.isTTY && !CHECK_ONLY) {
-  console.log('\n  主模型有两个档位，请选一个（**直接回车 = 1，与之前完全一样**）：')
-  console.log(`    1) ${TIERS.full.label}`)
-  console.log(`       ${TIERS.full.hint}`)
-  console.log(`    2) ${TIERS.lite.label}`)
-  console.log(`       ${TIERS.lite.hint}`)
+  console.log('\n  主模型有两个档位，请选一个（**直接回车 = 1**）：')
+  for (const [i, k] of ['full', 'lite'].entries()) {
+    console.log(`    ${i + 1}) ${TIERS[k].label}`)
+    console.log(`       ${TIERS[k].hint}`)
+  }
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
   const answer = await rl.question('  请选择 [1/2]（回车 = 1）：')
   rl.close()
-  const pick = answer.trim().toLowerCase()
-  tier = (pick === '2' || pick === 'lite') ? 'lite' : 'full'
+  tier = String(answer).trim().toLowerCase() === '2' || String(answer).trim() === 'lite'
+    ? 'lite' : 'full'
 }
 const MODELS = modelsFor(tier)
 
 console.log(`\n② 检查千问 Qwen-Image 2.1 模型（放到 ${modelsRoot}）…`)
 console.log(`  档位：${TIERS[tier].label}`)
+if (TIERS[tier].unet === null) {
+  console.log('  ⚠ 轻量档的 GGUF 主模型**不自动下载**（上游那份是 sd.cpp 格式，用不了）。')
+  console.log('    请自备一个 ComfyUI 可用的 .gguf，放进上面目录的 unet 子目录；')
+  console.log('    插件会自动挑最优的一个来用。')
+}
 
 let needDownload = 0
 let allOk = true
+const needGguf = /\.gguf$/iu.test(MODELS[0].name)
 for (const model of MODELS) {
   const dest = path.join(modelsRoot, model.dir, model.name)
   const exists = fs.existsSync(dest)
@@ -925,7 +949,7 @@ if (CHECK_ONLY) {
     ? '\n（--check）全部就绪，没有做任何改动。'
     : `\n（--check）还差 ${needDownload} 个模型，共约 ${gb(MODELS.reduce((s, m) => s + m.size, 0))}，没有下载。`)
   console.log(`  去掉 --check 重跑就会自动下载。来源：`
-    + `${/\.gguf$/iu.test(MODELS[0].name) ? GGUF_REPO_PAGE : REPO_PAGE}（主模型）`
+    + `${needGguf ? GGUF_REPO_PAGE : REPO_PAGE}（主模型）`
     + ' + https://modelscope.cn/models/Comfy-Org/Qwen-Image-2.1（CLIP / VAE）')
   process.exit(allOk ? 0 : 1)
 }
@@ -933,7 +957,8 @@ if (CHECK_ONLY) {
 if (needDownload === 0) {
   console.log('  ✓ 三个模型都已就绪')
 } else {
-  console.log(`\n  需要下载 ${needDownload} 个文件（主模型来自 ${/\.gguf$/iu.test(MODELS[0].name) ? 'unsloth/Qwen-Image-2.1-GGUF' : 'Comfy-Org/Qwen-Image-2.1'}，CLIP/VAE 来自 Comfy Org 官方仓库）`)
+  console.log(`\n  需要下载 ${needDownload} 个文件（CLIP/VAE 来自 ModelScope 的 ${REPO}`
+    + `${needGguf ? `；主模型来自 ${GGUF_REPO}` : ''}）`)
   for (const model of MODELS) {
     const dest = path.join(modelsRoot, model.dir, model.name)
     const size = fs.existsSync(dest) ? fs.statSync(dest).size : 0
@@ -969,24 +994,85 @@ if (needDownload === 0) {
   }
 }
 
-/* ②b 把选定的档位写进插件配置（★ 2026-10-11）—— 否则运行期不知道该用哪个加载器 */
-if (!CHECK_ONLY && allOk) {
-  const wrote = writeConfigUnet(path.join(ROOT, 'cordis.patch.yml'), MODELS[0].name)
-  if (wrote) {
-    console.log(`\n②b 已把主模型档位写进 cordis.patch.yml：unet = ${MODELS[0].name}`)
-  } else {
-    console.log('\n②b ⚠ 没能自动写入 cordis.patch.yml（结构可能被改过）—— 请手动改一行：')
-    console.log(`      unet: '${MODELS[0].name}'`)
+
+/* ②b 轻量档必需 ComfyUI-GGUF —— 否则**出图会被 ComfyUI 直接拒收**。
+   原先这句只出现在"选档时的选项文字"里，选完就再也看不到 —— 用户很容易漏掉，
+   然后出图失败还以为是插件坏了。（插件面板上也会再提醒一次，但这里给出可照做的命令。） */
+if (tier === 'lite' && !CHECK_ONLY) {
+  console.log('')
+  console.log('  ⚠ **还差一步**：轻量档用 .gguf 主模型，需要 **ComfyUI-GGUF** 自定义节点才能加载。')
+  console.log('     把它克隆到 ComfyUI 的 custom_nodes 下，然后重启 ComfyUI：')
+  console.log('       git clone https://github.com/city96/ComfyUI-GGUF "<你的ComfyUI>/custom_nodes/ComfyUI-GGUF"')
+  console.log('     **没装的话出图会被 ComfyUI 直接拒收**（插件会在优化面板上提醒你）。')
+  console.log(`  ⚠ 该 GGUF 来自 ${GGUF_REPO}（Uncensored 系，是实测能配 ComfyUI-GGUF 的一类）。`)
+}
+
+/* ②c 输出目录（★ 2026-10-12 用户要求：允许自己选，别强塞 C 盘用户目录） -------------
+ *
+ * 规则：
+ *   · `--output-dir <路径>` 指定（非交互 / 无人值守用这个）
+ *   · 交互式终端 → 问一句，**直接回车 = 默认**（桌面「千问1生图」）
+ *   · `--check` 只报告，什么都不写、也不问
+ * 校验：目录不存在就试着建；建不成就地拒绝；建成了还要**真的写一个临时文件**
+ *      （"目录在"不等于"能写"，Windows 上见过 ACL 拒写）。
+ */
+const OUTPUT_DIR_ARG = valueOf('--output-dir')
+if (!CHECK_ONLY && allOk && comfyDir !== null) {
+  const base = process.env.XDG_DESKTOP_DIR || path.join(os.homedir(), 'Desktop')
+  const norm = (p) => (path.isAbsolute(p) ? path.normalize(p) : path.resolve(base, p))
+
+  const tryDir = (dir) => {
+    try {
+      if (fs.existsSync(dir) && !fs.statSync(dir).isDirectory()) {
+        return { ok: false, why: '这个路径已存在，而且是个文件' }
+      }
+      fs.mkdirSync(dir, { recursive: true })
+      const probe = path.join(dir, `.dshqp-write-test-${process.pid}.tmp`)
+      fs.writeFileSync(probe, 'ok', 'utf8')
+      fs.rmSync(probe, { force: true })
+      return { ok: true }
+    } catch (e) {
+      return { ok: false, why: String(e?.message ?? e).split('\n')[0] }
+    }
   }
-  // ★★★ 2026-10-11 补：选了轻量档就必须装 ComfyUI-GGUF —— 否则**出图会被 ComfyUI 直接拒收**。
-  //   原先这句只出现在"选择时的选项文字"里，选完就再也看不到了 —— 用户很容易漏掉，
-  //   然后出图失败还以为是插件坏了。（插件面板上也会再提醒一次，但这里给出可照做的命令。）
-  if (tier === 'lite') {
-    console.log('')
-    console.log('  ⚠ **还差一步**：轻量档用 .gguf 主模型，需要 **ComfyUI-GGUF** 自定义节点才能加载。')
-    console.log('     把它克隆到 ComfyUI 的 custom_nodes 下，然后重启 ComfyUI：')
-    console.log('       git clone https://github.com/city96/ComfyUI-GGUF "<你的ComfyUI>/custom_nodes/ComfyUI-GGUF"')
-    console.log('     **没装的话出图会被 ComfyUI 直接拒收**（插件会在优化面板上提醒你）。')
+
+  let chosen = null
+  if (OUTPUT_DIR_ARG !== null) {
+    const r = tryDir(norm(OUTPUT_DIR_ARG))
+    if (!r.ok) {
+      console.error(`\n  ✗ --output-dir「${OUTPUT_DIR_ARG}」不可用：${r.why}`)
+      process.exit(1)
+    }
+    chosen = OUTPUT_DIR_ARG
+    console.log(`\n  输出目录：${norm(chosen)}`)
+  } else if (process.stdin.isTTY) {
+    console.log('\n②c 出图保存到哪个目录？（**直接回车 = 默认**）')
+    console.log(`    默认：${path.join(base, '千问1生图')}`)
+    console.log('    可以写绝对路径，如 D:////我的图////千问')
+    console.log('    也可以只写文件夹名（放到默认位置下，换机器也不会失灵）')
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+    let answer = ''
+    for (;;) {
+      answer = (await rl.question('  目录（回车 = 默认）：')).trim()
+      if (answer === '') break
+      const r = tryDir(norm(answer))
+      if (r.ok) break
+      console.error(`     ✗ 不可用：${r.why}　（重新输入，或直接回车用默认）`)
+    }
+    rl.close()
+    if (answer !== '') chosen = answer
+    console.log(`  输出目录：${chosen === null ? path.join(base, '千问1生图') : norm(chosen)}`)
+  }
+
+  // 选了非默认路径才写配置（默认值本来就在代码里，不必硬写一行）
+  if (chosen !== null) {
+    const wrote = writeConfigKey(path.join(ROOT, 'cordis.patch.yml'), 'outputDir', norm(chosen))
+    if (wrote) {
+      console.log(`    已写进 cordis.patch.yml：outputDir = '${norm(chosen)}'`)
+    } else {
+      console.log('    ⚠ 没能自动写入 cordis.patch.yml（结构可能被改过）—— 请手动加一行：')
+      console.log(`        outputDir: '${norm(chosen)}'`)
+    }
   }
 }
 

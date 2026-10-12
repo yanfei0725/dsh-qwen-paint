@@ -358,33 +358,33 @@ node scripts/setup.mjs --tier full|lite       # 直接指定主模型档位（�
 它会：① 自动找 ComfyUI；② 把三个模型下到正确目录并**逐个 SHA256 校验**（校验不过的一律删除）；  
 ③ 调 `install.mjs` 把插件挂进 DSH profile。
 
-### 主模型两个档位（★ 2026-10-11 新增，小显存适配）
+### 主模型两个档位（小显存适配）
 
-跑 `setup.mjs` 时它会**问一句**你选哪个（**直接回车 = 1，与之前完全一样**）：
+装的时候会问一句，两个档位：
 
-| 档位            | 主模型                                       | 大小           | 适合                            |
-| ------------- | ----------------------------------------- | ------------ | ----------------------------- |
-| **1）完整档**（默认） | `qwen_image_2.1_int8_convrot.safetensors` | 约 7.26 GB    | 显存 ≥ 8 GB 的机器 —— 就是之前一直在用的那个  |
-| **2）轻量档**     | `qwen-image-2.1-Q4_K_M.gguf`              | 约 **4.2 GB** | 显存较小（8 GB 及以下，如 **RTX 5060**） |
+| 档位 | 主模型 | 体积 | 适合 |
+|---|---|---|---|
+| **完整档**（默认） | `qwen_image_2.1_int8_convrot.safetensors` | 6.8 GB | 显存 ≥ 8 GB，画质最好 |
+| **轻量档** | `qwen-image-2.1-UC-Q4_K_M.gguf`（GGUF Q4_K_M） | 4.3 GB | 8 GB 及以下（如 RTX 5060） |
 
-- 两档的 **CLIP / VAE 共用**，只换主模型。
-- 轻量档需要额外装 **[ComfyUI-GGUF](https://github.com/city96/ComfyUI-GGUF)** 自定义节点  
-  （放进 `custom_nodes` 后重启 ComfyUI）—— 插件会**探测**它；没装时不会静默降级，而是明确提示。
-- 选定后会**写进 `cordis.patch.yml` 的 `unet`**；插件按文件名后缀自动选加载器  
-  （`.gguf` → `UnetLoaderGGUF`，否则 → 原生 `UNETLoader`），**不需要你再配别的**。
-- 非交互环境（脚本/CI）不指定 `--tier` 时**默认走完整档** —— 老流程一字不变。
+CLIP 与 VAE 两档共用，**只有主模型不同**。
 
-> 轻量档的 `size` / `sha256` 取自 **ModelScope 官方文件列表 API**  
-> （[unsloth/Qwen-Image-2.1-GGUF](https://modelscope.cn/models/unsloth/Qwen-Image-2.1-GGUF)），  
-> 同样是"校验不过一律删除"。
+轻量档有两件事必须知道：
 
-**下载渠道**：模型走 **ModelScope 官方直连**（阿里官方平台），上传者是  
-[Comfy Org 官方组织自己的仓库](https://modelscope.cn/models/Comfy-Org/Qwen-Image-2.1)，  
-期望哈希取自该仓库文件列表 API 的 `sha256`。  
-ComfyUI 本体在 GitHub 官方 release，**官方不公布哈希**，所以脚本**默认不自动下它**，  
-要下得显式加 `--download-comfy`（它会再问一次）。
+1. **要另装 ComfyUI-GGUF 节点**（`city96/ComfyUI-GGUF`），否则出图会被 ComfyUI 直接拒收：
+   ```
+   git clone https://github.com/city96/ComfyUI-GGUF "<你的ComfyUI>/custom_nodes/ComfyUI-GGUF"
+   ```
+2. **该 GGUF 是 Uncensored 系**的 —— 经核实，目前能在 ComfyUI-GGUF 下跑起来的
+   Qwen-Image GGUF 只有这一类。介意的话装完自行替换 `models/unet` 里的文件即可，
+   插件会自动认你换的那个。
 
-断点续传：中途断了**直接重跑**，`curl -C -` 会接着下。
+> ⚠ 曾经的坑：这里原先是 `unsloth/Qwen-Image-2.1-GGUF` 的 Q4_K_M，
+> 那个是 **stable-diffusion.cpp 格式**的 GGUF（元数据为空、张量名
+> `model.diffusion_model.*`），ComfyUI-GGUF 加载不了。2026-10-12 已换成
+> 实测能用的 `abenzerps` 系，并保留 ComfyUI-GGUF 的安装提示。
+
+**显存还是紧张？** 降 `megapixels`（如 0.5）立竿见影；出图目录也可以设到固态盘上（见「配置」的 `outputDir`）。
 
 ### 显卡：N 卡开箱即用，A 卡走 ROCm（0.1.1 新增）
 
@@ -525,8 +525,8 @@ node scripts/install.mjs --dry-run
 | 报"等 ComfyUI 出图超时"           | 首次出图要加载 7.26 GB UNET + 6.31 GB 文本编码器，**第一次特别慢**；本机实测 25 步 1MP 约 62–124 秒，首次更久                                |
 | 报 `ComfyUI 报错：...` + 节点校验详情 | 模型文件名对不上或节点不存在 → 对照上面「依赖」里的三个文件名，以及 ComfyUI 版本需支持 `TextEncodeQwenImage21` / `QwenImage21Cache`（本机 0.37.0 内置） |
 | 图出来了但聊天框只有文字                | 交付卡片依赖会话工作区能取到该文件；把 `outputDir` 设在会话工作区内（默认就在桌面「千问1生图」）                                                      |
-| 显存不够 / 很慢                   | 三个模型共约 14 GB，8 GB 卡必然换入换出。两个办法：① **装插件时选「轻量档」**（GGUF Q4_K_M，约 4.2 GB，见上面「主模型两个档位」）；② 降低 `megapixels`（如 0.5） |
-| 出图报 `value not in list` / 被直接拒收 | **选了轻量档（GGUF）但没装 ComfyUI-GGUF 节点** —— 把 [ComfyUI-GGUF](https://github.com/city96/ComfyUI-GGUF) 克隆到 `custom_nodes` 后重启 ComfyUI。插件会在优化面板**置顶用橙色块提醒你** |
+| 出图报 `value not in list` / 被直接拒收 | **选了轻量档（GGUF）但没装 ComfyUI-GGUF 节点** —— 克隆 [ComfyUI-GGUF](https://github.com/city96/ComfyUI-GGUF) 到 `custom_nodes` 后重启 ComfyUI。插件会在优化面板**置顶用橙色块提醒你** |
+| 显存不够 / 很慢                   | 三个模型共约 14 GB，8 GB 卡必然换入换出。两个办法：① **装插件时选「轻量档」**（GGUF Q4_K_M，约 4.3 GB，见上面「主模型两个档位」）；② 降低 `megapixels`（如 0.5） |
 | 优化面板里点了开关，像"没反应"          | 面板里那几个开关（A 卡专属内核 / 异步卸载 / SageAttention）是**启动参数** ⇒ **改完要重启 ComfyUI** 才生效（面板提示里写了）。另外它们是**内存态**，重载 DSH 会回到 `cordis.patch.yml` 里的值 —— 想永久生效就写进配置 |
 | macOS 上找不到 ComfyUI          | 官方对 Apple Silicon **只提供手动安装**（没有便携包）。装好后用 `node scripts/setup.mjs --comfy <你的 ComfyUI 目录>` 指定位置即可（详见 [INSTALL.md](INSTALL.md)） |
 
@@ -558,7 +558,7 @@ node scripts/selftest.mjs
 | `statusCacheMs`         | `3000`                           | 状态探测缓存（客户端每 5 秒轮询一次）           |
 
 > ⚠ `unet` 除了"用哪个模型"，还**决定用哪个加载器**：文件名以 `.gguf` 结尾 →
-> 走 `UnetLoaderGGUF`（需 ComfyUI-GGUF）；否则走原生 `UNETLoader`。见上面「主模型两个档位」。
+> 走 `UnetLoaderGGUF`（需 ComfyUI-GGUF）；否则走原生 `UNETLoader`。
 
 ### 厂商专属优化（可选，默认关）★ 2026-10-11 新增
 

@@ -46,7 +46,7 @@ try {
 // ---- 2. 必需字段（DSH 靠这些认插件）----
 const REQUIRED = [
   ['name', 'dsh-qwen-paint'],
-  ['version', '0.1.4'],
+  ['version', '0.1.5'],
   ['main', 'lib/index.js'],
   ['type', 'module'],
 ]

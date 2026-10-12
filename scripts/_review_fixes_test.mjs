@@ -172,10 +172,10 @@ console.log('\n=== 16. 优化面板按显卡过滤（N 卡上不该出现 RDNA3 
   ok('16. client 有对应样式类', CLIENT_SRC.includes('.qwen-paint-opt-filtered'))
 }
 
-console.log('\n=== 17. 模型档位（小显存适配） ===')
+console.log('\n=== 17. 主模型加载器（GGUF 路线已撤，但手动配置仍生效） ===')
 {
-  const { buildWorkflow, DEFAULTS: DEF, unetLoaderFor, unetLoaderNode, MODEL_TIERS, resolvePlan } = mod.__internal
-  const GGUF = 'qwen-image-2.1-Q4_K_M.gguf'
+  const { buildWorkflow, DEFAULTS: DEF, unetLoaderFor, unetLoaderNode, resolvePlan } = mod.__internal
+  const GGUF = 'whatever-qwen-image-Q4_K_M.gguf'
 
   // ---- 默认路径必须与旧版**一字不差** ----
   const wfDef = buildWorkflow({ ...DEF }, { prompt: 'x', width: 992, height: 992, seed: 1 })
@@ -196,56 +196,51 @@ console.log('\n=== 17. 模型档位（小显存适配） ===')
   ok('17. 原生节点带 unet_name + weight_dtype',
     JSON.stringify(Object.keys(safeNode.inputs)) === JSON.stringify(['unet_name', 'weight_dtype']), safeNode.inputs)
 
-  // ---- 档位表 ----
-  ok('17. MODEL_TIERS 有 full / lite 两档', MODEL_TIERS.full && MODEL_TIERS.lite)
-  ok('17. full 用原生加载器', MODEL_TIERS.full.loader === 'UNETLoader')
-  ok('17. lite 用 GGUF 加载器', MODEL_TIERS.lite.loader === 'UnetLoaderGGUF')
-  ok('17. lite 的主模型是真实存在的 GGUF 文件名', MODEL_TIERS.lite.unet === GGUF, MODEL_TIERS.lite.unet)
+  // ---- ★ 2026-10-12：GGUF 路线已撤（装错格式的文件）----
+  const SRC = readFileSync(path.join(ROOT, 'lib', 'index.js'), 'utf8')
+  ok('17. ★ 档位表保留（用户要求）', SRC.includes('const MODEL_TIERS = {'))
+  // ⚠ 文件名本身还会出现在"解释为什么删掉它"的注释里 —— 那是**教训记录**，不是推荐。
+  //   所以断言的是：**没有任何会自动执行它的东西**（下载用的 size/sha 必须消失）。
+  ok('17. ★ 不再下载那个 sd.cpp GGUF（size/sha 校验值已消失）',
+    !SRC.includes('4199565024') && !SRC.includes('631d532e7ca71e8d90a87c71d3699761a812039d22e3370e87498d87754660fe'))
+  ok('17. ★ 但 UnetLoaderGGUF 加载能力保留（手动配置可用）',
+    SRC.includes("const UNET_LOADER_GGUF = 'UnetLoaderGGUF'"))
+  ok('17. ★ 探测器仍探 ggufUnet 节点（手动装了就报"可用"）',
+    SRC.includes('ggufUnet: up(\'ggufUnet\')'))
+  ok('17. ★ 删档位的理由写进了源码（防止后人再犯）',
+    SRC.includes('stable-diffusion.cpp') && SRC.includes('general.architecture'))
 
-  // ---- resolvePlan 会把加载器带出来 ----
+  const SETUP = readFileSync(path.join(ROOT, 'scripts', 'setup.mjs'), 'utf8')
+  ok('17. setup 保留 TIERS 分档（用户要求）', SETUP.includes('const TIERS = {'))
+  ok('17. setup 保留 --tier 参数', SETUP.includes("valueOf('--tier')"))
+  ok('17. ★ lite 档恢复自动下载（用 abenzerps 那个实测能用的）', SETUP.includes('const UNET_LITE = {'))
+  ok('17. ★ GGUF 下载源是 hf-mirror（ModelScope 上实测 404）',
+    SETUP.includes('https://hf-mirror.com/${GGUF_REPO}/resolve/main/'))
+  ok('17. ★ GGUF 的 size/sha256 是服务器权威值（HF API 的 lfs.oid + Content-Length）',
+    SETUP.includes('4604558112') && SETUP.includes('e79c8a009f2ecbdb6c70fd663d9aea9ee304a0d91f347e4169a756b8ad141b41'))
+  ok('17. ★ 下载按仓库选源（GGUF 走 hf-mirror，其余走 ModelScope）', SETUP.includes('const repoBaseOf'))
+  // ⚠ "unsloth" 仍出现在**解释为什么不用它**的注释里，那不算引用。
+  //   断言的应是"不把它当下载源"。
+  ok('17. ★ setup 不把 unsloth 当下载源',
+    !SETUP.includes("const GGUF_REPO = 'unsloth"))
+  ok('17. setup 下载 URL 按仓库选源', SETUP.includes('repoBaseOf(model)'))
+  ok('17. 轻量档装完提示必须装 ComfyUI-GGUF', SETUP.includes('city96/ComfyUI-GGUF'))
+  ok('17. 死函数 writeConfigUnet 已删', !SETUP.includes('function writeConfigUnet'))
+  ok('17. 死函数不残留调用', !SETUP.includes('writeConfigUnet('))
+  ok('17. int8 主模型的 sha256 仍是官方值',
+    SETUP.includes('cb74113cb03faecd79611b01fd7fd642f0aa60d6f0b95086abee214d75eaa57d'))
+
+  // ---- resolvePlan 仍会把加载器带出来（手动配 .gguf 时自动切换）----
   const planGguf = resolvePlan({ ...DEF, unet: GGUF }, null)
-  ok('17. cfg.unet=.gguf 时 plan.unetLoader = UnetLoaderGGUF', planGguf.unetLoader === 'UnetLoaderGGUF',
-    planGguf.unetLoader)
+  ok('17. cfg.unet=.gguf 时 plan.unetLoader = UnetLoaderGGUF（手动配置仍生效）',
+    planGguf.unetLoader === 'UnetLoaderGGUF', planGguf.unetLoader)
   const planDef = resolvePlan({ ...DEF }, null)
   ok('17. 默认 plan.unetLoader = UNETLoader', planDef.unetLoader === 'UNETLoader', planDef.unetLoader)
-
-  // ---- setup.mjs：分档 + 官方校验值 + 写配置 ----
-  const SETUP = readFileSync(path.join(ROOT, 'scripts', 'setup.mjs'), 'utf8')
-  ok('17. setup 有 TIERS 两档', SETUP.includes("const TIERS = {") && SETUP.includes('lite:'))
-  ok('17. 默认档是 full（老流程不变）', SETUP.includes("const DEFAULT_TIER = 'full'"))
-  ok('17. GGUF 走独立仓库（unsloth）', SETUP.includes("const GGUF_REPO = 'unsloth/Qwen-Image-2.1-GGUF'"))
-  ok('17. GGUF 的 sha256 是 ModelScope 官方值（非估算）',
-    SETUP.includes('631d532e7ca71e8d90a87c71d3699761a812039d22e3370e87498d87754660fe'))
-  ok('17. GGUF 的 size 与官方一致（4199565024）', SETUP.includes('4199565024'))
-  ok('17. --tier 提前校验（不用等显卡检测）', SETUP.includes('const TIER_ARG = valueOf(\'--tier\')'))
-  ok('17. 非交互且未指定时用默认档（不会卡住）', SETUP.includes('process.stdin.isTTY && !CHECK_ONLY'))
-  ok('17. 下载后把档位写进 cordis.patch.yml', SETUP.includes('writeConfigUnet(path.join(ROOT'))
-
-  // ---- 真实执行 writeConfigUnet（不是只看源码文本）----
-  const fnSrc = SETUP.match(/function writeConfigUnet\(file, unetName\) \{[\s\S]*?\n\}/)
-  ok('17. 能取出 writeConfigUnet 源码', fnSrc !== null)
-  if (fnSrc) {
-    const fsMod = await import('node:fs')
-    const osMod = await import('node:os')
-    const writeConfigUnet = new Function('fs', `${fnSrc[0]}\nreturn writeConfigUnet`)(fsMod)
-    const dir = await import('node:fs/promises').then((m) => m.mkdtemp(`${osMod.tmpdir()}/qwp-tier-`))
-    const f = `${dir}/cordis.patch.yml`
-    // ① 无 unet 行 → 插在 config: 之后
-    await fsMod.promises.writeFile(f, "- insert:\n    - id: qwen-paint\n      config:\n        comfyUrl: 'x'\n")
-    ok('17. ① 插入成功', writeConfigUnet(f, GGUF) === true)
-    let t = await fsMod.promises.readFile(f, 'utf8')
-    ok('17. ① 插到了 config: 之后、且缩进 8 空格', /^ {6}config:\n {8}unet: 'qwen-image-2\.1-Q4_K_M\.gguf'$/mu.test(t), t)
-    // ② 已有 unet 行 → 原地替换（幂等，不重复插入）
-    ok('17. ② 再写一次仍成功', writeConfigUnet(f, 'a.safetensors') === true)
-    t = await fsMod.promises.readFile(f, 'utf8')
-    ok('17. ② 是替换不是追加（只有一行 unet）', (t.match(/^ {8}unet:/gmu) ?? []).length === 1, t)
-    ok('17. ② 值已更新', t.includes("unet: 'a.safetensors'"))
-    // ③ 结构对不上 → 返回 false，**不硬改**
-    const f2 = `${dir}/broken.yml`
-    await fsMod.promises.writeFile(f2, 'no-config-here: true\n')
-    ok('17. ③ 找不到 config: → 返回 false（不硬改）', writeConfigUnet(f2, GGUF) === false)
-    ok('17. ③ 文件内容未被改动', (await fsMod.promises.readFile(f2, 'utf8')) === 'no-config-here: true\n')
-  }
+  const wfGguf = buildWorkflow({ ...DEF, unet: GGUF }, { prompt: 'x', width: 992, height: 992, seed: 1 })
+  ok('17. 手动配 GGUF 时工作流节点也切过去', wfGguf['1']?.class_type === 'UnetLoaderGGUF', wfGguf['1'])
+  // 只有 1 号（主模型加载器）该动，其余 15 个节点一个都不许变
+  const changed = Object.keys(wfDef).filter((k) => JSON.stringify(wfDef[k]) !== JSON.stringify(wfGguf[k]))
+  ok('17. GGUF 只影响 1 号节点，其余全不动', JSON.stringify(changed) === JSON.stringify(['1']), changed)
 }
 
 console.log('\n=== 18. A 卡专属优化（可选，质量中性；9000/7000/6000 各按代数给内核） ===')
@@ -396,7 +391,7 @@ console.log('\n=== 19. N 卡 40/50 系强化（SageAttention，硬依赖 ⇒ 确
 
 console.log('\n=== 20. macOS（Apple Silicon）适配 ★ 2026-10-11 ===')
 {
-  const { vendorIdOf, MODEL_TIERS, IS_MAC } = mod.__internal
+  const { vendorIdOf, IS_MAC, unetLoaderFor } = mod.__internal
   ok('20. IS_MAC 已定义且导出', IS_MAC === false || IS_MAC === true)
 
   // ---- 厂商识别 ----
@@ -423,8 +418,10 @@ console.log('\n=== 20. macOS（Apple Silicon）适配 ★ 2026-10-11 ===')
     /apple: \{[\s\S]{0,900}?packs: \[\]/u.test(src2))
   ok('20. apple 档案明确写了"统一内存"', /apple: \{[\s\S]{0,900}?统一内存/u.test(src2))
 
-  // ---- 档位表仍然完整（macOS 也能用小显存档）----
-  ok('20. 模型档位表不受影响（lite 仍可用）', MODEL_TIERS.lite?.loader === 'UnetLoaderGGUF')
+  // ---- ★ 2026-10-12：档位表已撤，只剩"按文件后缀选加载器"这一件事 ----
+  ok('20. 档位表保留（用户要求）', src2.includes('const MODEL_TIERS = {'))
+  ok('20. 但按后缀选加载器仍在（macOS 用户手动配 GGUF 也能用）',
+    unetLoaderFor('a.gguf') === 'UnetLoaderGGUF' && unetLoaderFor('a.safetensors') === 'UNETLoader')
 
   // ---- setup.mjs 的 macOS 分支 ----
   const SETUP2 = readFileSync(path.join(ROOT, 'scripts', 'setup.mjs'), 'utf8')
@@ -447,7 +444,7 @@ console.log('\n=== 20. macOS（Apple Silicon）适配 ★ 2026-10-11 ===')
 
 console.log('\n=== 21. 隐患排查所修 9 条（★ 2026-10-11） ===')
 {
-  const { describeOptimization, nvidiaGenOf, FULL_CAPS, DEFAULTS: DEF, MODEL_TIERS } = mod.__internal
+  const { describeOptimization, nvidiaGenOf, FULL_CAPS, DEFAULTS: DEF } = mod.__internal
   const capsWith = (g, over) => ({
     ...FULL_CAPS,
     nodes: { ...FULL_CAPS.nodes },
@@ -501,15 +498,19 @@ console.log('\n=== 21. 隐患排查所修 9 条（★ 2026-10-11） ===')
 
   // ⑥ setup 选完 lite 后有明确的后续步骤
   const SETUP3 = readFileSync(path.join(ROOT, 'scripts', 'setup.mjs'), 'utf8')
-  ok('21.⑥ setup 在 lite 档下提示要装 ComfyUI-GGUF',
-    SETUP3.includes("if (tier === 'lite')") && SETUP3.includes('git clone https://github.com/city96/ComfyUI-GGUF'))
+  // ⚠ 2026-10-12：**轻量档保留**（用户要求），且装完要催一句"必须装 ComfyUI-GGUF"。
+  ok("21.⑥ 轻量档保留 → setup 里仍有 lite 分支提示（装完催装 ComfyUI-GGUF）",
+    SETUP3.includes("if (tier === 'lite' && !CHECK_ONLY)"))
 
   // ⑦ 状态端点对 sagesa 有服务端护栏
   ok('21.⑦ 已确认没装时服务端拒绝打开 sagesa',
     HOST.includes("key === 'nvidiaSageAttention' && want && SAGE_READY === false"))
 
   // ⑧ MODEL_TIERS 无死字段
-  ok('21.⑧ MODEL_TIERS 不再带未被使用的 hint', !('hint' in MODEL_TIERS.full) && !('hint' in MODEL_TIERS.lite))
+  // ⚠ 2026-10-12：档位表整个撤了（`MODEL_TIERS` 已不存在），这条断言随之作废 ——
+  //   换成"确认表真的没了"，因为残留一张空表同样是 bug。
+  ok('21.⑧ 档位表保留（有 full/lite 两档）',
+    readFileSync(path.join(ROOT, 'lib', 'index.js'), 'utf8').includes('const MODEL_TIERS = {'))
 
   // ⑨ 可移植性测试的厂商列表含 apple
   const PORT = readFileSync(path.join(ROOT, 'scripts', '_portability_test.mjs'), 'utf8')
@@ -573,6 +574,73 @@ console.log('\n=== 22. 第二轮隐患排查所修（★ 2026-10-11，0.1.4） =
     SETUP4.includes("path.join(os.homedir(), 'Desktop', 'ComfyUI')"))
   ok('22.⑥ 源码里不再有 USERPROFILE ?? \'\' 的活代码（注释不算）',
     !/^\s+path\.join\(process\.env\.USERPROFILE \?\? ''/mu.test(SETUP4))
+}
+
+console.log('\n=== 23. 自定义输出目录（用户要求：能选、能校验、能改） ===')
+{
+  const { resolveOutputDir, defaultOutputDir, defaultOutputBase, DEFAULTS: DEF } = mod.__internal
+  const os2 = await import('node:os')
+  const fsp2 = await import('node:fs')
+  const path2 = await import('node:path')
+
+  // ① 默认值不带用户目录
+  // ⚠ 不能写 "!includes('<用户名>')" —— 打包机上跑的用户名可能恰好就叫那个。
+  //   改成断言"它是从环境变量推导的、且落在桌面或主目录下"。
+  ok('23. 默认输出目录落在桌面或主目录下',
+    defaultOutputDir().startsWith(path2.normalize(os2.homedir())), defaultOutputDir())
+
+  // ② 绝对路径照用
+  const abs = fsp2.mkdtempSync(path2.join(os2.tmpdir(), 'qwp-abs-'))
+  const r1 = resolveOutputDir(abs, null)
+  ok('23. 绝对路径照用', r1.dir === path2.normalize(abs) && !r1.problem, r1)
+
+  // ③ 不存在的绝对路径 → 自动建
+  const deep = path2.join(abs, 'a', 'b', 'c')
+  const r2 = resolveOutputDir(deep, null)
+  ok('23. 不存在的目录会自动创建', r2.dir === deep && !r2.problem && fsp2.existsSync(deep), r2)
+
+  // ④ 相对路径 → 解析到默认基目录下（换机器不失灵）
+  const r3 = resolveOutputDir('我的图/千问', null)
+  ok('23. 相对路径解析到默认位置下',
+    path2.isAbsolute(r3.dir) && r3.dir === path2.join(defaultOutputBase(), '我的图', '千问')
+    && !r3.problem, r3)
+  ok('23. 相对路径不会写死盘符/用户名',
+    !r3.dir.includes('C:////') || r3.dir.startsWith(path2.normalize(os2.homedir())) === false, r3.dir)
+
+  // ⑤ 空串 → 默认
+  ok('23. 空串 = 用默认', resolveOutputDir('', null).dir === defaultOutputDir())
+  ok('23. undefined = 用默认', resolveOutputDir(undefined, null).dir === defaultOutputDir())
+
+  // ⑥ 指向一个**文件** → 拒绝并退回
+  const f = path2.join(abs, 'notadir.txt')
+  fsp2.writeFileSync(f, 'x', 'utf8')
+  const r4 = resolveOutputDir(f, null)
+  ok('23. 路径指到文件 → 拒绝并退回默认', r4.dir === defaultOutputDir() && !!r4.problem, r4)
+
+  // ⑦ 非法字符/不存在盘符 → 退回，且**不抛错**（插件不能因此起不来）
+  let threw = false
+  try { resolveOutputDir('Z:////不存在的盘////xyz', null) } catch { threw = true }
+  ok('23. 非法路径不抛错（安全退回）', threw === false)
+  ok('23. 非法路径退回默认目录', resolveOutputDir('Z:////不存在的盘////xyz', null).dir === defaultOutputDir())
+
+  // ⑧ DEFAULTS 有 outputDirSource（界面展示用）
+  ok('23. DEFAULTS 带 outputDirSource', typeof DEF.outputDirSource === 'string')
+
+  // ⑨ 状态端点支持 ?outputDir=；客户端有"改目录"按钮
+  const HOST23 = readFileSync(path.join(ROOT, 'lib', 'index.js'), 'utf8')
+  ok('23. 状态端点处理 ?outputDir=', HOST23.includes("query.searchParams.get('outputDir')"))
+  ok('23. 端点里的校验与启动时同一套（resolveOutputDir）',
+    HOST23.includes('const r = resolveOutputDir(wantDir, log)'))
+  const CL = readFileSync(path.join(ROOT, 'lib', 'client.js'), 'utf8')
+  ok('23. 客户端有"改目录"入口', CL.includes('改目录'))
+  ok('23. 客户端显示当前目录与来源', CL.includes('outputDirSource'))
+  // ⑩ setup.mjs 首次运行询问 + 写配置
+  const ST = readFileSync(path.join(ROOT, 'scripts', 'setup.mjs'), 'utf8')
+  ok('23. setup 支持 --output-dir', ST.includes("valueOf('--output-dir')"))
+  ok('23. setup 有"试建+试写"的校验', ST.includes('.dshqp-write-test-'))
+  ok('23. setup 记住选择（写进 cordis.patch.yml）', ST.includes("writeConfigKey(path.join(ROOT, 'cordis.patch.yml'), 'outputDir'"))
+  ok('23. setup 有通用的 writeConfigKey', ST.includes('function writeConfigKey'))
+  ok('23. --check 不写不问', ST.includes('if (!CHECK_ONLY && allOk && comfyDir !== null)'))
 }
 
 console.log(`\n=== 结果：${fail === 0 ? '全部通过' : `${fail} 项失败`} ===`)

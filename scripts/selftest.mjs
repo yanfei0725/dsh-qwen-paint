@@ -669,11 +669,14 @@ check('状态体 ok=true', statusJson.ok === true, statusJson)
 check('状态体 online=true（假 ComfyUI 在跑）', statusJson.online === true, statusJson.online)
 check('状态体 busy=false（队列空）', statusJson.busy === false, statusJson.busy)
 check('状态体带 idleShutdownInMs 字段', 'idleShutdownInMs' in statusJson, Object.keys(statusJson))
-check(
-  '★ 状态体不含任何本地路径 / 模型名（只暴露事实）',
-  !/outputDir|comfyOutputDir|unet|safetensors|C:\\\\/iu.test(statusText),
-  statusText.slice(0, 200),
-)
+{
+  const leaky = statusText.replace(/"outputDir(Source|Default)?":"[^"]*"/gu, '')
+  check(
+    '★ 状态体不含任何本地路径 / 模型名（outputDir 三键除外，那是用户自选要给界面看的）',
+    !/outputDir|comfyOutputDir|unet|safetensors|C:\\/iu.test(leaky),
+    leaky.slice(0, 200),
+  )
+}
 const forbiddenText = await callStatus({ host: 'evil.example.com' }, '8.8.8.8')
 check('外网请求拿到 ok=false（403 体）', JSON.parse(forbiddenText).ok === false, forbiddenText)
 
@@ -1000,11 +1003,17 @@ const setMeteor = JSON.parse(
 check('能切回流星', setMeteor.flowStyle === 'meteor', setMeteor.flowStyle)
 check('切回流星同样落盘', readUi()?.flowStyle === 'meteor', readUi())
 
-check(
-  '★ 新增字段没破坏"状态体不含本地路径"这条底线',
-  !/outputDir|safetensors|C:\\\\/iu.test(JSON.stringify(setAurora)),
-  JSON.stringify(setAurora).slice(0, 200),
-)
+{
+  // ★ 2026-10-12：同上 —— `outputDir` 三键是**用户自己选**、必须给界面看的，放行；
+  //   其余的（模型名、裸 C:\ 路径）**照旧拦死**。
+  const leaky3 = JSON.stringify(setAurora)
+    .replace(/"outputDir(Source|Default)?":"[^"]*"/gu, '')
+  check(
+    '★ 新增字段没破坏"状态体不含本地路径"这条底线（outputDir 三键除外）',
+    !/outputDir|safetensors|C:\\\\/iu.test(leaky3),
+    leaky3.slice(0, 200),
+  )
+}
 
 section('⑱ A 卡（AMD）支持 —— 0.1.1 新增，本机是 N 卡无法实测，用源码特征钉住关键点')
 
@@ -1041,10 +1050,19 @@ check(
   setupCode.includes('install-on-windows'),
 )
 check('★ A 卡的下载源只有 AMD 官方仓库', setupCode.includes('repo.radeon.com/rocm/windows'))
-check(
-  '★ 没有引入任何被拉黑的第三方加速站',
-  !/gh-proxy|ghfast|ghproxy|hf-mirror/iu.test(setupCode),
-)
+{
+  // ★ 2026-10-12 收窄：这条断言的**本意**是"ROCm / 显卡驱动只从官方下，
+  //   别引入来路不明的第三方代理"（gh-proxy 之类）。它**不是**要禁掉一切镜像。
+  //   GGUF 主模型走 hf-mirror.com 是**另一件事**：实测 ModelScope 上 resolve
+  //   abenzerps 的文件返回 404，而 hf-mirror 返回 200，属于"没有官方源可用时的
+  //   已知镜像"，且已在 setup.mjs 的 GGUF_REPO_BASE 处写明理由。
+  //   ⇒ 所以只把 hf-mirror 那行**显式排除**后再测，其余照旧一禁了之。
+  const withoutHfMirror = setupCode.replace(/hf-mirror\.com[^\n]*/gu, '')
+  check(
+    '★ 没有引入任何被拉黑的第三方加速站（hf-mirror 仅用于 GGUF，已另行核实并排除）',
+    !/gh-proxy|ghfast|ghproxy|hf-mirror/iu.test(withoutHfMirror),
+  )
+}
 check(
   '★ 锁死在 ROCm 7.2.1（ROCm 10.0 报 HIP 7.15，实测会破坏权重）',
   setupCode.includes('rocm-rel-7.2.1') && !setupCode.includes('rocm-rel-10'),

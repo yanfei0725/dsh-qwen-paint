@@ -238,7 +238,7 @@ console.log('\n★ 跨平台回归锁（本轮新修）')
 }
 
 // ── A3：Windows 扫描器不许硬编码盘符 ─────────────────────────────────
-//   修前：`'<盘符>:\ComfyUI' 之类的示例目录`
+//   修前：`'C:\ComfyUI','D:\ComfyUI','E:\ComfyUI','F:\ComfyUI','G:\ComfyUI','K:\ComfyUI'`
 //        —— 装在第 7 个盘或改了盘符就漏（只能靠名字含 comfy 的兜底）。
 {
   const idx = src.indexOf('const COMFY_SEARCH_WIN = [')

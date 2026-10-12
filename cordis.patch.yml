@@ -73,10 +73,13 @@
         #     最松的 eager 也只是"沾边就画"，不是"无脑画"。
         # drawTrigger: 'auto'
 
-        # ★ outputDir 故意**不写死**：插件默认会按当前用户的桌面推算（USERPROFILE/Desktop/千问1生图）。
-        #   写死绝对路径有两个害处：① 别人装上后往**不存在的目录**写，出图会失败；
-        #   ② 包里带着打包者的 Windows 用户名。
-        #   要固定在别处，放开下面这行并改成你的路径：
+        # ★★ 2026-10-12（用户要求：允许自选输出目录）支持三种写法：
+        #   · 绝对路径（D:\我的图\千问）—— 照用，完全自己说了算；
+        #   · 只写文件夹名（我的图/千问）—— 放到默认位置（桌面）下，**换机器也不会失灵**；
+        #   · 留空 = 默认（桌面\千问1生图）。
+        # 安装时会问一次；也可以随时在优化面板里点「改目录」改。
+        # 校验：目录不存在就试着建 → 建不成就拒绝 → 建成了还要**真的写一个临时文件**
+        #      （"目录在"不等于"能写"）。不可用则退回默认并 warn，**绝不因此让插件起不来**。
         # outputDir: 'D:\我的图'
         # ★★ 2026-10-09：600000(10分钟) → 300000(5分钟)。见 DEFAULTS 注释：
         #   10 分钟太大，后端一旦卡住会"假性卡死"干等；5 分钟覆盖首次加载+大图余量足够。
@@ -135,22 +138,22 @@
         #     实际路径（或改用 registry 里现成的 tag）：
         #       ① 下载 pipe（约 16 GB，注意排除重复的单文件副本）：
         #          hf download black-forest-labs/FLUX.2-klein-4B ^
-        #            --local-dir X:/hipfire/models/flux-klein-pipe ^
+        #            --local-dir K:/hipfire/models/flux-klein-pipe ^
         #            --exclude "flux-2-klein-4b.safetensors" "*.jpg" "*.png" "*.webp"
         #       ② 打包成 3 个 hfq 组件（约 20+ 分钟，单核慢）：
-        #          hipfire-quantize --flux-pipe X:/hipfire/models/flux-klein-pipe ^
-        #            --output X:/hipfire/models/flux-klein.hfq
+        #          hipfire-quantize --flux-pipe K:/hipfire/models/flux-klein-pipe ^
+        #            --output K:/hipfire/models/flux-klein.hfq
         #          → flux-klein-transformer.hfq (45) / -qwen3.hfq (46) / -vae.hfq (43)
-        #       ③ 把下面这行改成 'X:/hipfire/models/flux-klein-transformer.hfq'
+        #       ③ 把下面这行改成 'K:/hipfire/models/flux-klein-transformer.hfq'
         #
         #     也可以直接用 registry 里现成的（但 FLUX.1 schnell 需 ~24.3 GB 显存，
         #     RX 7900 XT 的 20 GB 装不下；仅 gfx1151 统一内存等机型可用）：
         #       hipfireImgModel: 'flux.schnell:1'
-        # hipfireImgModel: 'X:/hipfire/models/flux-klein-transformer.hfq'
+        # hipfireImgModel: 'K:/hipfire/models/flux-klein-transformer.hfq'
         #
         #   hipfireExe: hipfire 可执行文件。**留空 = 自动探测**（依次查
         #     HIPFIRE_EXE → HIPFIRE_HOME/{,engine/,bin/} → PATH → C–K 各盘常见位置）。
-        #     要指定就写绝对路径，例如 'X:\hipfire\engine\hipfire.exe'。
+        #     要指定就写绝对路径，例如 'K:\hipfire\engine\hipfire.exe'。
         imageBackend: 'comfyui'
         hipfireExe: ''
         #   hipfireTransport: 'auto'（默认：先探 HTTP，不通回退 CLI）| 'http' | 'cli'
@@ -249,6 +252,9 @@
         # ② --async-offload（异步权重卸载）：ComfyUI 的 help 原文写着它
         #    "Enabled by default on Nvidia" —— 即 **N 卡默认开、A 卡默认关**，
         #    这里把它给 A 卡补上（只改权重加载的时机，与计算重叠）。
+        # 【2026-10-11 本机 RX 7900 XT（RDNA3）实测确认适用】—— 但**发布默认仍保持关**：
+        #    它是"可选档"（与 amdKernel 同一套约定），已知只在 RDNA3 上验证过；
+        #    别的 A 卡用户请自己在优化面板里点开（或把下面这行改成 true）。
         # amdAsyncOffload: false
 
         # ── ★ 2026-10-11：N 卡 SageAttention（40 系 Ada / 50 系 Blackwell 专属）────
