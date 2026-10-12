@@ -1057,9 +1057,13 @@ check('★ A 卡的下载源只有 AMD 官方仓库', setupCode.includes('repo.r
   //   abenzerps 的文件返回 404，而 hf-mirror 返回 200，属于"没有官方源可用时的
   //   已知镜像"，且已在 setup.mjs 的 GGUF_REPO_BASE 处写明理由。
   //   ⇒ 所以只把 hf-mirror 那行**显式排除**后再测，其余照旧一禁了之。
-  const withoutHfMirror = setupCode.replace(/hf-mirror\.com[^\n]*/gu, '')
+  // 两种域名都要排除：hf-mirror.com 与 huggingface.co（GGUF 的两个候选源）。
+  // ⚠ 正则**不能要求 .com** —— 源码注释里也写了 "hf-mirror 的 308" 这种不带域名的说法。
+  const withoutHfMirror = setupCode
+    .replace(/hf-mirror[^\n]*/gu, '')
+    .replace(/huggingface\.co[^\n]*/gu, '')
   check(
-    '★ 没有引入任何被拉黑的第三方加速站（hf-mirror 仅用于 GGUF，已另行核实并排除）',
+    '★ 没有引入任何被拉黑的第三方加速站（hf-mirror/huggingface 仅作 GGUF 候选源，已另行核实并排除）',
     !/gh-proxy|ghfast|ghproxy|hf-mirror/iu.test(withoutHfMirror),
   )
 }

@@ -162,14 +162,30 @@ const REPO_BASE = `https://modelscope.cn/models/${REPO}/resolve/master/`
 const REPO_PAGE = `https://modelscope.cn/models/${REPO}`
 /**
  * GGUF 档的仓库与下载源。
- * ⚠ **不用 ModelScope** —— 实测 `abenzerps/*` 仓库在 ModelScope 上 resolve 该文件返回 404；
- *    用 hf-mirror.com（HF 国内镜像）实测 200，且支持 Range/断点续传。
+ *
+ * ## ⚠ 为什么只能"多源轮询 + 如实告知"（2026-10-12 排查结论）
+ *   1. `city96/Qwen-Image-gguf`（ComfyUI-GGUF 作者本人的转换）**在 ModelScope 上有**，
+ *      但它转的是 **Qwen-Image 初代（20B）** —— `qwen-image-Q4_K_M.gguf` 有 **12.17 GB**。
+ *      本插件用 **2.1（7B，int8 主模型才 6.76 GB）**，**两者不能混用** ⇒ 那份对不上。
+ *   2. Qwen-Image **2.1** 的 GGUF 目前只有 `abenzerps` 一家，且**只在 HuggingFace**：
+ *      · ModelScope 上 `abenzerps/*` 实测 `record not found`（根本没这个仓库）；
+ *      · `hf-mirror.com` 对该 LFS 文件实测只返回 **308 跳转到 huggingface.co**，
+ *        **等于没起镜像作用**。
+ *   3. abenzerps 的 `Q4_K_M` 是 **4.6 GB**，与 7B × ~0.6 B/param 吻合 ⇒ 规模对得上。
+ *
+ * ⇒ 结论：**轻量档的 GGUF 实际要求能连 HuggingFace**，国内网络很可能失败。
+ *   所以做**多源轮询**，并让"自己弄一个 .gguf 放进 models/unet"这条路始终可用
+ *   （插件会按文件名自动挑最优的那个，见 MODEL_HINTS.unetGguf）。
  */
 const GGUF_REPO = 'abenzerps/Qwen-Image-2.1-Uncensored-GGUF'
-const GGUF_REPO_BASE = `https://hf-mirror.com/${GGUF_REPO}/resolve/main/`
+/** 候选源，按顺序试。curl `-L` 会跟随 hf-mirror 的 308，等价于也能试到 HF 本体。 */
+const GGUF_BASES = [
+  `https://hf-mirror.com/${GGUF_REPO}/resolve/main/`,
+  `https://huggingface.co/${GGUF_REPO}/resolve/main/`,
+]
 const GGUF_REPO_PAGE = `https://huggingface.co/${GGUF_REPO}`
-/** 某个模型该从哪个仓库/源下 —— GGUF 走 GGUF 源，其余走 ModelScope。 */
-const repoBaseOf = (model) => (/\.gguf$/iu.test(model.name) ? GGUF_REPO_BASE : REPO_BASE)
+/** GGUF 的**全部**候选 URL（下载失败时依次换下一个）。 */
+const ggufUrlsOf = (model) => GGUF_BASES.map((b) => `${b}${model.dir}/${model.name}`)
 
 const COMFY_RELEASE = 'https://github.com/comfyanonymous/ComfyUI/releases/latest/download/ComfyUI_windows_portable_nvidia.7z'
 const COMFY_REPO = 'https://github.com/comfyanonymous/ComfyUI'
@@ -963,13 +979,25 @@ if (needDownload === 0) {
     const dest = path.join(modelsRoot, model.dir, model.name)
     const size = fs.existsSync(dest) ? fs.statSync(dest).size : 0
     if (size === model.size) continue
-    const url = `${repoBaseOf(model)}${model.dir}/${model.name}`
-    console.log(`\n  ↓ ${model.name}（${gb(model.size)}）`)
-    const got = await downloadWithCurl(url, dest)
-    const finalSize = fs.existsSync(dest) ? fs.statSync(dest).size : 0
-    if (!got.ok && finalSize !== model.size) {
-      console.error(`  ✗ 下载失败（curl 退出码 ${got.code}）：${got.stderr?.slice(0, 300) ?? ''}`)
+    // GGUF 有多个候选源（HF 国内常连不上），失败就换下一个；
+    // 其余模型只有 ModelScope 一个源，行为与以前完全一致。
+    const urls = /\.gguf$/iu.test(model.name)
+      ? ggufUrlsOf(model)
+      : [`${REPO_BASE}${model.dir}/${model.name}`]
+    let done = false
+    let finalSize = 0
+    for (const [bi, url] of urls.entries()) {
+      if (bi > 0) console.log(`  ↻ 换源重试：${url}`)
+      console.log(`\n  ↓ ${model.name}（${gb(model.size)}）`)
+      const got = await downloadWithCurl(url, dest)
+      finalSize = fs.existsSync(dest) ? fs.statSync(dest).size : 0
+      if (got.ok || finalSize === model.size) { done = true; break }
+      console.error(`  ✗ 该源下载失败（curl 退出码 ${got.code}）`)
+    }
+    if (!done) {
+      console.error(`  ✗ ${urls.length} 个源都失败了。`)
       console.error('    可重复跑本脚本，curl 会断点续传。')
+      console.error(`    或者自己下一个 .gguf 放进 ${path.join(modelsRoot, 'unet')}，插件会自动认。`)
       allOk = false
       continue
     }

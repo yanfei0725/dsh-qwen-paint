@@ -215,15 +215,19 @@ console.log('\n=== 17. 主模型加载器（GGUF 路线已撤，但手动配置�
   ok('17. setup 保留 --tier 参数', SETUP.includes("valueOf('--tier')"))
   ok('17. ★ lite 档恢复自动下载（用 abenzerps 那个实测能用的）', SETUP.includes('const UNET_LITE = {'))
   ok('17. ★ GGUF 下载源是 hf-mirror（ModelScope 上实测 404）',
-    SETUP.includes('https://hf-mirror.com/${GGUF_REPO}/resolve/main/'))
+    SETUP.includes('https://hf-mirror.com/${GGUF_REPO}/resolve/main/')
+    && SETUP.includes('https://huggingface.co/${GGUF_REPO}/resolve/main/'))
   ok('17. ★ GGUF 的 size/sha256 是服务器权威值（HF API 的 lfs.oid + Content-Length）',
     SETUP.includes('4604558112') && SETUP.includes('e79c8a009f2ecbdb6c70fd663d9aea9ee304a0d91f347e4169a756b8ad141b41'))
-  ok('17. ★ 下载按仓库选源（GGUF 走 hf-mirror，其余走 ModelScope）', SETUP.includes('const repoBaseOf'))
+  ok('17. ★ GGUF 多源轮询（hf-mirror → huggingface）',
+    SETUP.includes('const GGUF_BASES = [') && SETUP.includes('ggufUrlsOf(model)'))
+  ok('17. ★ 非 GGUF 仍只走 ModelScope 一个源（行为与以前一致）',
+    SETUP.includes('[`${REPO_BASE}${model.dir}/${model.name}`]'))
+  ok('17. ★ 全源失败时提示可自备 .gguf', SETUP.includes('插件会自动认'))
   // ⚠ "unsloth" 仍出现在**解释为什么不用它**的注释里，那不算引用。
   //   断言的应是"不把它当下载源"。
   ok('17. ★ setup 不把 unsloth 当下载源',
     !SETUP.includes("const GGUF_REPO = 'unsloth"))
-  ok('17. setup 下载 URL 按仓库选源', SETUP.includes('repoBaseOf(model)'))
   ok('17. 轻量档装完提示必须装 ComfyUI-GGUF', SETUP.includes('city96/ComfyUI-GGUF'))
   ok('17. 死函数 writeConfigUnet 已删', !SETUP.includes('function writeConfigUnet'))
   ok('17. 死函数不残留调用', !SETUP.includes('writeConfigUnet('))

@@ -379,6 +379,15 @@ CLIP 与 VAE 两档共用，**只有主模型不同**。
    Qwen-Image GGUF 只有这一类。介意的话装完自行替换 `models/unet` 里的文件即可，
    插件会自动认你换的那个。
 
+> ⚠ **重要限制（2026-10-12 排查）**：Qwen-Image **2.1** 的 GGUF 目前只有
+> `abenzerps` 一家提供，且**只在 HuggingFace**。脚本会依次试
+> `hf-mirror.com` → `huggingface.co`，但 **hf-mirror 对 LFS 大文件只返回 308
+> 跳转、等于没镜像**，所以**国内网络下很可能下不动**。
+> `city96`（ComfyUI-GGUF 作者）确实有一份在 ModelScope 上，但他转的是
+> **初代 Qwen-Image（20B，Q4_K_M 12.17 GB）**，与 2.1（7B）**不能混用**。
+> ⇒ **下不动是预期内的**：自己弄一个可用的 `.gguf` 放进 `models/unet`
+> 即可，插件会按文件名自动挑最优的那个。
+
 > ⚠ 曾经的坑：这里原先是 `unsloth/Qwen-Image-2.1-GGUF` 的 Q4_K_M，
 > 那个是 **stable-diffusion.cpp 格式**的 GGUF（元数据为空、张量名
 > `model.diffusion_model.*`），ComfyUI-GGUF 加载不了。2026-10-12 已换成

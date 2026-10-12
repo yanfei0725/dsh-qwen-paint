@@ -184,6 +184,10 @@ winget install --id=Python.Python.3.12 -e
 > 轻量档**必须另装 ComfyUI-GGUF 节点**（`git clone https://github.com/city96/ComfyUI-GGUF "<你的ComfyUI>/custom_nodes/ComfyUI-GGUF"`），
 > 否则出图会被 ComfyUI 直接拒收。该 GGUF 属 Uncensored 系，介意可装完后自行替换
 > `models/unet` 里的文件。
+>
+> ⚠ **下载限制**：2.1 的 GGUF 只有 HuggingFace 一个来源，hf-mirror 对 LFS 大文件
+> 只做 308 跳转，**国内网络下很可能下不动**。下不动是预期内的 —— 自己弄一个
+> 可用的 `.gguf` 放进 `models/unet` 即可，插件会自动认。
 
 ### 体积与时间
 
