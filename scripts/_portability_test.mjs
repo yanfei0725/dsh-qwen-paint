@@ -18,7 +18,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-const src = readFileSync(fileURLToPath(new URL('../lib/index.js', import.meta.url)), 'utf8')
+const src = ['index.js', 'config.js'].map((f) => readFileSync(fileURLToPath(new URL(`../lib/${f}`, import.meta.url)), 'utf8')).join('\n')
 let fail = 0
 const assert = (name, cond, extra) => {
   console.log(`  ${cond ? 'OK  ' : 'FAIL'} ${name}${extra && !cond ? `  ← ${extra}` : ''}`)
@@ -238,7 +238,7 @@ console.log('\n★ 跨平台回归锁（本轮新修）')
 }
 
 // ── A3：Windows 扫描器不许硬编码盘符 ─────────────────────────────────
-//   修前：`'C:\ComfyUI','D:\ComfyUI','E:\ComfyUI','F:\ComfyUI','G:\ComfyUI','K:\ComfyUI'`
+//   修前：`'C:\ComfyUI','D:\ComfyUI','E:\ComfyUI','F:\ComfyUI','G:\ComfyUI','X:\ComfyUI'`
 //        —— 装在第 7 个盘或改了盘符就漏（只能靠名字含 comfy 的兜底）。
 {
   const idx = src.indexOf('const COMFY_SEARCH_WIN = [')

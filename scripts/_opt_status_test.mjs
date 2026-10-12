@@ -175,7 +175,7 @@ console.log('\n=== 9. 启动失败 vs 启动超时（两个不同状态，不能
   assert('前端按 launchTimedOut 区分两者', src.includes('data.launchTimedOut'))
   assert('菜单里超时显示"启动超时，点此重试"', src.includes('启动超时，点此重试'))
 
-  const host = readFileSync(fileURLToPath(new URL('../lib/index.js', import.meta.url)), 'utf8')
+  const host = ['index.js', 'config.js'].map((f) => readFileSync(fileURLToPath(new URL(`../lib/${f}`, import.meta.url)), 'utf8')).join('\n')
   assert('host 有 45 秒超时常量', /LAUNCH_TIMEOUT_MS = 45000/u.test(host))
   // ★ 重写后：超时由 phase='timeout' 表达（原 launchState.timedOut 已删）
   assert('host 有 launchMarkTimeout（超时独立态）', host.includes('function launchMarkTimeout'))
@@ -216,7 +216,7 @@ console.log('\n=== 10. 立即报错：致命日志识别（不等 45 秒）★ =
     for (const line of bad) assert(`认出致命错：${line.slice(0, 46)}`, f(line) !== '')
     for (const line of good) assert(`不误判正常日志：${line.slice(0, 40)}`, f(line) === '')
   }
-  const host = readFileSync(fileURLToPath(new URL('../lib/index.js', import.meta.url)), 'utf8')
+  const host = ['index.js', 'config.js'].map((f) => readFileSync(fileURLToPath(new URL(`../lib/${f}`, import.meta.url)), 'utf8')).join('\n')
   assert('轮询间隔已缩到 1 秒', /\}, 1000\)/u.test(host))
   assert('每轮先查日志再查进程', host.indexOf('fatalLineInLog(tail)') < host.indexOf("Get-Process -Id"))
 
@@ -475,7 +475,7 @@ console.log('\n=== 12. 界面侧：徽标可点 + 菜单入口 + 四态渲染 �
     client.includes('qwen-paint-opt-row-unknown .qwen-paint-opt-name'))
 
   // ⑩ host 侧必须真的产出 state / action / stats，否则界面这套全是空转
-  const host = readFileSync(fileURLToPath(new URL('../lib/index.js', import.meta.url)), 'utf8')
+  const host = ['index.js', 'config.js'].map((f) => readFileSync(fileURLToPath(new URL(`../lib/${f}`, import.meta.url)), 'utf8')).join('\n')
   assert('⑩ host 产出 state 字段', host.includes("detail.push({") && /^\s*state,$/mu.test(host))
   assert('⑩ host 产出 action 字段', /action: action \?\? ''/u.test(host))
   assert('⑩ host 产出 stats', host.includes('const stats = {'))

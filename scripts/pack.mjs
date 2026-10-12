@@ -70,8 +70,14 @@ const DIRS = ['lib', 'assets', 'scripts']
  * ★ 2026-10-09 修正：补上 `\.bak[^\\/]*$` —— 原来只跳 `_backup*` 目录，
  *   结果 `lib/index.js.bak-before-*` 这类**改动前备份**会被当普通文件收进包
  *   （实测一次收进 7 个，白占 440 KB，而且属于开发残留，不该发布）。
+ * ★ 2026-10-12 修正：排除**本轮拆分/压缩用的一次性开发脚手架** ——
+ *   `_split_move.mjs`（拆文件机的机械搬运器）、`_dbg.mjs`（调试探针）、
+ *   `_shrink_webp.py`（压缩 loading.webp 的工具，含本机绝对路径，
+ *   一旦进包会被上面的隐私检查拦下）。它们和 `.bak` 一样：
+ *   **本地保留、不进包、不上 GitHub**。拆分与压缩的结果（lib/*.js、
+ *   assets/loading.webp）才是要发布的东西。
  */
-const SKIP = /(^|[\\/])(node_modules|dist|\.git|_backup[^\\/]*|__pycache__)([\\/]|$)|\.(log|zip|tmp)$|\.bak[^\\/]*$/iu
+const SKIP = /(^|[\\/])(node_modules|dist|\.git|_backup[^\\/]*|__pycache__)([\\/]|$)|\.(log|zip|tmp)$|\.bak[^\\/]*$|(^|[\\/])(_split_move|_dbg|_shrink_webp|_ref)\./iu
 
 /* ------------------------------------------------------------------ ① 组装 ---- */
 

@@ -138,22 +138,22 @@
         #     实际路径（或改用 registry 里现成的 tag）：
         #       ① 下载 pipe（约 16 GB，注意排除重复的单文件副本）：
         #          hf download black-forest-labs/FLUX.2-klein-4B ^
-        #            --local-dir K:/hipfire/models/flux-klein-pipe ^
+        #            --local-dir X:/hipfire/models/flux-klein-pipe ^
         #            --exclude "flux-2-klein-4b.safetensors" "*.jpg" "*.png" "*.webp"
         #       ② 打包成 3 个 hfq 组件（约 20+ 分钟，单核慢）：
-        #          hipfire-quantize --flux-pipe K:/hipfire/models/flux-klein-pipe ^
-        #            --output K:/hipfire/models/flux-klein.hfq
+        #          hipfire-quantize --flux-pipe X:/hipfire/models/flux-klein-pipe ^
+        #            --output X:/hipfire/models/flux-klein.hfq
         #          → flux-klein-transformer.hfq (45) / -qwen3.hfq (46) / -vae.hfq (43)
-        #       ③ 把下面这行改成 'K:/hipfire/models/flux-klein-transformer.hfq'
+        #       ③ 把下面这行改成 'X:/hipfire/models/flux-klein-transformer.hfq'
         #
         #     也可以直接用 registry 里现成的（但 FLUX.1 schnell 需 ~24.3 GB 显存，
         #     RX 7900 XT 的 20 GB 装不下；仅 gfx1151 统一内存等机型可用）：
         #       hipfireImgModel: 'flux.schnell:1'
-        # hipfireImgModel: 'K:/hipfire/models/flux-klein-transformer.hfq'
+        # hipfireImgModel: 'X:/hipfire/models/flux-klein-transformer.hfq'
         #
         #   hipfireExe: hipfire 可执行文件。**留空 = 自动探测**（依次查
         #     HIPFIRE_EXE → HIPFIRE_HOME/{,engine/,bin/} → PATH → C–K 各盘常见位置）。
-        #     要指定就写绝对路径，例如 'K:\hipfire\engine\hipfire.exe'。
+        #     要指定就写绝对路径，例如 'X:\hipfire\engine\hipfire.exe'。
         imageBackend: 'comfyui'
         hipfireExe: ''
         #   hipfireTransport: 'auto'（默认：先探 HTTP，不通回退 CLI）| 'http' | 'cli'

@@ -27,12 +27,23 @@
       ],
       "platform": "web",
       "immediately": true
+    },
+    "compatibility": {
+      "dsh": ">=1.0.0",
+      "node": ">=18.0.0"
+    },
+    "build": {
+      "strategy": "none",
+      "note": "lib/ 下的文件即为最终运行代码，无构建步骤、无 prepare 契约；发布副本由源码脱敏生成（本机盘符路径统一替换为占位盘符，其余字节一致）。"
     }
   },
   "files": [
     "lib",
+    "assets",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "INSTALL.md",
+    "LICENSE"
   ],
   "keywords": [
     "dsh",
@@ -46,5 +57,16 @@
   "contributors": [
     "@yanfei0725"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yanfei0725/dsh-qwen-paint.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "original": {
+    "repository": "https://github.com/wonderandyou/dsh-qwen-paint",
+    "author": "@奇迹与你"
+  }
 }
