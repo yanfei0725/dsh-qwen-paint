@@ -19,7 +19,7 @@
 import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
-import { promises as fsp, existsSync, readFileSync } from 'node:fs'
+import { promises as fsp, existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -1132,7 +1132,7 @@ check(
 check(
   '★ 参考图走 /upload/image（不自己往 input 目录里复制 —— 那目录未必是配置里那个）',
   (() => {
-    const code = ['index.js', 'config.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
+    const code = ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
     return code.includes('/upload/image') && !/copyFile[^\n]*input/iu.test(code)
   })(),
 )
@@ -1143,7 +1143,7 @@ section('⑳ 取图编号撞车的事故防线（主人 2026-10-08 那张柴犬�
    SaveImage 编号**都从 00001 开始** → 旧目录里恰好有同名的旧文件
    → 老代码"先读本地"读到了 → 把昨天的图当成这次的成果，还按新 prompt 命名、
      报新请求的尺寸。**修法两条，这里各钉一条。** */
-const hostCode = ['index.js', 'config.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
+const hostCode = ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
 check(
   '★ 取图顺序：先走 ComfyUI 官方的 /view，本地目录只当兜底',
   (() => {
@@ -1174,7 +1174,7 @@ section('㉑ 生图意图优先级 + 每次只生一张（主人 2026-10-08）')
 /* 主人的要求：「把生图目的识别的优先级提到最高，一旦检测到就立刻隐藏思考切动画，切每次只生一张图」。
    ⚠ 有个绕不开的事实：客户端插件**看不到用户消息**，它能感知的最早事件就是"工具开始跑"，
    所以动画起点的早晚完全取决于**模型多快调用 draw_image** —— 提示词越狠，动画来得越早。 */
-const hostSrc = ['index.js', 'config.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
+const hostSrc = ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
 // ★ 2026-10-11 修正：提示词改成"按策略生成"（buildDrawIntentPrompt），
 //   旧文案「【最高优先级】」已被 auto 档的 lead 取代。
 check('★ systemPrompt 里点明生图意图是"优先要判断的一件事"', hostSrc.includes('【生图】判断用户是不是想生成图片'))
@@ -1184,9 +1184,15 @@ check(
 )
 check('★ 要求「一次只生一张图」', hostSrc.includes('一次只生一张图'))
 // ★ 2026-10-11 修正：加了 count（默认 1）批量，所以是 slice(0, count) —— 默认仍只落一张。
+// ★★ 2026-10-13 再修正：串行抽卡后这里变成 `slice(0, perIterCount)`，
+//     而 `perIterCount = wantSerial ? 1 : count` ⇒ **非串行时仍等于 count**，
+//     "默认只落一张"这个不变式没变，只是表达换了。
+//   ⇒ 断言**升级为同时检查 perIterCount 的取值**：只查字面量会在串行改动后
+//     假失败（正如这次实测），查取值才真守得住不变式。
 check(
   '★ 代码层面按 count 只落前 N 张（count 默认 1，守住"默认只生一张"）',
-  hostSrc.includes('images.slice(0, count)')
+  hostSrc.includes('images.slice(0, perIterCount)')
+  && hostSrc.includes('const perIterCount = wantSerial ? 1 : count')
   && hostSrc.includes('Math.max(1, Math.min(4, Math.trunc(args.count)))'),
 )
 check(
@@ -1285,8 +1291,278 @@ check(
   })(),
 )
 
-/* ------------------------------------------------------------------ 收尾 ---- */
+section('㉔ 串行抽卡 + 生成后自动放大（2026-10-13 用户反馈）')
 
+// ---- ① 串行抽卡（排队模式）------------------------------------------------
+//   ⚠ 最关键的一条：串行**不能**卸主模型。真卸掉，下一张就要重新加载 ~13.5 GB
+//     （实测冷启动 65 s），挂机抽卡会变成"每张 65 秒"的灾难。
+//     这是本特性的**核心设计决策**，必须用断言钉死 —— 否则以后有人"顺手"
+//     在循环里加个 freeComfyModels，就把这个特性从加速变成减速。
+check(
+  '★ 串行抽卡：显存闸 = < 16 GB（与 vaeTiling 的显存闸同源，判据一致）',
+  hostSrc.includes('serialBatch') && hostSrc.includes('vramGB > 0 && vramGB < 16'),
+)
+check(
+  '★ 串行抽卡：非串行时 perIterCount 仍等于 count（守住"默认只生一张"）',
+  hostSrc.includes('const perIterCount = wantSerial ? 1 : count'),
+)
+check(
+  '★ 串行抽卡：图生图**不**串行（维持既有"一次一张"语义，不擅自改）',
+  hostSrc.includes("const wantSerial = serialMode && count > 1 && reference === ''"),
+)
+check(
+  '★ 串行抽卡：第 2 张起换 seed（对齐 ComfyUI 批内 seed+1 的语义）',
+  hostSrc.includes('if (iter > 0) workflow = buildWf(undefined, seed + iter, 1)'),
+)
+// ★★ 2026-10-13 修 bug（我上一轮引入的）：OOM 重跑时把张数写死成 `1`，
+//     非串行批量（count=4）就会静默只出 1 张 —— 用户要 4 张拿到 1 张。
+//     钉死成"必须用 perIterCount"，防止再写死。
+check(
+  '★★ OOM 重跑**不能**把张数写死成 1（否则批量时静默少出图）',
+  hostSrc.includes('buildWf(retryCfg, seed + iter, perIterCount)'),
+)
+const serialLoop = (() => {
+  const from = hostSrc.indexOf('for (let iter = 0')
+  const to = hostSrc.indexOf('const seconds = Number(((Date.now() - t0)')
+  return from >= 0 && to > from ? hostSrc.slice(from, to) : ''
+})()
+check(
+  '★★ 串行抽卡：循环里**绝不**卸主模型（卸了下一张要重载 ~13.5GB）',
+  serialLoop !== '' && !serialLoop.includes('freeComfyModels'),
+)
+
+// ---- ② 生成后自动放大（一键出 2K）----------------------------------------
+check(
+  '★ 生成后自动放大：默认关（upscaleAfter: 0，行为与 0.16 一致）',
+  hostSrc.includes('upscaleAfter: 0'),
+)
+check(
+  '★★ 放大逻辑**只有一份**（工具与串联共用 runUpscaleFile，不留第二套节点图）',
+  (hostSrc.match(/class_type: 'VOSR2Upscale'/gu) ?? []).length === 1,
+)
+check(
+  '★★ 放大失败**只 warn 不抛**（不让可选后处理把已成功的主流程拖成失败）',
+  hostSrc.includes('生成后自动放大失败（原图已保存，不受影响）'),
+)
+check(
+  '★ 两段耗时分开记（seconds 仍是生图耗时，放大另记 upscaleSeconds）',
+  hostSrc.includes('upscaleSeconds'),
+)
+
+section('㉕ 发布体积护栏 + OOM / SADA 行为回归（2026-10-13）')
+
+// ---- ① DSH Store 体积护栏 ---------------------------------------------------
+//   ★★ 这是**防复发**的护栏：2026-10-13 实测 `lib/config.js` 涨到 264,530 B，
+//     超过了 Store 的**单文件上限 262,144 B** —— 与当初把 index.js 拆成 config.js
+//     是**同一件事复发**。拆完之后必须有护栏，否则下次又等"被机器人拦下"才发现。
+const LIMIT_FILE = 262144
+const LIMIT_TOTAL = 2097152
+const libDir = path.join(ROOT, 'lib')
+const libSizes = readdirSync(libDir)
+  .filter((f) => f.endsWith('.js'))
+  .map((f) => ({ f, b: statSync(path.join(libDir, f)).size }))
+const overSized = libSizes.filter((x) => x.b > LIMIT_FILE)
+const totalBytes = libSizes.reduce((a, x) => a + x.b, 0)
+check(
+  `★★ 每个 lib/*.js ≤ ${LIMIT_FILE} B（DSH Store 单文件上限）`,
+  overSized.length === 0,
+  overSized.map((x) => `${x.f}=${x.b}B`).join(', ') || `最大 ${Math.max(...libSizes.map((x) => x.b))}B`,
+)
+check(`★ lib/*.js 合计 ≤ ${LIMIT_TOTAL} B（实测 ${totalBytes} B）`, totalBytes <= LIMIT_TOTAL)
+
+// ---- ② OOM 判定（此前**零测试覆盖**，这次改成行为断言）----------------------
+const isOom = mod.__internal.isOutOfMemoryError
+check('★ OOM：CUDA out of memory → 命中', isOom('CUDA out of memory') === true)
+check('★ OOM：hip out of memory（AMD ROCm）→ 命中', isOom('hip out of memory') === true)
+check('★ OOM：MPS backend out of memory（Apple）→ 命中', isOom('MPS backend out of memory') === true)
+check('★ OOM：OutOfMemoryError → 命中', isOom('torch.OutOfMemoryError: alloc failed') === true)
+check('★ OOM：普通错误不误伤（prompt too long）', isOom('prompt too long') === false)
+check('★ OOM：单词边界不误伤（the room is big）', isOom('the room is big') === false)
+check('★ OOM：节点缺失不误伤（node type not found）', isOom('node type not found') === false)
+
+// ---- ③ SADA 门控（第三方节点，缺件时**绝不能**把不存在的节点塞进图）-------
+const bwSada = mod.__internal.buildWorkflow
+const sadaArgs = { prompt: 't', width: 1024, height: 1024, seed: 1, count: 1 }
+const capsBase = { ...mod.__internal.FULL_CAPS }
+const hasSada = (wf) => Object.values(wf).some((n) => String(n?.class_type ?? '').includes('SADA'))
+const wfOf = (cfg, nodes) => {
+  const r = bwSada(cfg, sadaArgs, { ...capsBase, nodes: { ...capsBase.nodes, ...nodes } })
+  return r?.workflow ?? r
+}
+const wfDefault = wfOf({ ...mod.__internal.DEFAULTS }, {})
+check('★ SADA 默认关 → 图里没有 SADA 节点', hasSada(wfDefault) === false)
+const wfNoNode = wfOf({ ...mod.__internal.DEFAULTS, sadaEnabled: true }, { sada: false })
+check('★★ SADA 开了但节点没装 → **不发**不存在的节点（整单不会被拒收）', hasSada(wfNoNode) === false)
+const wfOn = wfOf({ ...mod.__internal.DEFAULTS, sadaEnabled: true }, { sada: true })
+const sadaId = Object.keys(wfOn).find((k) => String(wfOn[k]?.class_type ?? '').includes('SADA'))
+check(
+  '★ SADA 开了 + 节点在 → 节点在链上，且 KSampler 的 model 指向它',
+  Boolean(sadaId) && wfOn[8]?.inputs?.model?.[0] === sadaId,
+  sadaId ? `node=${sadaId} ksampler.model=${wfOn[8]?.inputs?.model?.[0]}` : 'no sada node',
+)
+
+// ---- ④ turbo8Lora：**显式配置不能被探测结果覆盖** --------------------------
+//   老 bug：探测结果永远优先，而 `cfg.turbo8Lora` 默认就等于内置默认值（永远非空），
+//   所以"用户配了什么"根本无从体现 —— 你明明配了 A，插件挑了机器上另一个 turbo8 文件。
+const capsProbed = {
+  ...capsBase,
+  models: { ...capsBase.models, turbo8Lora: 'probed_turbo8_from_disk.safetensors' },
+}
+const wfProbeWin = wfOf({ ...mod.__internal.DEFAULTS }, {})
+const loraOf = (wf) => wf[11]?.inputs?.lora_name
+// 用带"探测到另一个 turbo8"的 caps 再跑一次
+const rProbeWin = bwSada({ ...mod.__internal.DEFAULTS }, sadaArgs, capsProbed)
+const wfProbeWin2 = rProbeWin?.workflow ?? rProbeWin
+check(
+  '★ turbo8Lora：用户没显式配（仍是内置默认值）→ 用探测到的那个',
+  loraOf(wfProbeWin2) === 'probed_turbo8_from_disk.safetensors',
+  `实际=${loraOf(wfProbeWin2)}`,
+)
+const rExplicit = bwSada(
+  { ...mod.__internal.DEFAULTS, turbo8Lora: 'my_custom_lora.safetensors' },
+  sadaArgs,
+  capsProbed,
+)
+const wfExplicit = rExplicit?.workflow ?? rExplicit
+check(
+  '★★ turbo8Lora：用户**显式配了** → 尊重配置，不被探测覆盖',
+  loraOf(wfExplicit) === 'my_custom_lora.safetensors',
+  `实际=${loraOf(wfExplicit)}`,
+)
+void wfProbeWin
+
+/* --------------------------------------------- ㉖ 记忆消费 / SageAttention 模式 / NVFP4 提示 */
+
+section('㉖ 记忆消费优先级 + SageAttention 中止模式的命名与崩溃自动回退 + NVFP4 提示（2026-10-13）')
+
+// ---- ① 记忆消费：**显式参数 > 记忆**（这是本轮最铁的一条规则）----------------
+const resolveDrawParams = mod.__internal.resolveDrawParams
+const rpNone = resolveDrawParams({}, {}, {})
+check('记忆：无偏好时走插件默认', rpNone.aspect === '1:1' && rpNone.megapixels === 1.0
+  && rpNone.count === 1 && rpNone.steps === undefined && rpNone.negative === undefined,
+  rpNone)
+check('★ 记忆：无偏好时 memFilled 为空', Array.isArray(rpNone.memFilled) && rpNone.memFilled.length === 0)
+
+const prefFull = { size: '16:9', megapixels: 1.5, steps: 30, count: 2, negative: 'blurry, lowres' }
+const rpMem = resolveDrawParams({}, {}, prefFull)
+check(
+  '记忆：没显式传 → 画幅/MP/步数/张数/负向词全部由记忆补上',
+  rpMem.aspect === '16:9' && rpMem.megapixels === 1.5 && rpMem.steps === 30
+    && rpMem.count === 2 && rpMem.negative === 'blurry, lowres',
+  rpMem,
+)
+check('★★ 记忆：memFilled 把补上的项如实列全（不静默改用户的画参）',
+  rpMem.memFilled.length === 5
+    && rpMem.memFilled.includes('画幅=16:9') && rpMem.memFilled.includes('负向词'),
+  rpMem.memFilled)
+
+const rpExplicit = resolveDrawParams({ size: '4:3', steps: 8 }, {}, prefFull)
+check(
+  '★★★ 记忆：显式传了 size/steps → **记忆不覆盖**，其余仍由记忆补',
+  rpExplicit.aspect === '4:3' && rpExplicit.steps === 8 && rpExplicit.megapixels === 1.5
+    && rpExplicit.count === 2 && rpExplicit.negative === 'blurry, lowres',
+  rpExplicit,
+)
+check(
+  '★★★ 记忆：被显式参数压过的项**不进** memFilled（日志不能说谎）',
+  !rpExplicit.memFilled.some((s) => s.includes('画幅') || s.includes('步')),
+  rpExplicit.memFilled,
+)
+
+// 偏好里的脏值不能漏进链路
+const rpDirty = resolveDrawParams({}, {}, { size: '9:99', megapixels: -1, count: 99, negative: '   ' })
+check(
+  '★★ 记忆：非法画幅 / 负数 MP / 空负向词一律按缺省处理；count 仍被夹到 ≤4',
+  rpDirty.aspect === '1:1' && rpDirty.megapixels === 1.0 && rpDirty.negative === undefined
+    && rpDirty.count === 4,
+  rpDirty,
+)
+
+// 运行时 cfg.preset 与记忆 preset 的关系
+check(
+  '记忆：cfg.preset 与记忆 preset 同时存在 → cfg.preset 优先',
+  resolveDrawParams({}, { preset: 'portrait' }, { preset: 'landscape' }).preset === 'portrait',
+  resolveDrawParams({}, { preset: 'portrait' }, { preset: 'landscape' }).preset,
+)
+check(
+  '记忆：没配 cfg.preset → 用记忆里的 preset',
+  resolveDrawParams({}, {}, { preset: 'landscape' }).preset === 'landscape',
+)
+// 默认值里没有 seed 痕迹：**任何**情况下都不从记忆读 seed
+check(
+  '★★ 记忆：resolveDrawParams 不返回 seed（默认每次随机，要复现必须显式传）',
+  !('seed' in rpMem),
+)
+
+// ---- ② SageAttention：中止模式的"是不是它导致的"判定 ------------------------
+const dueToSage = mod.__internal.launchFailedDueToSage
+check('★ Sage 归咎：unrecognized arguments + --use-sage-attention → 命中',
+  dueToSage('error: unrecognized arguments: --use-sage-attention') === true)
+check('★ Sage 归咎：No module named \'sageattention\' → 命中',
+  dueToSage("ModuleNotFoundError: No module named 'sageattention'") === true)
+check('★ Sage 归咎：Blackwell 构建不匹配 → 命中',
+  dueToSage('sage_attn kernel not compiled for sm_120') === true)
+check('★ Sage 归咎：报告提示与 Traceback 同时出现 → 命中',
+  dueToSage('Traceback (most recent call last)\n  ... --use-sage-attention ...') === true)
+check('★★ Sage 归咎：端口被占**不误伤**', dueToSage('Port 8188 is already in use') === false)
+check('★★ Sage 归咎：OOM **不误伤**', dueToSage('CUDA out of memory') === false)
+check('★★ Sage 归咎：空日志**不误伤**', dueToSage('') === false)
+
+// ---- ③ SageAttention：崩溃自动回退（禁 + 不重复报）-------------------------
+const sageLogs = []
+const fakeLog = (level, msg) => sageLogs.push(`${level}: ${msg}`)
+const sageCfgOn = { nvidiaSageAttention: true }
+check('★ 回退：sage 开着崩了 → 本会话自动关掉', mod.__internal.recoverFromSageCrash(sageCfgOn, fakeLog) === true)
+check('★ 回退：确实被置成 false', sageCfgOn.nvidiaSageAttention === false, sageCfgOn)
+check('★ 回退：说了"为什么、怎么恢复"（不静默）',
+  sageLogs.length === 1 && sageLogs[0].startsWith('warn:') && sageLogs[0].includes('nvidiaSageAttention'),
+  sageLogs)
+check('★ 回退：本来就是关的 → 不再重复报', mod.__internal.recoverFromSageCrash(sageCfgOn, fakeLog) === false
+  && sageLogs.length === 1)
+
+// ---- ④ describeOptimization：SageAttention 命名敛在标题里 -------------------
+const describeOptimization = mod.__internal.describeOptimization
+const capsNv = (name) => ({ ...mod.__internal.FULL_CAPS, gpu: { name, vramGB: 24 }, level: 'full' })
+const nvPerf = describeOptimization({ ...mod.__internal.DEFAULTS }, capsNv('NVIDIA GeForce RTX 5060 Ti'), 'win32')
+const sageItemOf = (d) => d.detail.filter((x) => x.name.includes('SageAttention'))
+check('★ SageAttention：默认标题带上"性能模式"称谓',
+  sageItemOf(nvPerf).some((x) => x.name.includes('性能模式')),
+  sageItemOf(nvPerf).map((x) => x.name))
+const nvCompat = describeOptimization(
+  { ...mod.__internal.DEFAULTS, nvidiaSageAttentionMode: 'compatibility' },
+  capsNv('NVIDIA GeForce RTX 5060 Ti'),
+  'win32',
+)
+const sageCompatItems = sageItemOf(nvCompat)
+check('★ 模式：兼容模式的称谓敛进标题',
+  sageCompatItems.some((x) => x.name.includes('兼容模式')),
+  sageCompatItems.map((x) => x.name))
+check('★ 模式：模式说明与"崩溃自动回退"提示进了悬停说明',
+  sageCompatItems.some((x) => String(x.toggle?.hint ?? '').includes('崩溃自动回退')
+    && String(x.toggle?.hint ?? '').includes('nvidiaSageAttentionMode')),
+  sageCompatItems.map((x) => x.toggle?.hint))
+
+// ---- ⑤ NVFP4：只在 Blackwell 上出现，且**不能**影响"优化是否完整" ----------
+const capsBlackwell = capsNv('NVIDIA GeForce RTX 5090')
+const capsAda = capsNv('NVIDIA GeForce RTX 4090')
+const nvfpOn = describeOptimization({ ...mod.__internal.DEFAULTS }, capsBlackwell, 'win32')
+  .detail.find((d) => d.name.includes('NVFP4'))
+check('★★ NVFP4：Blackwell（50 系）出现', Boolean(nvfpOn), nvfpOn?.name)
+check('★★ NVFP4：如实说明插件**不自动切换模型** + 开发机未实测',
+  Boolean(nvfpOn) && nvfpOn.action.includes('不会') && nvfpOn.action.includes('未在本机实测'),
+  nvfpOn?.action)
+check('★★ NVFP4：**不是开关**（无 toggle，插件不接管模型文件，也没有对应端点）',
+  Boolean(nvfpOn) && nvfpOn.toggle === undefined, nvfpOn?.toggle)
+check('★★ NVFP4：标为 optional，不计入"优化是否完整"', Boolean(nvfpOn) && nvfpOn.optional === true)
+const nvfpOff = describeOptimization({ ...mod.__internal.DEFAULTS }, capsAda, 'win32')
+  .detail.some((d) => d.name.includes('NVFP4'))
+check('★★ NVFP4：Ada（40 系）不显示', nvfpOff === false)
+// 本机（AMD）更不能出现 NVFP4 项
+const amdArtifacts = describeOptimization({ ...mod.__internal.DEFAULTS }, capsNv('AMD Radeon RX 7900 XT'), 'win32')
+check('★★ NVFP4：AMD 机器不显示（只针对 Blackwell）',
+  amdArtifacts.detail.some((d) => d.name.includes('NVFP4')) === false)
+
+/* ------------------------------------------------------------------ 收尾 ---- */
 server.close()
 await fsp.rm(tmp, { recursive: true, force: true }).catch(() => {})
 
