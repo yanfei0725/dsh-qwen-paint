@@ -18,7 +18,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-const src = ['index.js', 'config.js'].map((f) => readFileSync(fileURLToPath(new URL(`../lib/${f}`, import.meta.url)), 'utf8')).join('\n')
+const src = ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(fileURLToPath(new URL(`../lib/${f}`, import.meta.url)), 'utf8')).join('\n')
 let fail = 0
 const assert = (name, cond, extra) => {
   console.log(`  ${cond ? 'OK  ' : 'FAIL'} ${name}${extra && !cond ? `  ← ${extra}` : ''}`)
