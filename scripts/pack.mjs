@@ -80,8 +80,17 @@ const DIRS = ['lib', 'assets', 'scripts']
  *   一旦进包会被上面的隐私检查拦下）。它们和 `.bak` 一样：
  *   **本地保留、不进包、不上 GitHub**。拆分与压缩的结果（lib/*.js、
  *   assets/loading.webp）才是要发布的东西。
+ * ★ 2026-10-13 修正（再来一批）：把**所有 GitHub 推送助手** `_push_*.py*`
+ *   一起扫进来 —— 它们是**一次性内部工具**，里面写死了本机的 git 路径、
+ *   远端仓库名与**真实用户名**（`Administrator`），不带数字列举就会被漏掉
+ *   （实测：`_push_0155.py` / `_push_0156.py` / `_push_all.py` / `_push_finish.py`
+ *   四处同时被隐私检查拦下，**打包直接失败**）。
+ *   同批再加 `_re_test.mjs` —— 它是"盘符正则"的单元测试，fixture 里
+ *   **故意**放着 `C:/Users/Administrator/...` 这类真实路径来验证规则会拒绝它。
+ *   规则本身已经由 `_portability_test.mjs`（在清单内、已脱敏）覆盖，故不进包。
+ * ⚠ 这些文件**本地保留**（开发仍是资产），只是**不进包、不上 GitHub**。
  */
-const SKIP = /(^|[\\/])(node_modules|dist|\.git|_backup[^\\/]*|__pycache__)([\\/]|$)|\.(log|zip|tmp)$|\.bak[^\\/]*$|(^|[\\/])(_ref|_split_move|_dbg|_shrink_webp|_sync_publish|_push_github|_push_release|_verify_remote)\./iu
+const SKIP = /(^|[\\/])(node_modules|dist|\.git|_backup[^\\/]*|__pycache__)([\\/]|$)|\.(log|zip|tmp)$|\.bak[^\\/]*$|(^|[\\/])(_ref|_split_move|_dbg|_shrink_webp|_sync_publish|_re_test|_push_[a-z0-9_]+|_verify_remote)\./iu
 
 /* ------------------------------------------------------------------ ① 组装 ---- */
 
