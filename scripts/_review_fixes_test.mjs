@@ -24,7 +24,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const mod = await import(pathToFileURL(path.join(ROOT, 'lib', 'index.js')).href)
 const { safeStem, DEFAULTS, GPU_PROFILES } = mod.__internal
-const HOST = ['index.js', 'config.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
+const HOST = ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
 const CLIENT = readFileSync(path.join(ROOT, 'lib', 'client.js'), 'utf8')
 const HIPFIRE = readFileSync(path.join(ROOT, 'lib', 'hipfire-img.js'), 'utf8')
 
@@ -197,7 +197,7 @@ console.log('\n=== 17. 主模型加载器（GGUF 路线已撤，但手动配置�
     JSON.stringify(Object.keys(safeNode.inputs)) === JSON.stringify(['unet_name', 'weight_dtype']), safeNode.inputs)
 
   // ---- ★ 2026-10-12：GGUF 路线已撤（装错格式的文件）----
-  const SRC = ['index.js', 'config.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
+  const SRC = ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
   ok('17. ★ 档位表保留（用户要求）', SRC.includes('const MODEL_TIERS = {'))
   // ⚠ 文件名本身还会出现在"解释为什么删掉它"的注释里 —— 那是**教训记录**，不是推荐。
   //   所以断言的是：**没有任何会自动执行它的东西**（下载用的 size/sha 必须消失）。
@@ -423,7 +423,7 @@ console.log('\n=== 20. macOS（Apple Silicon）适配 ★ 2026-10-11 ===')
     vendorIdOf('Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz') === 'intel')
 
   // ---- 档案：Apple 不加任何 CUDA/ROCm 专用内核参数 ----
-  const src2 = ['index.js', 'config.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
+  const src2 = ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
   ok('20. 有 apple 厂商档案', /apple: \{\s*\n\s*id: 'apple'/u.test(src2))
   // ★★★ 2026-10-12 改：下面三条原本断言「apple 档案 `args: []`」——
   //   那断言的恰恰是**要修掉的旧状态**（Mac 上什么都不加 = 零优化）。
@@ -533,7 +533,7 @@ console.log('\n=== 21. 隐患排查所修 9 条（★ 2026-10-11） ===')
   // ⚠ 2026-10-12：档位表整个撤了（`MODEL_TIERS` 已不存在），这条断言随之作废 ——
   //   换成"确认表真的没了"，因为残留一张空表同样是 bug。
   ok('21.⑧ 档位表保留（有 full/lite 两档）',
-    ['index.js', 'config.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n').includes('const MODEL_TIERS = {'))
+    ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n').includes('const MODEL_TIERS = {'))
 
   // ⑨ 可移植性测试的厂商列表含 apple
   const PORT = readFileSync(path.join(ROOT, 'scripts', '_portability_test.mjs'), 'utf8')
@@ -654,7 +654,7 @@ console.log('\n=== 23. 自定义输出目录（用户要求：能选、能校验
   ok('23. DEFAULTS 带 outputDirSource', typeof DEF.outputDirSource === 'string')
 
   // ⑨ 状态端点支持 ?outputDir=；客户端有"改目录"按钮
-  const HOST23 = ['index.js', 'config.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
+  const HOST23 = ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
   ok('23. 状态端点处理 ?outputDir=', HOST23.includes("query.searchParams.get('outputDir')"))
   ok('23. 端点里的校验与启动时同一套（resolveOutputDir）',
     HOST23.includes('const r = resolveOutputDir(wantDir, log)'))
