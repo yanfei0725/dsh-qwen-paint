@@ -15,7 +15,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const mod = await import(pathToFileURL(path.join(ROOT, 'lib', 'index.js')).href)
 const { buildWorkflow, planWorkflow, DEFAULTS } = mod.__internal
-const SRC = ['index.js', 'config.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
+const SRC = ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
 
 let fail = 0
 const ok = (name, cond) => { console.log(`  ${cond ? 'OK  ' : 'FAIL'} ${name}`); if (!cond) fail += 1 }
@@ -39,7 +39,15 @@ ok('planWorkflow 与 execute 一致：count=2 → batch_size=2',
   planWorkflow({ ...DEFAULTS }, { prompt: 'x', count: 2 })['6']?.inputs?.batch_size === 2)
 ok('PARAMETERS 暴露了 count 参数', /count:\s*\{\s*\n\s*type:\s*'integer'/u.test(SRC))
 ok('count 描述里写明"默认只出一张"', SRC.includes('默认就传 1（只出一张）'))
-ok('落盘切片用 count（不是写死 1）', SRC.includes('images.slice(0, count)'))
+// ★ 2026-10-13：串行抽卡后这里变成 `slice(0, perIterCount)`
+//   （`perIterCount = wantSerial ? 1 : count`，非串行时仍等于 count）。
+//   不变式是"**不写死 1**"，所以断言改成"接受 count 或 perIterCount，但拒绝写死 1" ——
+//   只查 `images.slice(0, count)` 会在串行改动后假失败（正如这次实测）。
+ok(
+  '落盘切片用 count / perIterCount（**不是写死 1**）',
+  (SRC.includes('images.slice(0, count)') || SRC.includes('images.slice(0, perIterCount)'))
+  && !SRC.includes('images.slice(0, 1)'),
+)
 
 console.log('\n=== M6 · 编排层并行（三步 Promise.all） ===')
 ok('三处独立请求改成并发（Promise.all 解构 ready/reference/caps）',
