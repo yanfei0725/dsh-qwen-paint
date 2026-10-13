@@ -21,7 +21,7 @@
 
 [project]
 name = "dsh-qwen-paint"
-version = "0.16.0"
+version = "0.16.2"
 description = "DSH 插件 · 通过本机 ComfyUI 调用 Qwen-Image 2.1 文生图/图生图，附带 turbo8 蒸馏加速链 + VAE 分块解码 + OOM 自动回退 + dsh-auto-memory 联动。"
 readme = "README.md"
 license = { text = "MIT" }
