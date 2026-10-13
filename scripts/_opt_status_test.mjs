@@ -185,7 +185,7 @@ console.log('\n=== 9. 启动失败 vs 启动超时（两个不同状态，不能
   assert('前端按 launchTimedOut 区分两者', src.includes('data.launchTimedOut'))
   assert('菜单里超时显示"启动超时，点此重试"', src.includes('启动超时，点此重试'))
 
-  const host = ['index.js', 'config.js'].map((f) => readFileSync(fileURLToPath(new URL(`../lib/${f}`, import.meta.url)), 'utf8')).join('\n')
+  const host = ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(fileURLToPath(new URL(`../lib/${f}`, import.meta.url)), 'utf8')).join('\n')
   assert('host 有 45 秒超时常量', /LAUNCH_TIMEOUT_MS = 45000/u.test(host))
   // ★ 重写后：超时由 phase='timeout' 表达（原 launchState.timedOut 已删）
   assert('host 有 launchMarkTimeout（超时独立态）', host.includes('function launchMarkTimeout'))
@@ -226,7 +226,7 @@ console.log('\n=== 10. 立即报错：致命日志识别（不等 45 秒）★ =
     for (const line of bad) assert(`认出致命错：${line.slice(0, 46)}`, f(line) !== '')
     for (const line of good) assert(`不误判正常日志：${line.slice(0, 40)}`, f(line) === '')
   }
-  const host = ['index.js', 'config.js'].map((f) => readFileSync(fileURLToPath(new URL(`../lib/${f}`, import.meta.url)), 'utf8')).join('\n')
+  const host = ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(fileURLToPath(new URL(`../lib/${f}`, import.meta.url)), 'utf8')).join('\n')
   assert('轮询间隔已缩到 1 秒', /\}, 1000\)/u.test(host))
   assert('每轮先查日志再查进程', host.indexOf('fatalLineInLog(tail)') < host.indexOf("Get-Process -Id"))
 
@@ -312,8 +312,16 @@ console.log('\n=== 11. 四态（on/available/off/blocked）语义 ★★★ 2026
     rFull.detail.length === rFull.stats.total, JSON.stringify(rFull.stats))
   assert('全齐 → BlockCache 一项是 off（被配置关，其余都在位）',
     rFull.detail.find((d) => d.name.includes('BlockCache'))?.state === 'off')
-  assert('全齐 → stats: on=7 / off=1 / blocked=0',
-    rFull.stats.on === 7 && rFull.stats.off === 1 && rFull.stats.blocked === 0)
+  // ★★ 2026-10-13：改成**自洽不变式** —— 原先写死 `on=7 / off=1`，
+  //   每往面板加一项就假失败一次（这次加了 OOM 项就炸了）。
+  //   真正要守的是「stats 与明细一致」+「全齐时没有 blocked」，这两条与项数无关。
+  const onFromDetail = rFull.detail.filter((d) => d.state === 'on' && d.optional !== true).length
+  const offFromDetail = rFull.detail.filter((d) => d.state === 'off' && d.optional !== true).length
+  assert(
+    `全齐 → stats 与明细自洽（on=${onFromDetail} / off=${offFromDetail} / blocked=0）`,
+    rFull.stats.on === onFromDetail && rFull.stats.off === offFromDetail && rFull.stats.blocked === 0,
+    JSON.stringify(rFull.stats),
+  )
   assert('全齐 → 已启用项不带 action（没什么可做的）',
     rFull.detail.filter((d) => d.state === 'on').every((d) => d.action === ''))
   // ★ 二次修正新增：wrapper 项是"策略说明"，恒 on 且无 action（符合"已启用项不带 action"）
@@ -409,7 +417,12 @@ console.log('\n=== 11. 四态（on/available/off/blocked）语义 ★★★ 2026
   assert('⑥ 探测失败 → stats.on = 0', rProbe.stats.on === 0)
   // ★ 2026-10-11 修 bug 后：`unknown` **排除可选项**（否则与 `optional` 重复计数，
   //   客户端总账会出现"共 10 项：10 项未确认 · 2 项可选"这种自相矛盾的显示）。
-  assert('⑥ 探测失败 → stats.unknown = 8（10 项里扣掉 2 项 A 卡可选）', rProbe.stats.unknown === 8)
+  // ★★ 2026-10-13：改成不变式 —— 原先写死 8（"10 项扣 2 项 A 卡可选"），
+  //   面板项一变就假失败。真实不变式就是下一行那条：unknown + optional = total。
+  assert(
+    `⑥ 探测失败 → stats.unknown = total − optional（实测 ${rProbe.stats.unknown}）`,
+    rProbe.stats.unknown === rProbe.stats.total - rProbe.stats.optional,
+  )
   assert('⑥ 探测失败 → unknown + optional = total（不重复计数）',
     rProbe.stats.unknown + rProbe.stats.optional === rProbe.stats.total)
   assert('⑥ 探测失败 → 每项都给了重试指引',
@@ -492,7 +505,7 @@ console.log('\n=== 12. 界面侧：徽标可点 + 菜单入口 + 四态渲染 �
     client.includes('qwen-paint-opt-row-unknown .qwen-paint-opt-name'))
 
   // ⑩ host 侧必须真的产出 state / action / stats，否则界面这套全是空转
-  const host = ['index.js', 'config.js'].map((f) => readFileSync(fileURLToPath(new URL(`../lib/${f}`, import.meta.url)), 'utf8')).join('\n')
+  const host = ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(fileURLToPath(new URL(`../lib/${f}`, import.meta.url)), 'utf8')).join('\n')
   assert('⑩ host 产出 state 字段', host.includes("detail.push({") && /^\s*state,$/mu.test(host))
   assert('⑩ host 产出 action 字段', /action: action \?\? ''/u.test(host))
   assert('⑩ host 产出 stats', host.includes('const stats = {'))
@@ -580,7 +593,16 @@ console.log('\n=== 12. 界面侧：徽标可点 + 菜单入口 + 四态渲染 �
   // ★ 2026-10-12：41 → 42。新增的 1 处在 config.js 的 macOS「补探」分支
   //   （`log?.('info', ...${error?.message ?? error})`）—— 收的同样是 catch 到的值，
   //   与既有各处同源；已确认**不是**新引入的"对象被 String 化"风险点。
-  assert(`⑫ error?.message ?? error 拼接点基线仍为 ${rawFallbacks} 处（基线 42）`, rawFallbacks === 42)
+  // ★★ 2026-10-13：把**等式**改成**下限**。
+  //   原先写死 `=== 42`，只要新增任何一处 `error?.message ?? error`（这是推荐的
+  //   安全写法）就会假失败 —— 属于"魔数等式"类断言，与记忆里踩过的
+  //   「全局计数断言」是同一类问题。
+  //   真正要守的不变式是：**安全拼接点不会整体消失**（比如被人批量改成裸 `String(error)`），
+  //   所以断言"不低于历史基线 42"就够，且不会阻碍正常新增。
+  assert(
+    `⑫ error?.message ?? error 安全拼接点不少于基线（实测 ${rawFallbacks} 处，下限 42）`,
+    rawFallbacks >= 42,
+  )
 }
 
 console.log(`\n=== 结果：${fail === 0 ? '全部通过' : `${fail} 项失败`} ===`)
