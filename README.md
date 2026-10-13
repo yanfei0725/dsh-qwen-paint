@@ -6,7 +6,7 @@
 插件的全部网络流量限于本机回环地址（`127.0.0.1`），**不依赖外部网络，无需任何 API 密钥，亦不产生调用费用**。
 
 > **原作者**：@奇迹与你（<https://github.com/wonderandyou/dsh-qwen-paint>）  
-> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.16.0`
+> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.16.2`
 
 ---
 
@@ -17,6 +17,29 @@
 - **本机扩展 API**：新增 `/api/qwen-paint/health`、`/capabilities`、`/presets`、`/memory/recent`、`/memory/preference`，供本地工具集成；端点仅接受本机请求。
 - **记忆联动基础**：每次成功出图追加一条 JSONL 到输出目录 `.qwen-paint-memory.jsonl`，`dsh-auto-memory` 可从 recent 端点读取；偏好 GET/POST 目前只持久化，不自动改变生图参数。
 - **ComfyUI Registry 元数据**：加入 `pyproject.toml` 以供 Registry 索引发现。此仓库仍是 DSH 插件而非 ComfyUI Python custom node；元数据不代表已发布或已获 Registry 收录。
+
+## 0.16.1 新增说明（串行抽卡 / 一键出大图）
+
+- **串行抽卡（排队模式）**：显存不足时（默认 < 16 GB 自动判定）一次要出多张会改成「提交 1 张 → 等结果 → 落盘 → 再提交下一张」，显存里始终只有一份 latent，适合挂机批量生成。可用 `serialBatch` 设为 `auto`（默认）/ `on` / `off` 手动控制。
+  - ⚠ 重要：串行**不会**卸载主模型。若真的每轮卸载，下一张就要重新加载约 13.5 GB 模型，反而更慢；串行省的是「不同时持有多份 latent」。
+- **生成后自动放大（一键出大图）**：设置 `upscaleAfter`（如 2，即 1024² → 2048）后，生图完成会自动接着做分块放大。放大失败不影响已生成的原图（原图已落盘，只记录警告）。
+  - 放大逻辑与 `upscale_image` 工具**共用同一套节点图**，不存在两套实现。
+
+## 0.16.2 新增说明（记忆消费 / SageAttention 模式 / NVFP4 提示）
+
+- **偏好记忆自动消费**：输出目录下的 `.qwen-paint-preferences.json`（由 `dsh-auto-memory` 或本机工具写入）现在会被真正用起来 —— 当你**没有显式传参**时，按记忆补上画幅、像素档位（MP）、采样步数、每轮张数与负向词。
+  - ⚠ 优先级铁律：**显式参数 > 记忆偏好 > 界面预设 > 插件默认**。你显式传了 `size` / `steps` 就绝不会被记忆覆盖；每次补齐都会在日志里**如实列出补了哪些**，不静默改你的意图。
+  - ⚠ **随机种子不从记忆读** —— 默认每次随机出图；想复现必须自己传 `seed`（否则会每次出同一张）。
+  - 偏好接口不变：`GET/POST /api/qwen-paint/memory/preference`。
+- **SageAttention：性能 / 兼容模式 + 崩溃自动回退**（仅 N 卡）
+  - 新增 `nvidiaSageAttentionMode: 'performance' | 'compatibility'`，面板标题直接标注「性能模式 / 兼容模式」。
+    ⚠ 如实说明：ComfyUI 的 `--use-sage-attention` 是**全局开关、没有官方子模式参数**，所以这两档的差别**只在崩溃兜底策略**，插件没有、也不会编造一个"模式"命令行参数。
+  - **崩溃自动回退**：若启用 SageAttention 后 ComfyUI 启动失败，且启动日志**明确指向 sage-attention**（参数不被当前版本识别、`sageattention` 没装却被强制开启、或 Blackwell / sm_120 构建不匹配），插件会在**当前会话内自动关掉它**，避免反复重启反复崩；同时告知原因与恢复方式。
+    - 判据**宁漏不误**：端口占用、显存不足、普通报错**绝不会**被误判成 SageAttention 的锅，也不会因此关掉你想要的功能。
+- **NVFP4 检测与提示**（仅 50 系 / Blackwell 出现）
+  - 面板会多一条信息项「NVFP4 量化模型（Blackwell 专属，可选）」，指出社区已有 Qwen-Image 2.1 的 NVFP4 checkpoint（`BennyDaBall/Qwen-Image-2.1-NVFP4`），供你在 50 系卡上自行下载、自行选择模型。
+  - ⚠ 只**检测 + 提示**，插件**不会**替你切换模型、也不自动下载；它不是开关。**该路径未在开发机（AMD）上实测**，实际提速请以你的 5060 机器为准。
+- **稳定性修正**：修好了一处"面板说已生效、端点其实不认"的假开关白名单遗漏（SADA / OOM 两个开关）；`lib/config.js` 拆出 `lib/describe.js` 以符合发布体积上限。
 
 ## 优化版说明
 
@@ -637,11 +660,13 @@ node scripts/selftest.mjs
 | `amdKernel` | `false` | AMD | 换用本代的替代注意力内核：**5000 / 6000 → `--use-quad-cross-attention`**，**7000 / 9000 → `--use-ck-attention`** |
 | `amdAsyncOffload` | `false` | AMD | `--async-offload`（ComfyUI 在 **N 卡上默认开、A 卡上默认关**，这里给 A 卡补上） |
 | `nvidiaSageAttention` | `'auto'` | NVIDIA | `'auto'` = 自检确认 sageattention **已装**才挂 `--use-sage-attention`；`true` 强制挂（**确定装好了再设**，没装会让 ComfyUI 起不来）；`false` 永不挂 |
+| `nvidiaSageAttentionMode` | `'performance'` | NVIDIA | ★ 2026-10-13 新增。`'performance'` 性能模式 / `'compatibility'` 兼容模式。⚠ ComfyUI 的 `--use-sage-attention` **没有官方子模式参数**，所以两档差别**只在崩溃兜底策略**（兼容模式对 SageAttention 引发的启动失败始终自动兜底），**不新增任何命令行 flag** |
 | `appleMpsFallback` | `true` | macOS | 注入 `PYTORCH_ENABLE_MPS_FALLBACK=1`：MPS 未实现的算子自动回退 CPU，而不是让整次出图抛错（**质量中性**，只影响"本来就会失败"的路径） |
 | `appleMpsUnlimitedMem` | `false` | macOS | 注入 `PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0`：取消 MPS 分配器硬上限（官方默认 1.7），大模型在小内存 Mac 上**可能就能跑**。⚠ 系统级 OOM 会连系统一起拖垮，官方原文 *"may cause system failure"* |
 | `comfyAttentionBackend` | `'auto'` | 全部 | 手动接管注意力后端：`quad` / `pytorch` / `ck` / `default`（`auto` = 按显卡自动选） |
 
-> ⚠ 前三个都是**启动参数** ⇒ 改完**必须重启 ComfyUI** 才生效。
+> ⚠ 上面 A/N 卡那几项（`amdKernel` / `amdAsyncOffload` / `nvidiaSageAttention` / `nvidiaSageAttentionMode`）
+> 都是**启动参数** ⇒ 改完**必须重启 ComfyUI** 才生效。
 > ⚠ 两个 `appleMps*` 是**注入给 ComfyUI 进程的环境变量**（不是命令行参数）⇒ 同样需重启 ComfyUI；
 > 且**只在 macOS 生效** —— 其它平台改它们会被服务端直接拒绝（没有 MPS 后端，改了也不会发生什么）。
 > ⚠ Mac 上**不会**挂 `--use-sage-attention` / `--use-quad-cross-attention` / `--use-ck-attention`
