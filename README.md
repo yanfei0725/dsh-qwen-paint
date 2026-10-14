@@ -89,7 +89,9 @@ git clone https://github.com/yanfei0725/dsh-qwen-paint -b comfyui-node qwen-imag
 `pyproject.toml` 已按[官方规范](https://docs.comfy.org/registry/specifications)填好。
 发布前需你做两件事（只有仓库所有者能做）：
 
-1. **核对 `PublisherId`**（现为 `yanfei0725`）—— 必须与你 Registry 个人页 `@` 后面那串**完全一致**。
+1. **核对 `PublisherId`**（现为 `gitonnet`）—— 必须与你 Registry 个人页 `@` 后面那串**完全一致**。
+   ⚠ 它**不等于** GitHub 用户名：本项目用户名是 `yanfei0725`，Publisher ID 是 `gitonnet`。
+   写错会报 `Failed to validate token`。
 2. **建 API Key**，然后二选一：
    - 自动：`Settings → Secrets → Actions` 建 `REGISTRY_ACCESS_TOKEN`，改 `pyproject.toml` 的 version 推送即发；
    - 手动：`pip install comfy-cli` → `comfy node publish`。
