@@ -111,8 +111,18 @@ assert('★ apple 档案只挂通用 SDPA，不挂任何 CUDA/ROCm 专属内核�
   appleArgs)
 assert('★ apple 档案注入 MPS 算子回退环境变量（PYTORCH_ENABLE_MPS_FALLBACK）',
   /apple: \{[\s\S]{0,4000}?env: \{ PYTORCH_ENABLE_MPS_FALLBACK/u.test(src))
-assert('★ macOS **整个平台**跳过离散显存驻留参数（MPS 上 vram_state 恒为 SHARED）',
-  /if \(IS_MAC\) \{\s*\n\s*const label = GPU_PROFILES/u.test(src))
+// ★★★ 2026-10-14：这条原先钉的是 index.js 里那段**内联**的 macOS 分支 ——
+//   它**已移进 config.js 的 `resolveVramArgs`**（启动参数与面板报告同源，只留一份实现）。
+//   所以改成**行为断言**（比源码正则更强）：直接调它，确认 macOS 上**任何档位**
+//   都不产出显存参数 —— 依据是 ComfyUI 源码里 MPS 的 `vram_state` 恒为 SHARED。
+{
+  const { resolveVramArgs } = (await import(new URL('../lib/index.js', import.meta.url).href)).__internal
+  const macModes = ['auto', 'resident', 'standard', 'save', 'ram', 'cpu']
+  const macArgs = macModes.map((mode) => resolveVramArgs({ mode, vramGB: 48, isMac: true }).args)
+  assert('★ macOS **整个平台**跳过离散显存驻留参数（MPS 上 vram_state 恒为 SHARED）',
+    macArgs.every((a) => a.length === 0),
+    macArgs.map((a, i) => `${macModes[i]}:${a.join(' ') || '(空)'}`).join(' | '))
+}
 assert('有 macOS 显存探测（PyTorch MPS）',
   src.includes('GPU_VRAM_PROBE_PY_MAC') && src.includes('recommended_max_memory'))
 // ★ 2026-10-11 修的真 bug：显存探测那行原来**没有平台闸** ——
