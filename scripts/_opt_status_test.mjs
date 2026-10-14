@@ -543,6 +543,13 @@ console.log('\n=== 12. 界面侧：徽标可点 + 菜单入口 + 四态渲染 �
     const accepted = new Set([
       ...[...host.matchAll(/queryLc\.get\('([^']+)'\)/gu)].map((m) => m[1].toLowerCase()),
       ...[...host.matchAll(/\['([a-z0-9]+)', '[A-Za-z]+', '[^']*'\]/gu)].map((m) => m[1].toLowerCase()),
+      // ★ 2026-10-14（专业卡版）：**枚举型档位**是 4 元组
+      //   `['vrammode', 'vramMode', '显存/内存档位', VRAM_MODES]` —— 第 4 项是标识符（白名单数组），
+      //   上面那条 3 元组正则匹配不到。这里补一条，否则会把"面板有下拉、端点确实认"
+      //   的档位误报成假控件。
+      //   ⚠ 权重那三条第 4 项是**箭头函数**（`() => [wf?.unet, …]`，动态白名单），
+      //     所以这里要同时认 `IDENT` 与 `()` 两种形态。
+      ...[...host.matchAll(/\['([a-z0-9]+)', '[A-Za-z]+', '[^']*',\s*(?:[A-Z_]+|\(\))/gu)].map((m) => m[1].toLowerCase()),
     ])
     const keys = [...host.matchAll(/key: '([A-Za-z0-9]+)'/gu)].map((m) => m[1])
     assert(`⑪ 每个开关的 key 都能被端点接受（共 ${keys.length} 个）`,
