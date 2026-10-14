@@ -1,42 +1,32 @@
-# dsh-qwen-paint —— ComfyUI Registry 元数据
+# qwen-image-optimized —— ComfyUI Registry 元数据
 #
-# ★★ 2026-10-14（用户要求）：按 **ComfyUI Registry 官方规范**重写。
-#   依据：https://docs.comfy.org/registry/specifications
-#         https://docs.comfy.org/registry/publishing
+# 依据官方规范：
+#   https://docs.comfy.org/registry/specifications
+#   https://docs.comfy.org/registry/publishing
 #
-# ⚠⚠ 必须先读这一段（否则会误解本条目）
-#   本插件是 **DSH（DeepSeek Harness）插件**，**不是** ComfyUI custom_node：
-#     · 它**不跑在** ComfyUI 的 Python 进程里，而是通过 HTTP 与本机 ComfyUI 对话；
-#     · 本仓库**没有任何 Python 节点文件**（没有 `__init__.py` / `NODE_CLASS_MAPPINGS`）；
-#     · **把它装进 ComfyUI 的 custom_nodes 不会有任何效果** —— 它需要 DSH 宿主。
-#   ⇒ 在 Registry 上架**只为元数据可被发现**；实际安装请走 DSH 的 `install_bundle`
-#     （见 `cordis.patch.yml` 与 `一键安装.cmd`）。
-#   ⇒ 因此 description 里**明确写了**这一点，不让 ComfyUI 用户误装。
-#
-# ════════════════════════════════════════════════════════════════════════════
-# [project] —— PEP 621 标准元数据
-# ════════════════════════════════════════════════════════════════════════════
+# ★ 这是一个**真正的 ComfyUI 自定义节点包**（Python），**不依赖 DSH**。
+#   （同仓库 main 分支上的 dsh-qwen-paint 是 DSH 插件，两者不是一回事。）
 
 [project]
-# 唯一标识符，创建后不可更改。不含 "ComfyUI" 字样（规范要求）。
-name = "dsh-qwen-paint"
-# 语义化版本 X.Y.Z；每次发布必须递增，且旧版本号不可复用。
-# ⚠ 与 package.json 的 version 保持**同一个数**，避免两处版本号打架。
-version = "0.17.0"
-description = "⚠ DSH（DeepSeek Harness）插件，不是 ComfyUI 节点：通过 HTTP 调用你本机的 ComfyUI，用 Qwen-Image 2.1 出图（turbo8 加速链 / VAE 分块解码 / OOM 自动回退 / 专业卡档位）。装进 ComfyUI 的 custom_nodes 不会生效 —— 它需要 DSH 宿主。"
+# 唯一标识符，创建后不可更改；规范建议**不要**包含 "ComfyUI" 字样。
+name = "qwen-image-optimized"
+# 语义化版本 X.Y.Z。首次发布用 1.0.0；之后每次发布必须递增，旧版本号不可复用。
+version = "1.0.0"
+description = "千问 2.1（Qwen-Image 2.1）优化节点包：优化加载器（精度档/turbo LoRA/采样位移/前缀缓存）+ 加速链（BlockCache T8 / TE-Speed / Speedup / RDNA3-FA，按互斥规则自动挑）+ 分块解码（防大图 OOM）+ ControlNet + 一键出图。缺文件/缺节点会如实跳过并给出说明。"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
   { name = "yanfei0725", url = "https://github.com/yanfei0725/dsh-qwen-paint" },
-  { name = "wonderandyou", url = "https://github.com/wonderandyou/dsh-qwen-paint" },
 ]
 keywords = [
-  "dsh", "deepseek-harness", "comfyui", "qwen-image", "qwen-image-2.1",
-  "image-generation", "turbo8", "vae-tiling", "rocm", "cuda",
+  "qwen-image", "qwen-image-2.1", "qwen", "image-generation",
+  "turbo8", "cache", "tiled-vae", "controlnet", "rocm", "cuda",
 ]
-# ★ 只保留**真实成立**的分类器：本包是 JS（不声明 Python）、跨平台、三厂商 GPU 都可驱动。
+# ★ 真实依赖：无。本包纯 Python，只用 ComfyUI 自带的 API（comfy.sd / folder_paths / nodes）。
+dependencies = []
+# 分类器：声明真实支持的 GPU 后端与平台
 classifiers = [
-  "Programming Language :: JavaScript",
+  "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Topic :: Multimedia :: Graphics",
@@ -44,26 +34,17 @@ classifiers = [
   "Environment :: GPU :: AMD ROCm",
   "Environment :: GPU :: Intel Arc",
 ]
-# ★ 故意留空：本插件是纯 JS、**零运行依赖**，不装任何 Python 包。
-dependencies = []
 
-# 规范要求：repository 走 [project.urls].Repository（不是 [tool.comfy].repo）
 [project.urls]
 Repository = "https://github.com/yanfei0725/dsh-qwen-paint"
-Documentation = "https://github.com/yanfei0725/dsh-qwen-paint#readme"
+Documentation = "https://github.com/yanfei0725/dsh-qwen-paint/blob/comfyui-node/README.md"
 "Bug Tracker" = "https://github.com/yanfei0725/dsh-qwen-paint/issues"
 
-# ════════════════════════════════════════════════════════════════════════════
-# [tool.comfy] —— ComfyUI Registry 扩展字段（**字段名大小写敏感**）
-# ════════════════════════════════════════════════════════════════════════════
-
 [tool.comfy]
-# 必填：必须与 Registry 上的 Publisher ID **完全一致**（在个人页 @ 后面那一串）。
-# ⚠ 创建后不可更改 —— 若你的 Publisher ID 不是 yanfei0725，请改成你的实际值。
+# 必填，必须与 Registry 上的 Publisher ID 完全一致（个人页 @ 后面那串），**创建后不可改**。
 PublisherId = "yanfei0725"
 # 展示名（可随时改）
-DisplayName = "DSH Qwen Paint (DeepSeek Harness 插件)"
-# ⚠ Icon 暂不填：本仓库目前**没有**符合规范（SVG/PNG/JPG/GIF、≤400×400、正方形）的图标文件。
-#   填一个不存在的 URL 只会显示裂图，不如先空着。
-#   放好 `assets/icon.png` 后取消下面这行的注释即可：
-# Icon = "https://raw.githubusercontent.com/yanfei0725/dsh-qwen-paint/main/assets/icon.png"
+DisplayName = "Qwen Image Optimized (Qwen-Image 2.1 优化节点包)"
+# ⚠ Icon 暂不填：本包还没有符合规范（SVG/PNG/JPG/GIF、≤400×400、正方形）的图标文件。
+#   放好后取消注释即可：
+# Icon = "https://raw.githubusercontent.com/yanfei0725/dsh-qwen-paint/comfyui-node/assets/icon.png"
