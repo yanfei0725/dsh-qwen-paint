@@ -1,128 +1,69 @@
-# dsh-qwen-paint —— ComfyUI Registry / ComfyUI-Manager 元数据
+# dsh-qwen-paint —— ComfyUI Registry 元数据
 #
-# ★★ 2026-10-12（用户要求）：**ComfyUI Registry 发布**。
+# ★★ 2026-10-14（用户要求）：按 **ComfyUI Registry 官方规范**重写。
+#   依据：https://docs.comfy.org/registry/specifications
+#         https://docs.comfy.org/registry/publishing
 #
-# 这个文件遵循 [nodes.comfy.org](https://nodes.comfy.org) 的 pyproject.toml 规范，
-# 让本插件能被 ComfyUI-Manager / 官方 Registry 索引和发现。
-#
-# ⚠ 重要声明：本插件是 **DSH (DeepSeek Harness) 插件**，**不是**纯 ComfyUI custom_node。
-#   · 它通过 HTTP 与 ComfyUI 对话（comfyUrl），不在 ComfyUI 的 Python 进程里跑；
-#   · 真正的 ComfyUI 侧依赖（VOSR2、TE-Speed、Speedup、BlockCache、Spectrum 等 custom_nodes）
-#     由用户在 ComfyUI 那边**独立安装**（见 `INSTALL.md` 的"ComfyUI 侧依赖"一节）；
-#   · 因此本 pyproject.toml 的 `dependencies` 留空，**[tool.comfy].dependencies** 指向
-#     一份**说明性清单**（不强制 ComfyUI Manager 自动装，避免与用户的 ComfyUI 安装冲突）。
-#
-# 发布到 Registry 仅供**元数据索引**；实际安装仍走 DSH 的 `install_bundle` 流程
-# （见 `cordis.patch.yml` 与 `一键安装.cmd`）。
+# ⚠⚠ 必须先读这一段（否则会误解本条目）
+#   本插件是 **DSH（DeepSeek Harness）插件**，**不是** ComfyUI custom_node：
+#     · 它**不跑在** ComfyUI 的 Python 进程里，而是通过 HTTP 与本机 ComfyUI 对话；
+#     · 本仓库**没有任何 Python 节点文件**（没有 `__init__.py` / `NODE_CLASS_MAPPINGS`）；
+#     · **把它装进 ComfyUI 的 custom_nodes 不会有任何效果** —— 它需要 DSH 宿主。
+#   ⇒ 在 Registry 上架**只为元数据可被发现**；实际安装请走 DSH 的 `install_bundle`
+#     （见 `cordis.patch.yml` 与 `一键安装.cmd`）。
+#   ⇒ 因此 description 里**明确写了**这一点，不让 ComfyUI 用户误装。
 #
 # ════════════════════════════════════════════════════════════════════════════
 # [project] —— PEP 621 标准元数据
 # ════════════════════════════════════════════════════════════════════════════
 
 [project]
+# 唯一标识符，创建后不可更改。不含 "ComfyUI" 字样（规范要求）。
 name = "dsh-qwen-paint"
+# 语义化版本 X.Y.Z；每次发布必须递增，且旧版本号不可复用。
+# ⚠ 与 package.json 的 version 保持**同一个数**，避免两处版本号打架。
 version = "0.17.0"
-description = "DSH 插件 · 通过本机 ComfyUI 调用 Qwen-Image 2.1 文生图/图生图，附带 turbo8 蒸馏加速链 + VAE 分块解码 + OOM 自动回退 + dsh-auto-memory 联动。"
+description = "⚠ DSH（DeepSeek Harness）插件，不是 ComfyUI 节点：通过 HTTP 调用你本机的 ComfyUI，用 Qwen-Image 2.1 出图（turbo8 加速链 / VAE 分块解码 / OOM 自动回退 / 专业卡档位）。装进 ComfyUI 的 custom_nodes 不会生效 —— 它需要 DSH 宿主。"
 readme = "README.md"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
 authors = [
   { name = "yanfei0725", url = "https://github.com/yanfei0725/dsh-qwen-paint" },
   { name = "wonderandyou", url = "https://github.com/wonderandyou/dsh-qwen-paint" },
 ]
 keywords = [
-  "comfyui", "qwen-image", "image-generation", "dsh", "deepseek-harness",
-  "qwen-image-2.1", "turbo8", "vae-tiling", "spectrum", "sada",
+  "dsh", "deepseek-harness", "comfyui", "qwen-image", "qwen-image-2.1",
+  "image-generation", "turbo8", "vae-tiling", "rocm", "cuda",
 ]
+# ★ 只保留**真实成立**的分类器：本包是 JS（不声明 Python）、跨平台、三厂商 GPU 都可驱动。
 classifiers = [
   "Programming Language :: JavaScript",
-  "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Topic :: Multimedia :: Graphics",
+  "Environment :: GPU :: NVIDIA CUDA",
+  "Environment :: GPU :: AMD ROCm",
+  "Environment :: GPU :: Intel Arc",
 ]
-requires-python = ">=3.10"
-# ★ 故意留空：本插件是 JS（不装进 ComfyUI 的 Python 环境）。
+# ★ 故意留空：本插件是纯 JS、**零运行依赖**，不装任何 Python 包。
 dependencies = []
 
+# 规范要求：repository 走 [project.urls].Repository（不是 [tool.comfy].repo）
+[project.urls]
+Repository = "https://github.com/yanfei0725/dsh-qwen-paint"
+Documentation = "https://github.com/yanfei0725/dsh-qwen-paint#readme"
+"Bug Tracker" = "https://github.com/yanfei0725/dsh-qwen-paint/issues"
+
 # ════════════════════════════════════════════════════════════════════════════
-# [tool.comfy] —— ComfyUI Registry 扩展字段
+# [tool.comfy] —— ComfyUI Registry 扩展字段（**字段名大小写敏感**）
 # ════════════════════════════════════════════════════════════════════════════
 
 [tool.comfy]
-# 在 ComfyUI-Manager 列表里的展示名
-displayName = "dsh-qwen-paint (DSH 插件 · Qwen-Image 2.1)"
-# 在列表里的一句话简介（≤ 80 字）
-summary = "DSH 插件，调用本机 ComfyUI 用 Qwen-Image 2.1 出图。turbo8 + VAE 分块 + OOM 自动回退。"
-# 仓库地址（Registry 据此抓 README / 更新）
-repo = "https://github.com/yanfei0725/dsh-qwen-paint"
-# ★ 关键：本插件**不是** ComfyUI custom_node，
-#   是通过 HTTP 调 ComfyUI 的 DSH 插件 ⇒ Registry 抓取时跳过 Python 解析
-is_custom_node = false
-# 关联 DSH 插件市场（如果有）
-dsh_bundle = "qwen-paint"
-# 图标（Registry 在列表里展示）
-icon = "https://raw.githubusercontent.com/yanfei0725/dsh-qwen-paint/main/assets/icon.png"
-
-# ── ComfyUI 侧 custom_node 依赖（**说明性**，不强制自动装）──
-# 这里列的是本插件正常工作**建议**装的 ComfyUI custom_nodes。
-# ComfyUI-Manager 看到 `is_custom_node=false` 会**忽略**这一节，不会自动装。
-# 用户应按 `INSTALL.md` 的"ComfyUI 侧依赖"一节自行安装。
-#
-# 格式：{ repo_owner, repo_name, purpose }
-[[tool.comfy.dependencies]]
-repo_owner = "comfyanonymous"
-repo_name = "ComfyUI"
-purpose = "ComfyUI 主程序（≥ 0.3.0，需要 VAEDecodeTiled 等内置节点）"
-
-[[tool.comfy.dependencies]]
-repo_owner = "kijai"
-repo_name = "ComfyUI-QwenImage21Speedup"
-purpose = "Qwen-Image 2.1 残差缓存加速（实测 +15-25%）"
-
-[[tool.comfy.dependencies]]
-repo_owner = "kijai"
-repo_name = "ComfyUI-TE-Speed-QwenImage21"
-purpose = "Qwen-Image 2.1 TE 跳步加速（与小尺寸优化档配合使用）"
-
-# 注意：以下 custom_node 的 repo owner/name 可能因上游迁移而变化，
-#   详见 `INSTALL.md` 的"ComfyUI 侧依赖"获取**当前**可用的仓库地址。
-[[tool.comfy.dependencies]]
-repo_owner = "see-INSTALL.md"
-repo_name = "Comfyui-Qwen-Image-2.1-BlockCache-T8"
-purpose = "Qwen-Image 2.1 大尺寸分块缓存加速（1408² 实测 +22.7%）"
-
-[[tool.comfy.dependencies]]
-repo_owner = "see-INSTALL.md"
-repo_name = "ComfyUI-Spectrum-Qwen-Proper"
-purpose = "Qwen 专用 Spectrum 跳步（**默认关**，需手动开 `spectrumEnabled=true`）"
-
-[[tool.comfy.dependencies]]
-repo_owner = "kijai"
-repo_name = "ComfyUI-VOSR2"
-purpose = "放大引擎（一步 1.4B，支持 2-16x 超分）"
-
-[[tool.comfy.dependencies]]
-repo_owner = "city96"
-repo_name = "ComfyUI-GGUF"
-purpose = "GGUF 主模型加载器（小显存档 / lite 档需要）"
-
-# ── 模型依赖（说明性）──
-[[tool.comfy.models]]
-type = "unet"
-filename = "qwen_image_2.1_int8_convrot.safetensors"
-purpose = "Qwen-Image 2.1 主模型（int8 量化）"
-
-[[tool.comfy.models]]
-type = "clip"
-filename = "qwen3vl_8b_w4a8.safetensors"
-purpose = "Qwen3-VL 文本编码器（w4a8 量化）"
-
-[[tool.comfy.models]]
-type = "vae"
-filename = "qwen_image_2.1_vae_bf16.safetensors"
-purpose = "Qwen-Image 2.1 VAE（bf16 精度）"
-
-[[tool.comfy.models]]
-type = "lora"
-filename = "turbo8_lora_step2500.safetensors"
-purpose = "8 步蒸馏 LoRA（turbo8 加速链的标配）"
+# 必填：必须与 Registry 上的 Publisher ID **完全一致**（在个人页 @ 后面那一串）。
+# ⚠ 创建后不可更改 —— 若你的 Publisher ID 不是 yanfei0725，请改成你的实际值。
+PublisherId = "yanfei0725"
+# 展示名（可随时改）
+DisplayName = "DSH Qwen Paint (DeepSeek Harness 插件)"
+# ⚠ Icon 暂不填：本仓库目前**没有**符合规范（SVG/PNG/JPG/GIF、≤400×400、正方形）的图标文件。
+#   填一个不存在的 URL 只会显示裂图，不如先空着。
+#   放好 `assets/icon.png` 后取消下面这行的注释即可：
+# Icon = "https://raw.githubusercontent.com/yanfei0725/dsh-qwen-paint/main/assets/icon.png"
