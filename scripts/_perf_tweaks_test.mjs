@@ -50,10 +50,17 @@ ok(
 )
 
 console.log('\n=== M6 · 编排层并行（三步 Promise.all） ===')
-ok('三处独立请求改成并发（Promise.all 解构 ready/reference/caps）',
-  SRC.includes('const [ready, reference, caps] = await Promise.all('))
+// ★ 2026-10-14：改成**顺序无关**的判据 —— 原先写死 `[ready, reference, caps]`，
+//   而 C4 又往这个并行块里加了"上传控制图"（现在是 4 项）⇒ 写死就会假失败。
+//   真正要守的是"这三件事在**同一个** Promise.all 里并发"。
+ok('三处独立请求改成并发（Promise.all 解构含 ready / reference / caps）',
+  /const \[[^\]]*\bready\b[^\]]*\breference\b[^\]]*\bcaps\b[^\]]*\] = await Promise\.all\(/u.test(SRC),
+  (SRC.match(/const \[[^\]]*\] = await Promise\.all\(/u) ?? [])[0])
 ok('并行块在 ensureComfyUp 之后（先在线再并发）',
-  SRC.indexOf('await ensureComfyUp(cfg, log, signal)') < SRC.indexOf('const [ready, reference, caps] = await Promise.all('))
+  // ⚠ 必须锚定**带 `reference` 的那一处** —— index.js 里还有别的 `Promise.all`
+  //   （如 343 行的 gpu/paths/caps），用宽松正则会锚到前面那个 ⇒ 假失败。
+  SRC.indexOf('await ensureComfyUp(cfg, log, signal)')
+    < SRC.search(/const \[[^\]]*\breference\b[^\]]*\] = await Promise\.all\(/u))
 
 console.log('\n=== M8 · 就绪后预热能力探测 ===')
 const prefetchCount = (SRC.match(/probeCapabilities\(cfg, log, signal\)\.catch\(\(\) => \{\}\)/gu) ?? []).length
