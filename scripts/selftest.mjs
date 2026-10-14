@@ -1562,6 +1562,179 @@ const amdArtifacts = describeOptimization({ ...mod.__internal.DEFAULTS }, capsNv
 check('★★ NVFP4：AMD 机器不显示（只针对 Blackwell）',
   amdArtifacts.detail.some((d) => d.name.includes('NVFP4')) === false)
 
+/* ---------------------------------------------- ㉗ 专业卡版：档位 / 精度档 / 文本控制档 */
+
+section('㉗ 专业卡版档位：显存·内存 / 精度 / 文本控制（2026-10-14）')
+
+// ---- ① 显存/内存档位（C1）：纯函数行为 --------------------------------------
+const resolveVramArgs = mod.__internal.resolveVramArgs
+const VRAM_MODES = mod.__internal.VRAM_MODES
+check('★ 档位：auto 在 48G 上 = 全驻留',
+  JSON.stringify(resolveVramArgs({ mode: 'auto', vramGB: 48, isMac: false }).args) === '["--highvram"]')
+check('★ 档位：auto 在 20G 上 = 全驻留 + 保留 0.5',
+  JSON.stringify(resolveVramArgs({ mode: 'auto', vramGB: 20, isMac: false }).args)
+    === '["--highvram","--reserve-vram","0.5"]')
+check('★ 档位：auto 在 12G 上 = 不加参数',
+  resolveVramArgs({ mode: 'auto', vramGB: 12, isMac: false }).args.length === 0)
+check('★★ 档位：ram = --novram（权重放内存，最省显存）',
+  JSON.stringify(resolveVramArgs({ mode: 'ram', vramGB: 20, isMac: false }).args) === '["--novram"]')
+check('★ 档位：save = --lowvram', JSON.stringify(resolveVramArgs({ mode: 'save', vramGB: 20, isMac: false }).args) === '["--lowvram"]')
+check('★ 档位：resident = --highvram', JSON.stringify(resolveVramArgs({ mode: 'resident', vramGB: 12, isMac: false }).args) === '["--highvram"]')
+check('★ 档位：standard = 不加参数', resolveVramArgs({ mode: 'standard', vramGB: 48, isMac: false }).args.length === 0)
+check('★ 档位：cpu = --cpu', JSON.stringify(resolveVramArgs({ mode: 'cpu', vramGB: 48, isMac: false }).args) === '["--cpu"]')
+check('★★★ 档位：macOS 上**任何档位**都不产出离散显存参数（MPS vram_state 恒为 SHARED）',
+  VRAM_MODES.every((mode) => resolveVramArgs({ mode, vramGB: 48, isMac: true }).args.length === 0))
+check('★ 档位：拿不到显存时 auto 不猜（不加参数）',
+  resolveVramArgs({ mode: 'auto', vramGB: 0, isMac: false }).args.length === 0)
+check('★ 档位：未知 mode 按 auto 处理（不抛、不瞎加）',
+  JSON.stringify(resolveVramArgs({ mode: 'bogus', vramGB: 48, isMac: false }).args) === '["--highvram"]')
+
+// ---- ② 精度档（C2）：从已装文件里按标记挑 ------------------------------------
+const pickUnetForTier = mod.__internal.pickUnetForTier
+const files = [
+  'qwen_image_2.1_int8_convrot.safetensors',
+  'qwen_image_2.1_fp8.safetensors',
+  'qwen_image_2.1_bf16.safetensors',
+  'qwen-image-2.1-UC-Q4_K_M.gguf',
+]
+check('★★ 精度档：bf16 → 挑到 bf16 文件，走原生 loader',
+  pickUnetForTier(files, 'bf16')?.unet === 'qwen_image_2.1_bf16.safetensors'
+  && pickUnetForTier(files, 'bf16')?.loader === 'UNETLoader')
+check('★★ 精度档：fp8 → 挑到 fp8 文件',
+  pickUnetForTier(files, 'fp8')?.unet === 'qwen_image_2.1_fp8.safetensors')
+check('★★ 精度档：int8 → 挑到 int8 文件',
+  pickUnetForTier(files, 'int8')?.unet === 'qwen_image_2.1_int8_convrot.safetensors')
+check('★★ 精度档：gguf → 挑到 .gguf，走 GGUF loader',
+  pickUnetForTier(files, 'gguf')?.unet === 'qwen-image-2.1-UC-Q4_K_M.gguf'
+  && pickUnetForTier(files, 'gguf')?.loader === 'UnetLoaderGGUF')
+check('★★★ 精度档：**没有对应文件时返回 null**（由调用方如实回落，不假装已用上）',
+  pickUnetForTier(['qwen_image_2.1_int8_convrot.safetensors'], 'bf16') === null)
+check('★ 精度档：auto 返回 null（走老逻辑）', pickUnetForTier(files, 'auto') === null)
+check('★ 精度档：空列表返回 null（不抛）', pickUnetForTier([], 'fp8') === null)
+
+// ---- ③ 文本控制档（C5）：native → 原生工作点 25 步 / CFG 2.5 ------------------
+const planOf = (cfg) => mod.__internal.resolvePlan(cfg, mod.__internal.FULL_CAPS)
+const pAuto = planOf({ ...mod.__internal.DEFAULTS })
+check('★ 文本控制：auto + 有 turbo8 → 走 8 步 / CFG 1.0（老行为不变）',
+  pAuto.useTurbo === true && pAuto.steps === 8 && pAuto.cfgScale === 1.0, pAuto.steps)
+const pNative = planOf({ ...mod.__internal.DEFAULTS, textControl: 'native' })
+check('★★★ 文本控制：native → **不挂 turbo8**，回退原生 25 步 / CFG 2.5',
+  pNative.useTurbo === false && pNative.steps === 25 && pNative.cfgScale === 2.5,
+  `turbo=${pNative.useTurbo} steps=${pNative.steps} cfg=${pNative.cfgScale}`)
+check('★ 文本控制：native 时 plan.textControl 如实报 native', pNative.textControl === 'native')
+check('★ 文本控制：auto + 有 turbo8 时 plan.textControl 报 turbo', pAuto.textControl === 'turbo')
+
+// ---- ④ 面板：三个档位选择器（tiers）与端点白名单**取值一致** -------------------
+const describeOptimization2 = mod.__internal.describeOptimization
+const optTiers = describeOptimization2({ ...mod.__internal.DEFAULTS }, mod.__internal.FULL_CAPS, 'win32')
+check('★★ 面板：tiers 有三个档位（显存/精度/文本控制）',
+  Array.isArray(optTiers.tiers) && optTiers.tiers.length === 3,
+  optTiers.tiers?.map((t) => t.key))
+check('★★ 面板：三个档位的 key 与端点参数名一致（vrammode/precision/textctl）',
+  ['vrammode', 'precision', 'textctl'].every((k) => optTiers.tiers.some((t) => t.key === k)))
+check('★★★ 面板：档位选项取值 ⊆ 端点白名单（否则就是"面板有、端点不认"的假控件）',
+  JSON.stringify(optTiers.tiers.find((t) => t.key === 'vrammode').options.map((o) => o.value)) === JSON.stringify(VRAM_MODES)
+  && JSON.stringify(optTiers.tiers.find((t) => t.key === 'precision').options.map((o) => o.value))
+    === JSON.stringify(mod.__internal.PRECISION_TIERS)
+  && JSON.stringify(optTiers.tiers.find((t) => t.key === 'textctl').options.map((o) => o.value))
+    === JSON.stringify(mod.__internal.TEXT_CONTROL_MODES))
+check('★★ 面板：档位**不进** detail / stats（不与"优化点"总账混在一起）',
+  optTiers.detail.every((d) => d.choice === undefined)
+  && optTiers.stats.on === optTiers.detail.filter((d) => d.state === 'on' && d.optional !== true).length)
+check('★★ 面板：档位形状一致（disabled / idle / 正常 三态都有 tiers 数组）',
+  Array.isArray(describeOptimization2({ ...mod.__internal.DEFAULTS, enabled: false }, null).tiers)
+  && Array.isArray(describeOptimization2({ ...mod.__internal.DEFAULTS }, null).tiers)
+  && Array.isArray(optTiers.tiers))
+check('★ 面板：档位带当前值 + 说明（用户看得懂现在是什么档）',
+  optTiers.tiers.every((t) => typeof t.value === 'string' && typeof t.now === 'string' && typeof t.hint === 'string'))
+
+/* ------------------------------------------- ㉘ 权重可调（C3）+ ControlNet（C4） */
+
+section('㉘ 权重可调面板（C3）+ 通用 ControlNet（C4）（2026-10-14）')
+
+const bwW = mod.__internal.buildWorkflow
+const capsW = (extra = {}) => ({
+  ...mod.__internal.FULL_CAPS,
+  gpu: { name: 'AMD Radeon RX 7900 XT', vramGB: 20 },
+  files: { unet: ['qwen_image_2.1_int8_convrot.safetensors'], unetGguf: [], lora: ['turbo8_lora_step2500.safetensors'], controlnet: ['qwen_canny.safetensors'], ...(extra.files ?? {}) },
+  // ⚠ 真实的 caps 由 probeCapabilities 产出，**带 overrides**（面板下拉要用）；
+  //   测试替身也必须带上，否则测不出"面板能拿到当前覆写值"这条。
+  overrides: { unet: '', lora: '', controlnet: '', ...(extra.overrides ?? {}) },
+  nodes: { ...mod.__internal.FULL_CAPS.nodes, cnetLoader: true, cnetApply: true, ...(extra.nodes ?? {}) },
+})
+const wfW = (cfg, args, caps) => bwW(cfg, { prompt: 't', width: 1024, height: 1024, seed: 1, count: 1, ...args }, caps)
+
+// ---- ① C3 权重覆写：**在清单里才采纳**，不在清单里如实回落 -------------------
+{
+  const caps = capsW()
+  const wfOk = wfW({ ...mod.__internal.DEFAULTS, mainModelOverride: 'qwen_image_2.1_int8_convrot.safetensors' }, {}, caps)
+  check('★★ C3：主模型覆写**在清单里** → 采纳',
+    wfOk[1]?.inputs?.unet_name === 'qwen_image_2.1_int8_convrot.safetensors', wfOk[1]?.inputs?.unet_name)
+
+  const wfBad = wfW({ ...mod.__internal.DEFAULTS, mainModelOverride: 'not_installed.safetensors' }, {}, caps)
+  check('★★★ C3：主模型覆写**不在清单里** → **不采纳**（回落到自动挑的那个，不硬塞）',
+    wfBad[1]?.inputs?.unet_name !== 'not_installed.safetensors', wfBad[1]?.inputs?.unet_name)
+
+  const planBad = mod.__internal.resolvePlan({ ...mod.__internal.DEFAULTS, mainModelOverride: 'not_installed.safetensors' }, caps)
+  check('★★ C3：未采纳时**留痕**（weightOverride.unet.ok=false，供面板如实显示）',
+    planBad.weightOverride?.unet?.set === true && planBad.weightOverride?.unet?.ok === false,
+    planBad.weightOverride)
+
+  const wfLora = wfW({ ...mod.__internal.DEFAULTS, loraOverride: 'turbo8_lora_step2500.safetensors' }, {}, caps)
+  check('★★ C3：LoRA 覆写生效（链路里的 LoRA 换成选中的那个）',
+    wfLora[11]?.inputs?.lora_name === 'turbo8_lora_step2500.safetensors', wfLora[11]?.inputs?.lora_name)
+}
+
+// ---- ② C3 面板：weights 三栏、**状态体里不带文件名** -------------------------
+{
+  const optW = describeOptimization2({ ...mod.__internal.DEFAULTS }, capsW(), 'win32')
+  check('★★ C3：面板有 weights 三栏（主模型 / LoRA / ControlNet）',
+    Array.isArray(optW.weights) && optW.weights.length === 3
+    && ['mainmodel', 'lorapick', 'cnetpick'].every((k) => optW.weights.some((w) => w.key === k)),
+    optW.weights?.map((w) => w.key))
+  check('★★★ C3：weights 是**动态**项（选项由客户端另拉 caps，状态体不夹带文件名）',
+    optW.weights.every((w) => w.dynamic === true && w.options === undefined))
+  check('★★ C3：weights 也不进 detail / stats（与档位同理）',
+    optW.detail.every((d) => d.choice === undefined && d.name.includes('ControlNet 权重') === false))
+  check('★★ C3：caps 带 files 与 overrides（供面板填充下拉）',
+    Array.isArray(capsW().files.unet) && typeof capsW().overrides === 'object')
+}
+
+// ---- ③ C4 ControlNet：三条件齐了才接，缺一条**不接且给原因** -------------------
+{
+  const cfgCnet = {
+    ...mod.__internal.DEFAULTS,
+    controlnetOverride: 'qwen_canny.safetensors',
+    controlnetStrength: 0.7,
+  }
+  const wfOn = wfW(cfgCnet, { controlImage: 'ctrl.png' }, capsW())
+  check('★★ C4：权重 + 控制图 + 节点齐 → 接上 20/21/22 三个节点',
+    Boolean(wfOn[20]) && Boolean(wfOn[21]) && Boolean(wfOn[22])
+    && wfOn[21].inputs.control_net_name === 'qwen_canny.safetensors'
+    && wfOn[22].inputs.strength === 0.7, Object.keys(wfOn).filter((k) => !k.startsWith('__')))
+  check('★★ C4：KSampler 的正/负条件改走 ControlNetApplyAdvanced',
+    wfOn[8]?.inputs?.positive?.[0] === '22' && wfOn[8]?.inputs?.negative?.[0] === '22'
+    && wfOn[22]?.inputs?.positive?.[0] === '5' && wfOn[22]?.inputs?.negative?.[0] === '5')
+  check('★★ C4：控制图走 LoadImage（22.image ← 20）',
+    wfOn[20]?.class_type === 'LoadImage' && wfOn[22]?.inputs?.image?.[0] === '20')
+
+  const wfNoImg = wfW(cfgCnet, {}, capsW())
+  check('★★★ C4：**只选权重、不给控制图 → 不接**（避免"面板开了、实际没生效"）',
+    wfNoImg[22] === undefined && wfNoImg[8].inputs.positive[0] === '5'
+    && wfNoImg.__cnet?.reason.includes('控制图'), wfNoImg.__cnet)
+
+  const wfNoNode = wfW(cfgCnet, { controlImage: 'ctrl.png' }, capsW({ nodes: { cnetLoader: false, cnetApply: false } }))
+  check('★★★ C4：**缺节点 → 不接**，并如实给出原因',
+    wfNoNode[22] === undefined && String(wfNoNode.__cnet?.reason).includes('节点'), wfNoNode.__cnet)
+
+  const wfNoWeight = wfW({ ...mod.__internal.DEFAULTS }, { controlImage: 'ctrl.png' }, capsW())
+  check('★★ C4：**没选权重 → 不接**，并如实给出原因',
+    wfNoWeight[22] === undefined && String(wfNoWeight.__cnet?.reason).includes('权重'), wfNoWeight.__cnet)
+
+  check('★★ C4：__cnet 是**不可枚举**的（不会混进提交给 ComfyUI 的载荷）',
+    !Object.keys(wfOn).includes('__cnet') && !JSON.stringify(wfOn).includes('__cnet'))
+}
+
 /* ------------------------------------------------------------------ 收尾 ---- */
 server.close()
 await fsp.rm(tmp, { recursive: true, force: true }).catch(() => {})
