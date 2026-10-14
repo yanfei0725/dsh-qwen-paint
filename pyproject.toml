@@ -41,8 +41,10 @@ Documentation = "https://github.com/yanfei0725/dsh-qwen-paint/blob/comfyui-node/
 "Bug Tracker" = "https://github.com/yanfei0725/dsh-qwen-paint/issues"
 
 [tool.comfy]
-# 必填，必须与 Registry 上的 Publisher ID 完全一致（个人页 @ 后面那串），**创建后不可改**。
-PublisherId = "yanfei0725"
+# 必填，必须与 Registry 上的 Publisher ID 完全一致（个人页 `@` 后面那串），**创建后不可改**。
+# ⚠ 是 `gitonnet`，**不是** GitHub 用户名 `yanfei0725` —— 这两者不是一回事。
+#   写错会报 "Failed to validate token"（2026-10-14 实测踩过，白折腾两个 token）。
+PublisherId = "gitonnet"
 # 展示名（可随时改）
 DisplayName = "Qwen Image Optimized (Qwen-Image 2.1 优化节点包)"
 # ⚠ Icon 暂不填：本包还没有符合规范（SVG/PNG/JPG/GIF、≤400×400、正方形）的图标文件。
