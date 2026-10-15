@@ -7,6 +7,7 @@
   · `decode.py`    —— 分块解码 + OOM 回退
   · `controlnet.py`—— ControlNet 施加
   · `oneclick.py`  —— 一键出图（**复用上面四个**，不另写一套）
+  · `styles.py`    —— 出图风格预设（提示词模板，**不是 LoRA**）+ 可独立接线的风格节点
 """
 
 from .accel import QwenImageAccelChain
@@ -14,6 +15,7 @@ from .controlnet import QwenImageControlNetApply
 from .decode import QwenImageTiledDecode
 from .loader import QwenImageOptimizedLoader
 from .oneclick import QwenImageOneClick
+from .styles import QwenImageStylePreset, STYLE_LABELS, resolve_style
 
 __all__ = [
     "QwenImageOptimizedLoader",
@@ -21,4 +23,5 @@ __all__ = [
     "QwenImageTiledDecode",
     "QwenImageControlNetApply",
     "QwenImageOneClick",
+    "QwenImageStylePreset",
 ]
