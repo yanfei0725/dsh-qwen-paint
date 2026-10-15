@@ -74,7 +74,28 @@ print(res["images"])
 ⚠ 提交前**一定要** `strip_meta(wf)` 去掉 `__meta__` —— ComfyUI 只认节点 id，
 多一个非常规键会被当成节点校验失败。
 
-## 四、档位
+## 四、风格预设（13 种）
+
+一键出图节点上有 `style` 下拉；另外还有**独立的 `QwenImageStylePreset` 节点**，
+可以接进**任何**工作流（`StylePreset` → 文本编码 → 你自己的采样器）。
+
+| 写实摄影 | 电影感 | 动漫插画 | 水墨国风 | 3D 渲染 |
+|---|---|---|---|---|
+| 产品摄影 | 概念艺术 | 赛博朋克 | 水彩手绘 | 极简 |
+| 游戏原画 | 黑白胶片 | （不加风格词） | | |
+
+### ⚠ 三件必须说清的事
+1. **风格预设不是 LoRA / 不是模型微调** —— 它只是**一组提示词模板**（风格描述词 + 负面词）。
+   换风格**不换模型、不增加显存**；效果差异来自提示词本身。
+2. **默认不覆盖 steps / cfg**（都是 `None`）⇒ 工作点仍由档位决定。
+   这不是偷懒 —— 写死就会重现「按 8 步采样却没有 turbo8 LoRA」的糊图。
+   优先级：**你显式填的 > 风格覆盖 > 档位**。
+3. **负面词你是优先的**：自己填了就用你的，没填才用风格自带的；
+   风格词只**追加**在你的 prompt 后面，不覆盖你写的内容。
+
+想改就叫 `nodes/styles.py` 里的 `STYLE_PRESETS` —— 一个普通 dict，改完重启即可。
+
+## 五、档位
 
 **精度档**（`precision`）：`auto` / `bf16`（全精度）/ `fp8` / `int8` / `gguf`
 - 按**文件名标记**从你已装的文件里挑；**挑不到就如实回落**并在 `report` 里写明原因 —— 绝不假装用上了。
@@ -91,7 +112,7 @@ print(res["images"])
 
 ---
 
-## 五、三条设计原则（都是踩坑换来的，写在这里免得后人再踩）
+## 六、三条设计原则（都是踩坑换来的，写在这里免得后人再踩）
 
 1. **绝不挂一个不存在的节点。** ComfyUI 遇到未知 `class_type` 会**整单拒收** ——
    所以加速件一律先探测，缺了就跳过。
@@ -102,13 +123,13 @@ print(res["images"])
 
 ---
 
-## 六、测试
+## 七、测试
 
 ```bash
 <ComfyUI 的 python> scripts/test_contract.py --comfy <ComfyUI 根目录>
 ```
 
-本机实测（ComfyUI `K:/ComfyUI-rocm/ComfyUI`，Python 3.12）：**69 项全部通过**。
+本机实测（ComfyUI `K:/ComfyUI-rocm/ComfyUI`，Python 3.12）：**85 项全部通过**。
 覆盖：精度档挑选（含"缺文件必须返回 None"）、包可导入、
 五个节点的完整契约（INPUT_TYPES / RETURN_TYPES / RETURN_NAMES / FUNCTION 真实存在 / CATEGORY）、
 节点 id 与 ComfyUI 现有节点不冲突、探测机制自检。
@@ -118,7 +139,7 @@ print(res["images"])
 
 ---
 
-## 七、上架 ComfyUI Registry
+## 八、上架 ComfyUI Registry
 
 `pyproject.toml` 已按[官方规范](https://docs.comfy.org/registry/specifications)填好。
 发布前需你做两件事（只有仓库所有者能做）：
