@@ -11,9 +11,10 @@
 # 唯一标识符，创建后不可更改；规范建议**不要**包含 "ComfyUI" 字样。
 name = "qwen-image-optimized"
 # 语义化版本 X.Y.Z。每次发布必须递增，旧版本号不可复用。
+# 2.1.0 = 新增：13 种出图风格预设 + 可独立接线的 QwenImageStylePreset 节点（非破坏性）
 # 2.0.0 = **破坏性变更**：优化加载器新增必填的 width/height/weight_dtype
 #        （位移依赖真实尺寸；第一版写死 1024 会算错）。旧工作流需重设这几个值。
-version = "2.0.1"
+version = "2.1.0"
 description = "千问 2.1（Qwen-Image 2.1）优化节点包：优化加载器（精度档/turbo LoRA/采样位移/前缀缓存）+ 加速链（BlockCache T8 / TE-Speed / Speedup / RDNA3-FA，按互斥规则自动挑）+ 分块解码（防大图 OOM）+ ControlNet + 一键出图。缺文件/缺节点会如实跳过并给出说明。"
 readme = "README.md"
 license = { file = "LICENSE" }
