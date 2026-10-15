@@ -26,12 +26,33 @@ ComfyUI 提交的是**这张图本身**，所以你拿去随便改（加放大�
 
 from __future__ import annotations
 
+import importlib.util
 import json
+import os
 import time
 import urllib.error
 import urllib.request
 
 DEFAULT_SERVER = "http://127.0.0.1:8188"
+
+
+def _load_styles():
+    """按**文件路径**加载风格表。
+
+    ⚠ 不能写 `from nodes.styles import ...` —— 那会触发 `nodes/__init__.py`，
+      而它连带 import 了 ComfyUI 才有的 `folder_paths`。
+      本模块的设计目标之一就是"**不依赖 ComfyUI 也能拼图**"，所以走文件路径。
+    """
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nodes", "styles.py")
+    spec = importlib.util.spec_from_file_location("_qio_styles", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_STYLES = _load_styles()
+resolve_style = _STYLES.resolve_style
+STYLE_LABELS = _STYLES.STYLE_LABELS
 
 
 class IdAlloc:
@@ -50,6 +71,7 @@ def build_workflow(
     prompt: str,
     *,
     negative_prompt: str = "",
+    style: str = "none",
     width: int = 1024,
     height: int = 1024,
     unet_name: str = "",
@@ -91,9 +113,18 @@ def build_workflow(
     - **图生图 / ControlNet**：通过 `reference_image_node` / `control_image_node`
       传入**已有节点的输出**（格式 `("节点id", 输出序号)`），方便你把我们的链接进你自己的图。
 
+    - **风格**：`style`（见 `nodes/styles.py` 的 `STYLE_LABELS`）。
+      它只是**提示词模板**（不是 LoRA/微调），默认 `none` 表示不加风格词。
+      风格里的 `steps`/`cfg` 默认**不覆盖**档位工作点 —— 防止「8 步却无 LoRA」糊图。
+
     ⚠ **本函数不校验模型文件是否存在** —— 那是 ComfyUI 的事（不存在它会给明确报错）。
       这么设计是为了让本模块**不依赖 ComfyUI 环境**（纯拼 JSON）。
     """
+    # 风格先合成提示词（用户 prompt 在前、风格词追加在后；负面词用户优先）
+    styled = resolve_style(style, prompt, negative_prompt)
+    prompt = styled["positive"]
+    negative_prompt = styled["negative"]
+
     ids = IdAlloc()
     wf: dict[str, dict] = {}
 
@@ -187,17 +218,17 @@ def build_workflow(
     ks_inputs = {
         "model": [accel_id, 0],
         "seed": int(seed),
-        "cfg": float(cfg) if cfg is not None else 1.0,
-        "sampler_name": sampler_name,
-        "scheduler": scheduler,
+        # 优先级：显式传入 > 风格预设覆盖 > 兜底 1.0（KSampler 必须要个值）
+        "cfg": float(cfg) if cfg is not None else (float(styled["cfg"]) if styled["cfg"] else 1.0),
+        "sampler_name": styled["sampler"] or sampler_name,
+        "scheduler": styled["scheduler"] or scheduler,
         "positive": positive_ref,
         "negative": negative_ref,
         "latent_image": latent_ref,
         "denoise": 1.0,
     }
-    # steps 留空时不写死 —— 但 KSampler 必须要 steps，这里给一个按档位的兜底值。
-    # ⚠ 真正的"按实际档位"由节点保证；这里只是让图能提交。
-    ks_inputs["steps"] = int(steps) if steps is not None else 8
+    # steps：显式传入 > 风格预设覆盖 > 兜底 8（KSampler 必须要个值）
+    ks_inputs["steps"] = int(steps) if steps is not None else (int(styled["steps"]) if styled["steps"] else 8)
     ks_id = ids.take()
     wf[ks_id] = {"class_type": "KSampler", "inputs": ks_inputs}
 
