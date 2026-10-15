@@ -3,10 +3,16 @@
 面向 **DeepSeek Harness** 的本地图像生成插件。经由本机 **ComfyUI** 调用 **Qwen-Image 2.1** 模型，  
 在对话中直接完成文生图与图生图；生成的图像落盘保存，并在会话界面内直接呈现。
 
-插件的全部网络流量限于本机回环地址（`127.0.0.1`），**不依赖外部网络，无需任何 API 密钥，亦不产生调用费用**。
+**网络边界（请以本节为准）**：插件**默认**只与**本机回环地址**（`127.0.0.1` / `localhost` / `::1`）的 ComfyUI 通信，
+且这一约束由代码层强制（`lib/net-guard.js`）——`comfyUrl` 若被配成本机以外的地址，**插件会拒绝启动**而不是照发请求；
+所有出站请求都强制 `redirect: 'error'`，不跟随任何 HTTP 重定向。因此**默认配置下不依赖外部网络，无需任何 API 密钥，亦不产生调用费用**。
+
+> ⚠ 为如实披露能力：插件提供了 `allowRemoteComfy` 开关（默认 `false`）。用户**显式**设为 `true` 后，
+> 才可把 `comfyUrl` 指向局域网（如 `192.168.1.100`）或远程主机——此时插件会向你指定的地址发送提示词与图片数据。
+> 这是**用户主动选择**的行为，不是默认状态。
 
 > **原作者**：@奇迹与你（<https://github.com/wonderandyou/dsh-qwen-paint>）  
-> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.1`
+> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.2`
 
 ---
 
@@ -30,7 +36,7 @@
 **本版没有改动出图逻辑** —— 全是"让别人能正确收录我们"的元数据与文档整改。
 
 - **权限与已知风险披露**（README 新增「权限与已知风险」章节）：按 DSH STORE 的口径逐项写明
-  `files=write` / `network=仅 127.0.0.1` / `commands=restricted` / `credentials=none`，
+  `files=write` / `network=默认仅 127.0.0.1（代码强制，另有 allowRemoteComfy opt-in）` / `commands=restricted` / `credentials=none`，
   以及 6 条已知风险 —— **不再让用户靠猜**。
 - **`.comfyignore`**：把开发脚本、构建产物、内部报告排除出发布归档。
 - **`.github/workflows/publish_action.yml`**：推送到 `main` 且改动涉及 `pyproject.toml` 时自动发版。
@@ -45,6 +51,41 @@
 > ⚠ 关于 DSH STORE 的如实说明：本插件**必然**具备文件 / 网络 / 命令能力，
 > 因此**不满足其"自动准入"要求**（`automaticApproval.permissionSignals` 必须全为 `false`），
 > 只能走 **`user-reviewed`** 人工通道。这是**功能决定**的，不是缺陷，也不打算为此阉割功能。
+
+## 0.17.2 新增说明（网络边界代码层强制 + 文档对齐）
+
+**本版修复的是"文档声明与代码行为不符"** —— 这是 DSH STORE 自动审核在 Issue #1390 给出的
+**本轮唯一拒绝理由**（原文：*"当前 README 仍将网络能力声明为'仅本机回环、不访问外部地址'，
+但 `lib/index.js` 直接合并 `rawConfig`，随后使用可配置的 `comfyUrl` 发起请求，
+未证明回环约束及重定向边界"*）。
+
+审核员同时明确：**不要删除功能，也不要把真实能力声明为 false**；请正面解决 —— 
+要么**落地限制并处理重定向**，要么**如实披露可配置的外部端点**。本版**两条都做了**。
+
+- **新增 `lib/net-guard.js`（网络边界守卫，代码层强制）**：
+  - `isLoopbackUrl(url)` / `assertLocalUrl(url)`：只认字面量 `127.0.0.0/8`、`localhost`、`::1`、`0.0.0.0`；
+    **不接受任何域名**（含 `localhost.evil.com` 这类伪装），从根上消除 DNS rebinding 面。
+  - **启动即校验**（`lib/index.js` 的 `apply()`，合并 `rawConfig` 之后第一件事）：
+    `comfyUrl` 非回环 → **抛出错误、拒绝启动**（fail-fast，不静默回退 —— 静默回退会让用户
+    以为远端生效了、实际连的是本机，那更糟）。
+  - **所有出站请求强制 `redirect: 'error'`**：不跟随任何 302/301。回环被重定向到公网是
+    最典型的越界手法，直接抛错比"跟过去再检查"可靠（那时数据已经发出去了）。
+    覆盖 `config.js` 的 `fetchWithTimeout`、`index.js` 的参考图上传、`hipfire-img.js` 的 HTTP 调用。
+- **如实披露可配置的外部端点**：新增 `allowRemoteComfy`（默认 `false`）。
+  用户**显式**开启后才允许 `comfyUrl` 指向局域网/远程地址，且放行时**记 warn 日志**。
+  这是"如实披露"，不是"撒谎说不支持"。
+- **子进程环境变量白名单化**（`net-guard.js` 的 `filteredEnv`）：
+  `hipfire-img.js` 的 `spawn` 与 `config.js` 的 `runShell` 不再直接继承宿主环境，
+  剔除 `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY` 等代理变量（避免子进程网络去向与声明不一致）
+  与 `*TOKEN*` / `*KEY*` / `*SECRET*` / `*PASSWORD*` / `*CREDENTIAL*` 类变量；
+  保留 `PATH` / `SystemRoot` / `HOME` / `TEMP` 等运行必需项。
+  > 审核员原话：*"spawn 未显式设置 env 会继承宿主环境 —— 这**不构成**拒绝理由"*。
+  > 我们仍然做了，是为了防患于未然。
+- **README 措辞对齐**：顶部「网络边界」段落与「权限与已知风险」表格改为准确描述
+  （默认本机回环 + **代码层强制** + opt-in 开关），**删掉"不访问任何外部地址"这类过度承诺**。
+- **新增回归测试 `scripts/test-net-guard.mjs`（48 项断言，全部通过）**：
+  覆盖回环放行 / 局域网·域名·伪装域名拒绝 / `allowRemote` 语义 / 重定向强制 `error` /
+  代理与凭据环境变量剔除。**纯 JS，不依赖网络与子进程派生**（沙箱会间歇性禁止 spawn）。
 
 ## 0.17.0 新增说明（专业卡版：档位 / 精度 / 权重可调 / ControlNet）
 
@@ -681,7 +722,8 @@ node scripts/selftest.mjs
 
 | 字段                      | 默认                               | 说明                             |
 | ----------------------- | -------------------------------- | ------------------------------ |
-| `comfyUrl`              | `http://127.0.0.1:8188`          | ComfyUI 地址                     |
+| `comfyUrl`              | `http://127.0.0.1:8188`          | ComfyUI 地址。**非本机地址会被拒绝启动**（除非同时设 `allowRemoteComfy: true`） |
+| `allowRemoteComfy`      | `false`                          | 是否允许 `comfyUrl` 指向非本机地址。默认 `false`（仅本机回环，代码层强制）。设为 `true` 后可连局域网/远程 ComfyUI，请自行确认那是你信任的机器 |
 | `outputDir`             | `C:\Users\<你的用户名>\Desktop\千问1生图` | 成品落盘目录                         |
 | `comfyOutputDir`        | `D:\ComfyUI\ComfyUI\output`      | 先在本地取文件，取不到才走 `/view`          |
 | `unet` / `clip` / `vae` | 三个千问文件名                          | 换模型时改这里                        |
@@ -801,13 +843,13 @@ LoRA 与缓存节点现在**无条件**接在模型链上。最小可行回退�
 | 能力 | 本插件的实际情况 | 等级 |
 | --- | --- | --- |
 | **文件（files）** | **读写**：读你给的参考图 / 控制图；把生成的图**写到你指定的目录**（默认桌面「千问1生图」）；读 ComfyUI 的模型清单与日志 | `write` |
-| **网络（network）** | **仅本机回环** `127.0.0.1:8188`（ComfyUI）。**不访问任何外部地址**，无遥测、无上报 | `specified-services` |
-| **命令（commands）** | **受限调用**：启动 / 探测本机 ComfyUI（`python main.py` 及 `nvidia-smi` / `rocm-smi` 类只读探测）。**不执行下载来的脚本，不装包** | `restricted` |
+| **网络（network）** | **默认为本机回环** `127.0.0.1:8188`（ComfyUI），**由代码层强制**（`lib/net-guard.js`：非回环地址拒绝启动）。无遥测、无上报。⚠ 提供 `allowRemoteComfy` 开关（默认关闭），用户显式开启后可连接局域网 / 远程 ComfyUI | `specified-services` |
+| **命令（commands）** | **受限调用**：启动 / 探测本机 ComfyUI（`python main.py` 及 `nvidia-smi` / `rocm-smi` 类只读探测）。子进程**传入过滤后的环境变量**（剔除代理与凭据类）。**不执行下载来的脚本，不装包** | `restricted` |
 | **凭据（credentials）** | **无**。不需要 API 密钥、不需要登录、不读写系统钥匙串 | `none` |
 | **生命周期脚本** | **无** —— manifest 里没有 `preinstall` / `install` / `postinstall` / `prepare` | — |
 | **运行依赖** | **零** —— 不 `import` 任何第三方包，纯 Node ESM | — |
 
-综合等级：**medium**（能力范围明确且限于本机，但确实会写文件与起进程）。
+综合等级：**medium**（能力范围明确且**默认**限于本机，但确实会写文件与起进程）。
 
 ### 已知风险（如实列出）
 
@@ -815,16 +857,26 @@ LoRA 与缓存节点现在**无条件**接在模型链上。最小可行回退�
    插件不会写到别处。
 2. **会起进程**：为省显存，插件可启动 / 关停本机 ComfyUI。它会**先探测**再启动，
    但如果你已手动开着 ComfyUI，请确认 `comfyUrl` 指向的是你想要的那个实例。
+   > 子进程（ComfyUI / 探测命令）使用**过滤后的环境变量**：`HTTP_PROXY` / `HTTPS_PROXY` /
+   > `ALL_PROXY` 等代理变量，以及 `*TOKEN*` / `*KEY*` / `*SECRET*` / `*PASSWORD*` /
+   > `*CREDENTIAL*` 类变量**不会**传给子进程（`lib/net-guard.js` 的 `filteredEnv`）。
 3. **会调用本机 Python**：仅用于**读取**显卡显存等只读探测；失败时如实跳过，不影响出图。
 4. **模型与加速节点由你自己安装**：插件**不自动下载**任何权重或第三方节点；
    缺失时会给明确指引，**不会假装已装上**。
 5. **`--novram` / `--lowvram` 等档位是拿速度换空间**：显存不够时能跑，但**会明显变慢**，
    这不是 bug（见上文「显存 / 内存档位」）。
-6. **本插件的开发机是 AMD RX 7900 XT 20 GB**：N 卡（L20 / RTX Pro 6000）、
+6. **`comfyUrl` 可被用户改成外部地址**（必须显式开启 `allowRemoteComfy`）：
+   一旦开启，提示词与图片数据会发送到该地址。**默认关闭**，且关闭时由代码强制拦截。
+7. **本插件的开发机是 AMD RX 7900 XT 20 GB**：N 卡（L20 / RTX Pro 6000）、
    Intel（Arc Pro B70）与 macOS 上的**效果未经本机实测**，请以你自己的机器为准。
 
-> 本插件**不做**任何网络外传、不收集使用数据、不需要账号。如果你发现任何与上表不符的行为，
+> 本插件**默认**不做任何网络外传、不收集使用数据、不需要账号。如果你发现任何与上表不符的行为，
 > 请开 Issue —— 这份披露的准确性本身也是承诺。
+>
+> **网络边界的实现与自测**：`lib/net-guard.js` 提供 `isLoopbackUrl` / `assertLocalUrl` /
+> `guardedFetch` / `filteredEnv`；回归用例在 `scripts/test-net-guard.mjs`
+> （48 项断言，覆盖 127.0.0.1/localhost/::1 放行、192.168.x / 10.x / 域名与
+> `localhost.evil.com` 式伪装拒绝、重定向强制 `error`、代理与凭据环境变量剔除）。
 
 ## 许可
 

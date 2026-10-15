@@ -1,10 +1,10 @@
 {
   "name": "dsh-qwen-paint",
-  "version": "0.17.1",
-  "description": "(绘图)千问 · 优化版 —— 面向 DeepSeek Harness 的本地图像生成插件。经由本机 ComfyUI 调用 Qwen-Image 2.1 完成文生图与图生图，图像落盘保存并在会话中直接呈现；全部网络流量限于 127.0.0.1，无需联网与 API 密钥。本优化版在推理链路性能、显卡厂商适配（NVIDIA / Intel Arc / AMD RDNA2·3·4）与操作系统兼容（Windows / Linux）三方面进行了系统性增强。原作者 @奇迹与你，优化版 @yanfei0725。",
+  "version": "0.17.2",
+  "description": "(绘图)千问 · 优化版 —— 面向 DeepSeek Harness 的本地图像生成插件。经由本机 ComfyUI 调用 Qwen-Image 2.1 完成文生图与图生图，图像落盘保存并在会话中直接呈现；网络默认仅本机回环 127.0.0.1（代码层强制，非本机地址拒绝启动），无需联网与 API 密钥。本优化版在推理链路性能、显卡厂商适配（NVIDIA / Intel Arc / AMD RDNA2·3·4）与操作系统兼容（Windows / Linux）三方面进行了系统性增强。原作者 @奇迹与你，优化版 @yanfei0725。",
   "meta": {
     "title": "(绘图)千问",
-    "description": "本地调用 ComfyUI 以 Qwen-Image 2.1 生成图像，图像直接呈现在会话中。优化版：推理提速、N 卡/I 卡/A 卡三厂商适配、Windows/Linux 双平台。全部流量限于本机，无需联网与密钥。"
+    "description": "本地调用 ComfyUI 以 Qwen-Image 2.1 生成图像，图像直接呈现在会话中。优化版：推理提速、N 卡/I 卡/A 卡三厂商适配、Windows/Linux 双平台。网络默认仅本机回环（代码强制），无需联网与密钥。"
   },
   "type": "module",
   "main": "lib/index.js",
