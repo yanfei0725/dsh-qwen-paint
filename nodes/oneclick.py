@@ -23,6 +23,7 @@ from ._common import PRESET_WORKPOINT
 from .accel import QwenImageAccelChain
 from .decode import QwenImageTiledDecode
 from .loader import QwenImageOptimizedLoader
+from .styles import STYLE_LABELS, resolve_style
 
 CATEGORY = "Qwen Image Optimized/一键"
 
@@ -46,6 +47,8 @@ class QwenImageOneClick:
             "required": {
                 "prompt": ("STRING", {"multiline": True, "default": ""}),
                 "negative_prompt": ("STRING", {"multiline": True, "default": ""}),
+                # 风格预设：**只是提示词模板**，不是 LoRA / 微调，不增加显存
+                "style": (STYLE_LABELS,),
                 "size": (SIZES, {"default": "1024x1024"}),
                 "unet_name": (folder_paths.get_filename_list("diffusion_models"),),
                 "clip_name": (folder_paths.get_filename_list("text_encoders"),),
@@ -78,7 +81,7 @@ class QwenImageOneClick:
         "本节点与它们**共用同一套实现**。"
     )
 
-    def generate(self, prompt, negative_prompt, size, unet_name, clip_name, vae_name,
+    def generate(self, prompt, negative_prompt, style, size, unet_name, clip_name, vae_name,
                  precision, shift_preset, seed, batch_size,
                  steps_override, cfg_override, wrapper_mode, decode_mode,
                  reference_image=None, control_image=None,
@@ -87,6 +90,14 @@ class QwenImageOneClick:
 
         width, height = (int(x) for x in size.split("x"))
         lines = ["【一键出图】"]
+
+        # ── ⓪ 风格预设（**先合成提示词**，再走后面的流程）──
+        styled = resolve_style(style, prompt, negative_prompt)
+        prompt, negative_prompt = styled["positive"], styled["negative"]
+        if styled["key"] != "none":
+            lines.append(f"【风格】{style} —— {styled['note']}")
+        if styled["note"].startswith("⚠"):
+            lines.append(styled["note"])
 
         # ── ① 加载（复用优化加载器，**不另写一套**；拿它**最终实际生效**的档位）──
         loader = QwenImageOptimizedLoader()
@@ -134,16 +145,26 @@ class QwenImageOneClick:
         elif control_image is not None:
             lines.append("【ControlNet】你给了控制图但**没选权重** → 不接（不假装生效）")
 
-        # ── ⑥ 采样：步数/CFG 由**实际生效档位**决定，除非你显式覆盖 ──
+        # ── ⑥ 采样：步数/CFG 由**实际生效档位**决定；优先级
+        #      显式 override  >  风格预设的覆盖  >  档位工作点
+        #    ⚠ 风格预设默认 **不覆盖** steps/cfg（None），就是为了避免
+        #      「8 步却没有对应 LoRA」的糊图 —— 参见 styles.py 顶部的说明。
         steps, cfg = PRESET_WORKPOINT.get(preset, PRESET_WORKPOINT["native"])[:2]
+        if styled["steps"]:
+            steps = int(styled["steps"])
+        if styled["cfg"]:
+            cfg = float(styled["cfg"])
         if steps_override > 0:
             steps = int(steps_override)
         if cfg_override > 0:
             cfg = float(cfg_override)
-        lines.append(f"【采样】档位={preset} → steps={steps} / cfg={cfg} / seed={seed} / {width}×{height} ×{batch_size}")
+        sampler_name = styled["sampler"] or "euler"
+        scheduler = styled["scheduler"] or "simple"
+        lines.append(f"【采样】档位={preset} → steps={steps} / cfg={cfg} / "
+                     f"{sampler_name}+{scheduler} / seed={seed} / {width}×{height} ×{batch_size}")
 
         sampled = comfy_nodes.common_ksampler(
-            model, seed, steps, cfg, "euler", "simple", positive, negative, latent)[0]
+            model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent)[0]
 
         # ── ⑦ 解码（复用分块解码节点）──
         image, dec_report = QwenImageTiledDecode().decode(
