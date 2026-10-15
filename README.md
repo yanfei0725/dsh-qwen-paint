@@ -40,7 +40,41 @@ git clone https://github.com/yanfei0725/dsh-qwen-paint -b comfyui-node qwen-imag
 
 ---
 
-## 三、档位
+## 三、程序化调用接口（接进你自己的工作流）
+
+界面拖节点适合手工玩。**要嵌进脚本、批处理或别的工作流**，用这一层：
+
+| 入口 | 适合 |
+|---|---|
+| `api.generate(...)` | 一步到位：拼图 → 提交 → 等结果 → 返回图片信息 |
+| `api.build_workflow(...)` | **只返回 ComfyUI API 格式的图（JSON）**，你自己决定怎么提交/改 |
+| `api.submit(wf)` / `api.wait_for(pid)` | 只提交或只等，配合你自己的流程 |
+| `python scripts/generate.py --prompt "..."` | 命令行出图，可直接进 shell / 定时任务 |
+
+```python
+import sys; sys.path.insert(0, r"路径\qwen-image-optimized")
+import api
+
+# ① 只要图（不占显存、不需要 ComfyUI 在跑）
+wf = api.build_workflow("一只橘猫趴在屋顶上", width=1024, height=1024,
+                        precision="fp8", shift_preset="turbo8", seed=42)
+json.dump(api.strip_meta(wf), open("my.json", "w", encoding="utf-8"), ensure_ascii=False)
+
+# ② 直接出图（需要 ComfyUI 正在跑）
+res = api.generate(prompt="一只橘猫", width=1024, height=1024, seed=42)
+print(res["images"])
+```
+
+**为什么方便接入**：`build_workflow` 返回的是**普通 ComfyUI 节点图**，不是黑盒 ——
+你可以把里面的节点拷进自己的 JSON，按 `[节点id, 输出序号]` 重新接线，插放大、插批处理都行。
+
+`workflows/` 下还有**三份现成模板**（文生图 / 图生图 / ControlNet），
+由 `scripts/make_workflows.py` **从 `api.build_workflow` 生成**，不会和代码漂移。
+
+⚠ 提交前**一定要** `strip_meta(wf)` 去掉 `__meta__` —— ComfyUI 只认节点 id，
+多一个非常规键会被当成节点校验失败。
+
+## 四、档位
 
 **精度档**（`precision`）：`auto` / `bf16`（全精度）/ `fp8` / `int8` / `gguf`
 - 按**文件名标记**从你已装的文件里挑；**挑不到就如实回落**并在 `report` 里写明原因 —— 绝不假装用上了。
@@ -57,7 +91,7 @@ git clone https://github.com/yanfei0725/dsh-qwen-paint -b comfyui-node qwen-imag
 
 ---
 
-## 四、三条设计原则（都是踩坑换来的，写在这里免得后人再踩）
+## 五、三条设计原则（都是踩坑换来的，写在这里免得后人再踩）
 
 1. **绝不挂一个不存在的节点。** ComfyUI 遇到未知 `class_type` 会**整单拒收** ——
    所以加速件一律先探测，缺了就跳过。
@@ -68,13 +102,13 @@ git clone https://github.com/yanfei0725/dsh-qwen-paint -b comfyui-node qwen-imag
 
 ---
 
-## 五、测试
+## 六、测试
 
 ```bash
 <ComfyUI 的 python> scripts/test_contract.py --comfy <ComfyUI 根目录>
 ```
 
-本机实测（ComfyUI `K:/ComfyUI-rocm/ComfyUI`，Python 3.12）：**46 项全部通过**。
+本机实测（ComfyUI `K:/ComfyUI-rocm/ComfyUI`，Python 3.12）：**69 项全部通过**。
 覆盖：精度档挑选（含"缺文件必须返回 None"）、包可导入、
 五个节点的完整契约（INPUT_TYPES / RETURN_TYPES / RETURN_NAMES / FUNCTION 真实存在 / CATEGORY）、
 节点 id 与 ComfyUI 现有节点不冲突、探测机制自检。
@@ -84,7 +118,7 @@ git clone https://github.com/yanfei0725/dsh-qwen-paint -b comfyui-node qwen-imag
 
 ---
 
-## 六、上架 ComfyUI Registry
+## 七、上架 ComfyUI Registry
 
 `pyproject.toml` 已按[官方规范](https://docs.comfy.org/registry/specifications)填好。
 发布前需你做两件事（只有仓库所有者能做）：
