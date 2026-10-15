@@ -6,7 +6,7 @@
 插件的全部网络流量限于本机回环地址（`127.0.0.1`），**不依赖外部网络，无需任何 API 密钥，亦不产生调用费用**。
 
 > **原作者**：@奇迹与你（<https://github.com/wonderandyou/dsh-qwen-paint>）  
-> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.0`
+> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.1`
 
 ---
 
@@ -24,6 +24,27 @@
   - ⚠ 重要：串行**不会**卸载主模型。若真的每轮卸载，下一张就要重新加载约 13.5 GB 模型，反而更慢；串行省的是「不同时持有多份 latent」。
 - **生成后自动放大（一键出大图）**：设置 `upscaleAfter`（如 2，即 1024² → 2048）后，生图完成会自动接着做分块放大。放大失败不影响已生成的原图（原图已落盘，只记录警告）。
   - 放大逻辑与 `upscale_image` 工具**共用同一套节点图**，不存在两套实现。
+
+## 0.17.1 新增说明（DSH STORE 合规整改 / Registry 元数据）
+
+**本版没有改动出图逻辑** —— 全是"让别人能正确收录我们"的元数据与文档整改。
+
+- **权限与已知风险披露**（README 新增「权限与已知风险」章节）：按 DSH STORE 的口径逐项写明
+  `files=write` / `network=仅 127.0.0.1` / `commands=restricted` / `credentials=none`，
+  以及 6 条已知风险 —— **不再让用户靠猜**。
+- **`.comfyignore`**：把开发脚本、构建产物、内部报告排除出发布归档。
+- **`.github/workflows/publish_action.yml`**：推送到 `main` 且改动涉及 `pyproject.toml` 时自动发版。
+- **`pyproject.toml` 按 ComfyUI Registry 官方规范重写**：
+  `PublisherId` / `DisplayName` 字段名大小写、`[project.urls].Repository`、移除非规范字段。
+  ⚠ 记录一个踩过的坑：**Publisher ID 不等于 GitHub 用户名**，
+  写错时报的是 `Failed to validate token`（**完全没提 publisher**），极具误导性。
+- ⚠ **修正一处会导致收录被拒的问题**：仓库里曾放着两个构建产物 zip（各约 0.8 MB），
+  它们**同时**撞穿 DSH STORE 的「单文件 262,144 B」与「总体积 2,097,152 B」两条上限，
+  使源码扫描被判为"**扫描面不完整**"。**已全部移除**（安装包改由 Release 分发）。
+
+> ⚠ 关于 DSH STORE 的如实说明：本插件**必然**具备文件 / 网络 / 命令能力，
+> 因此**不满足其"自动准入"要求**（`automaticApproval.permissionSignals` 必须全为 `false`），
+> 只能走 **`user-reviewed`** 人工通道。这是**功能决定**的，不是缺陷，也不打算为此阉割功能。
 
 ## 0.17.0 新增说明（专业卡版：档位 / 精度 / 权重可调 / ControlNet）
 
@@ -740,6 +761,37 @@ LoRA 与缓存节点现在**无条件**接在模型链上。最小可行回退�
 - **客户端状态指示器用 React 座位 + 纯 DOM**（照 `dsh-reasoning-glow` 的做法）：  
   React 只渲染一个 `<span>` 座位，圆点与文字都在 `useEffect` 里用原生 DOM 挂，  
   并且注册前检查 `React.useRef`/`useEffect` 存在 —— 种子被裁剪过就安静跳过，绝不抛。
+
+## 上架 ComfyUI Registry（元数据）
+
+> ⚠⚠ **先读这条**：本插件是 **DSH（DeepSeek Harness）插件**，**不是 ComfyUI 节点**。
+> 仓库里**没有任何 Python 节点文件**（无 `__init__.py` / `NODE_CLASS_MAPPINGS`），
+> 它是通过 HTTP 与本机 ComfyUI 对话的。
+> ⇒ **把它装进 ComfyUI 的 `custom_nodes` 不会有任何效果**。
+> 在 Registry 上架**只为元数据可被发现**；实际安装请走 DSH 的 `install_bundle`
+> （见 `cordis.patch.yml` 与 `一键安装.cmd`）。
+
+**已完成的配置**
+
+| 文件 | 作用 |
+| --- | --- |
+| `pyproject.toml` | Registry 元数据。按[官方规范](https://docs.comfy.org/registry/specifications)填写：`[project]` 的 `name`/`version`/`license`/`dependencies` + `[project.urls].Repository`，`[tool.comfy]` 的 `PublisherId`/`DisplayName`（**字段名大小写敏感**） |
+| `.comfyignore` | 排除开发脚本、构建产物与内部报告，让 Registry 归档更干净（语法同 `.gitignore`） |
+| `.github/workflows/publish_action.yml` | 推送到 `main` 且改动涉及 `pyproject.toml` 时**自动发布**（官方模板） |
+
+**还需你手动做两步**（只有仓库所有者能做）
+
+1. **确认 `PublisherId`**：`pyproject.toml` 里现在写的是 `yanfei0725`。
+   请核对 Registry 个人页 `@` 后面那串 —— **必须完全一致，且创建后不可更改**。
+   若不同，改 `pyproject.toml` 的 `PublisherId` 再推一次。
+2. **配置 API Key**（二选一）：
+   - **自动发布**：仓库 `Settings → Secrets and variables → Actions → Repository secrets`
+     新建名为 **`REGISTRY_ACCESS_TOKEN`** 的 Secret，值为 Registry 的 API Key。
+     之后改 `pyproject.toml` 的 `version` 并推送即会自动发布。
+   - **手动发布**：本地 `pip install comfy-cli`，在仓库根目录跑 `comfy node publish`，按提示粘贴 API Key。
+
+> ⚠ 版本号规则：`version` 每次发布必须**递增**，且**旧版本号不可复用**。
+> 本仓库的 `pyproject.toml` 与 `package.json` 保持**同一个版本号**，避免两处打架。
 
 ## 权限与已知风险（安装前请读）
 
