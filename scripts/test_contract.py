@@ -171,7 +171,101 @@ def main():
                 "QwenImage21Speedup", "ApplyRDNA3FlashAttention", "QwenSpectrumModelPatcher"]:
         print(f"     {'✔' if common.available(nid) else '·'} {nid}")
 
+    # ── ⑥ ★★ 我调用的 ComfyUI API 是否**真实存在** ───────────────────────────
+    #
+    # ⚠⚠ 这一节是**血泪教训**加的，务必看懂：
+    #   上面的契约测试只验"类结构"，**从不执行**节点的 load()/generate()。
+    #   于是第一版里 `comfy.sd.load_vae(...)` **根本不存在**（当前版本只有
+    #   `load_vae_patcher`）这种**一执行就崩**的错误，46 项测试全绿也没抓到。
+    #   ⇒ 必须有这一节：把**运行时才会触碰的 API** 逐个断言存在。
+    #   ⇒ 以后代码里新调了任何 ComfyUI API，**都要加到这张表里**。
+    print("\n⑥ ★★ 运行时 API 存在性（专抓'一执行就崩'的那类错误）")
+    try:
+        import comfy.sd
+        import comfy.utils
+        import nodes as comfy_nodes
+    except Exception as exc:
+        ok("能导入 comfy.sd / comfy.utils / nodes", False, str(exc))
+        return finish()
+
+    API_CHECKS = [
+        # (展示名, 取值函数) —— 取不到就说明这个 API 在当前版本不存在
+        ("comfy.sd.load_diffusion_model", lambda: comfy.sd.load_diffusion_model),
+        ("comfy.sd.load_clip", lambda: comfy.sd.load_clip),
+        ("comfy.sd.load_vae_patcher", lambda: comfy.sd.load_vae_patcher),
+        ("comfy.sd.CLIPType.QWEN_IMAGE", lambda: comfy.sd.CLIPType.QWEN_IMAGE),
+        ("comfy.utils.load_torch_file", lambda: comfy.utils.load_torch_file),
+        ("nodes.VAELoader", lambda: comfy_nodes.NODE_CLASS_MAPPINGS["VAELoader"]),
+        ("nodes.UNETLoader", lambda: comfy_nodes.NODE_CLASS_MAPPINGS["UNETLoader"]),
+        ("nodes.CLIPLoader", lambda: comfy_nodes.NODE_CLASS_MAPPINGS["CLIPLoader"]),
+        ("nodes.LoraLoaderModelOnly", lambda: comfy_nodes.NODE_CLASS_MAPPINGS["LoraLoaderModelOnly"]),
+        ("nodes.EmptyLatentImage", lambda: comfy_nodes.NODE_CLASS_MAPPINGS["EmptyLatentImage"]),
+        ("nodes.common_ksampler", lambda: comfy_nodes.common_ksampler),
+        ("nodes.VAEDecode", lambda: comfy_nodes.NODE_CLASS_MAPPINGS["VAEDecode"]),
+        ("nodes.VAEDecodeTiled", lambda: comfy_nodes.NODE_CLASS_MAPPINGS["VAEDecodeTiled"]),
+        ("nodes.ControlNetLoader", lambda: comfy_nodes.NODE_CLASS_MAPPINGS["ControlNetLoader"]),
+        ("nodes.ControlNetApplyAdvanced", lambda: comfy_nodes.NODE_CLASS_MAPPINGS["ControlNetApplyAdvanced"]),
+        ("comfy_extras.ModelSamplingFlux", lambda: __import__(
+            "comfy_extras.nodes_model_advanced", fromlist=["ModelSamplingFlux"]).ModelSamplingFlux),
+    ]
+    for label, getter in API_CHECKS:
+        try:
+            getter()
+            ok(f"存在：{label}", True)
+        except Exception as exc:
+            ok(f"存在：{label}", False, f"{type(exc).__name__}: {exc}")
+
+    # ★ 反向锁：明确断言 comfy.sd 里**没有** load_vae —— 防止哪天有人又写回去
+    ok("★ 反向锁：comfy.sd.load_vae 不存在（别再用它）", not hasattr(comfy.sd, "load_vae"))
+
+    # ── ⑦ api.py：不依赖 ComfyUI 也能拼图 ────────────────────────────────────
+    print("\n⑦ 调用接口 api.py（纯拼 JSON，不需要 ComfyUI 在跑）")
+    sys.path.insert(0, PKG_DIR)
+    try:
+        import api as qapi
+        wf = qapi.build_workflow("一只猫", width=1024, height=1024, seed=1)
+        ok("build_workflow 返回 dict", isinstance(wf, dict) and len(wf) > 1)
+        ok("★ 图里所有 class_type 都是字符串（拼错会当场暴露）",
+           all(isinstance(v.get("class_type"), str) for k, v in wf.items() if k != "__meta__"))
+        ok("★ 接线引用都指向图里存在的节点（断线会当场暴露）",
+           _links_resolve(wf))
+        ok("strip_meta 能去掉 __meta__（提交前必须调，否则 ComfyUI 拒收）",
+           "__meta__" not in qapi.strip_meta(wf))
+        wf2 = qapi.build_workflow("改图", reference_image_node=("99", 0))
+        ok("图生图：给了参考图 → latent 取自编码器第 3 个输出",
+           any(v.get("class_type") == "TextEncodeQwenImage21"
+               and isinstance(v["inputs"].get("images"), dict) for v in wf2.values()))
+        wf3 = qapi.build_workflow("按结构", control_image_node=("98", 0), control_net_name="cnet.safetensors")
+        ok("ControlNet：给了控制图+权重 → 图里出现 ControlNet 两个节点",
+           sum(1 for v in wf3.values() if str(v.get("class_type")).startswith("ControlNet")) == 2)
+    except Exception as exc:
+        ok("api.py 可用", False, f"{type(exc).__name__}: {exc}")
+        traceback.print_exc()
+
     return finish()
+
+
+def _links_resolve(workflow):
+    """图里所有 `[节点id, 序号]` 形式的接线，是否都指向真实存在的节点。"""
+    ids = set(workflow.keys())
+
+    def walk(v):
+        if isinstance(v, list) and len(v) == 2 and isinstance(v[0], str) and isinstance(v[1], int):
+            if v[0] not in ids:
+                return False
+            return True
+        if isinstance(v, dict):
+            return all(walk(x) for x in v.values())
+        if isinstance(v, list):
+            return all(walk(x) for x in v)
+        return True
+
+    for k, v in workflow.items():
+        if k == "__meta__":
+            continue
+        if not walk(v.get("inputs", {})):
+            return False
+    return True
 
 
 def finish():
