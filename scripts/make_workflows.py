@@ -18,6 +18,8 @@ sys.path.insert(0, ROOT)
 import api as qapi  # noqa: E402
 
 OUT = os.path.join(ROOT, "workflows")
+# ⚠ 文件名一律用 **ASCII**：实测 comfy-cli 打包 zip 时处理非 ASCII 路径会失败
+#   （报 "File not found. Not including in zip"），模板就漏发了。
 os.makedirs(OUT, exist_ok=True)
 
 
@@ -58,9 +60,9 @@ wf3 = qapi.build_workflow(
     control_strength=0.8)
 wf3["101"] = {"class_type": "LoadImage", "inputs": {"image": "control.png"}}
 
-n1 = dump("01-一键出图.json", wf1)
-n2 = dump("02-图生图改图.json", wf2)
-n3 = dump("03-ControlNet结构约束.json", wf3)
+n1 = dump("01-t2i.json", wf1)
+n2 = dump("02-img2img.json", wf2)
+n3 = dump("03-controlnet.json", wf3)
 
 readme = """# 工作流模板（ComfyUI **API 格式**）
 
@@ -69,9 +71,9 @@ readme = """# 工作流模板（ComfyUI **API 格式**）
 
 | 文件 | 节点数 | 用途 |
 |---|---:|---|
-| `01-一键出图.json` | {n1} | 文生图 |
-| `02-图生图改图.json` | {n2} | 给参考图改图（latent 取自参考图尺寸） |
-| `03-ControlNet结构约束.json` | {n3} | 给控制图（边缘/深度/姿态）做结构约束 |
+| `01-t2i.json` | {n1} | 文生图 |
+| `02-img2img.json` | {n2} | 给参考图改图（latent 取自参考图尺寸） |
+| `03-controlnet.json` | {n3} | 给控制图（边缘/深度/姿态）做结构约束 |
 
 ## 怎么用
 
@@ -88,7 +90,7 @@ python scripts/generate.py --prompt "..." --size 1024x1024 --seed 42
 ```python
 import json, sys; sys.path.insert(0, ".")
 import api
-wf = json.load(open("workflows/01-一键出图.json", encoding="utf-8"))
+wf = json.load(open("workflows/01-t2i.json", encoding="utf-8"))
 print(api.submit(wf))
 ```
 
@@ -101,7 +103,7 @@ print(api.submit(wf))
 with io.open(os.path.join(OUT, "README.md"), "w", encoding="utf-8", newline="\n") as f:
     f.write(readme)
 
-print(f"✓ 01-一键出图.json ({n1} 节点)")
-print(f"✓ 02-图生图改图.json ({n2} 节点)")
-print(f"✓ 03-ControlNet结构约束.json ({n3} 节点)")
+print(f"✓ 01-t2i.json ({n1} 节点)")
+print(f"✓ 02-img2img.json ({n2} 节点)")
+print(f"✓ 03-controlnet.json ({n3} 节点)")
 print("✓ workflows/README.md")
