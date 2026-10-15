@@ -242,6 +242,42 @@ def main():
         ok("api.py 可用", False, f"{type(exc).__name__}: {exc}")
         traceback.print_exc()
 
+    # ── ⑧ 风格预设 ───────────────────────────────────────────────────────────
+    print("\n⑧ 风格预设 styles.py")
+    sys.path.insert(0, os.path.join(PKG_DIR, "nodes"))
+    try:
+        spec1 = importlib.util.spec_from_file_location(
+            "_qio_styles", os.path.join(PKG_DIR, "nodes", "styles.py"))
+        st = importlib.util.module_from_spec(spec1)
+        spec1.loader.exec_module(st)
+
+        ok("★ 预设数量 >= 12（要给用户足够多的风格）",
+           len(st.STYLE_PRESETS) >= 12, f"实际 {len(st.STYLE_PRESETS)}")
+        ok("每个预设都有 key/label/note（界面与 report 都要用）",
+           all(p.get("key") and p.get("label") and p.get("note") for p in st.STYLE_PRESETS))
+        ok("★ 默认 steps/cfg 为 None（= 跟随档位，防'8步无LoRA'糊图）",
+           all(p.get("steps") is None and p.get("cfg") is None for p in st.STYLE_PRESETS),
+           "有预设写死了 steps/cfg")
+        r = st.resolve_style("写实摄影", "一只猫")
+        ok("风格词**追加在**用户 prompt 之后（不覆盖用户写的）",
+           r["positive"].startswith("一只猫") and len(r["positive"]) > len("一只猫"))
+        ok("负面词：用户没写 → 用风格自带的", len(st.resolve_style("写实摄影", "猫")["negative"]) > 0)
+        ok("负面词：用户写了 → **用户优先**（不被风格覆盖）",
+           st.resolve_style("写实摄影", "猫", "我自己的负面词")["negative"] == "我自己的负面词")
+        ok("★ 未识别的风格 → 按 none 处理**且如实提示**（不静默套别的风格）",
+           st.resolve_style("不存在的风格", "猫")["key"] == "none"
+           and st.resolve_style("不存在的风格", "猫")["note"].startswith("⚠"))
+        ok("'none' 不加任何风格词",
+           st.resolve_style("none", "一只猫")["positive"] == "一只猫")
+        # api 也要能用风格
+        wf4 = qapi.build_workflow("一只猫", style="水墨国风")
+        ok("api.build_workflow 支持 style（提示词被风格合成过）",
+           any(v.get("class_type") == "TextEncodeQwenImage21"
+               and "水墨" in str(v["inputs"].get("prompt", "")) for v in wf4.values()))
+    except Exception as exc:
+        ok("styles.py 可用", False, f"{type(exc).__name__}: {exc}")
+        traceback.print_exc()
+
     return finish()
 
 
