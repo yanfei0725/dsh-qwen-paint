@@ -10,6 +10,7 @@
 | `QwenImageTiledDecode` | 分块 VAE 解码 + 显存不足自动回退 |
 | `QwenImageControlNetApply` | ControlNet 加载 + 施加（结构约束） |
 | `QwenImageOneClick` | 一键出图：填 prompt 就出图（内部复用上面四个） |
+| `QwenImageStylePreset` | 风格预设：把 prompt + 风格合成最终提示词，**可接进任何工作流** |
 
 ## 设计原则（三条，都是踩坑换来的）
 1. **绝不挂一个不存在的节点** —— ComfyUI 遇到未知 `class_type` 会**整单拒收**，
@@ -25,6 +26,7 @@ from .nodes.controlnet import QwenImageControlNetApply
 from .nodes.decode import QwenImageTiledDecode
 from .nodes.loader import QwenImageOptimizedLoader
 from .nodes.oneclick import QwenImageOneClick
+from .nodes.styles import QwenImageStylePreset
 
 NODE_CLASS_MAPPINGS = {
     "QwenImageOptimizedLoader": QwenImageOptimizedLoader,
@@ -32,6 +34,7 @@ NODE_CLASS_MAPPINGS = {
     "QwenImageTiledDecode": QwenImageTiledDecode,
     "QwenImageControlNetApply": QwenImageControlNetApply,
     "QwenImageOneClick": QwenImageOneClick,
+    "QwenImageStylePreset": QwenImageStylePreset,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -40,6 +43,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "QwenImageTiledDecode": "千问 2.1 分块解码 (Qwen Image Tiled Decode)",
     "QwenImageControlNetApply": "千问 2.1 ControlNet (Qwen Image ControlNet)",
     "QwenImageOneClick": "千问 2.1 一键出图 (Qwen Image One-Click)",
+    "QwenImageStylePreset": "千问 2.1 风格预设 (Qwen Image Style Preset)",
 }
 
 # ⚠ 本包**没有**前端资源（无 js/css），所以**不声明** `WEB_DIRECTORY` ——
