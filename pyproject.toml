@@ -22,7 +22,7 @@
 name = "dsh-qwen-paint"
 # 语义化版本 X.Y.Z；每次发布必须递增，且旧版本号不可复用。
 # ⚠ 与 package.json 的 version 保持**同一个数**，避免两处版本号打架。
-version = "0.17.3"
+version = "0.17.5"
 description = "⚠ DSH（DeepSeek Harness）插件，不是 ComfyUI 节点：通过 HTTP 调用你本机的 ComfyUI，用 Qwen-Image 2.1 出图（turbo8 加速链 / VAE 分块解码 / OOM 自动回退 / 专业卡档位）。装进 ComfyUI 的 custom_nodes 不会生效 —— 它需要 DSH 宿主。"
 readme = "README.md"
 license = { file = "LICENSE" }

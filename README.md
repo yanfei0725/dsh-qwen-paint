@@ -20,7 +20,7 @@
 > 这是**用户主动选择**的行为，不是默认状态。
 
 > **原作者**：@奇迹与你（<https://github.com/wonderandyou/dsh-qwen-paint>）  
-> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.3`
+> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.5`
 
 ---
 
@@ -59,6 +59,56 @@
 > ⚠ 关于 DSH STORE 的如实说明：本插件**必然**具备文件 / 网络 / 命令能力，
 > 因此**不满足其"自动准入"要求**（`automaticApproval.permissionSignals` 必须全为 `false`），
 > 只能走 **`user-reviewed`** 人工通道。这是**功能决定**的，不是缺陷，也不打算为此阉割功能。
+
+## 0.17.5 新增说明（真实用户反馈 → 3 个致命 bug 修复 + 契约测试）
+
+**来源：插件市场的真实用户反馈（A 卡用户）**，不是审核意见。逐条回代码 + 回 ComfyUI 源码核实后，
+**3 个致命 bug 全部属实** —— 这也是本项目一直标注的「真机端到端未验证」所付出的实际代价。
+
+### 🔴 三个致命 bug（放大 / 局部重绘在真机上必崩）
+
+| 症状 | 根因 | 位置 |
+| --- | --- | --- |
+| **放大**（`upscale_image`）必崩 | `LoadImage` 的输入名写成了 `upload`，正确是 **`image`** | `lib/index.js` 3 处 |
+| **局部重绘**（`inpaint_image`）必崩 | ① 同上 `upload`；② `LoadImageMask` 漏了必需的 **`channel`**；③ `ControlNetInpaintingAliMamaApply` 漏了 **`strength` / `start_percent` / `end_percent`** | `lib/index.js` |
+
+**判定依据（不是推测，是 ComfyUI 源码）**：
+- `nodes.py` 的 `LoadImage.INPUT_TYPES` → `{"required": {"image": ...}}`
+- `nodes.py` 的 `LoadImageMask.INPUT_TYPES` → 在父类基础上追加 `"channel": (["alpha","red","green","blue"],)`；
+  取值 `'red'` 与官方 blueprint「Image Inpainting (Qwen-image).json」里 `ImageToMask` 的 channel 一致
+- `comfy_extras/nodes_controlnet.py` 的 `define_schema()` → 三个 Float.Input；
+  取值 `1.0 / 0.0 / 1.0` 与官方 blueprint 里该节点的 widget `[1, 0, 1]` 一致
+
+> ⚠ **为什么只有这两条链崩、主链路却是好的**：同一份工作流代码在 `config.js` 与 `lib/index.js`
+> 各写了一遍，`config.js` 那处用的是**正确**的 `image`。这是典型的"复制粘贴时只改了一处"。
+
+### 🟡 其余修复
+
+- **「改目录」按钮点了没反馈**（用户原话）：根因是那段依赖 `window.prompt` / `window.alert` 做交互与回执，
+  而 **DSH 桌面端会拦这两个**；更糟的是 `window.prompt` 写在 `try` 外面，一抛错连 `catch` 都进不去。
+  ⇒ 改为**面板内联输入**（点一下就地长出输入框，回车/点确定提交，回执显示在同一行），**全程不依赖原生弹窗**。
+- **ControlNet 与 2.1 底模不兼容**（用户实测：InstantX 公开权重是给 **Qwen-Image 1.0** 的，
+  latent 16ch vs 2.1 的 64ch，执行层 unpack 崩）：`inpaint_image` 的工具描述现在**在动手之前**就写明这一点；
+  并新增 `readSafetensorsConvInChannels()` 读权重 header 做**保守**提示 ——
+  **只在"只见到 16、没见到 64"时才警告**，其余一律不吭声（宁可漏报，绝不误报）。
+- **`steps` 在 turbo8 链是"假控制"**（用户实测）：`forceTurbo8Steps` 默认为 `true`，
+  此时用户传的 `steps` 会被丢弃、强制 8 步。这是**设计如此**（turbo8 是 8 步蒸馏 LoRA），
+  但 schema 原先没说明 ⇒ 现在 `steps` 的参数描述里写明该条件下无效及如何解除。
+
+### 🟢 新增：节点输入名「契约测试」（这才是能拦住这类错的东西）
+
+三个 bug 之所以能溜到用户手里，是因为**当时所有测试都只验"结构"、从不验"输入名"**。
+
+- `scripts/extract_comfy_schema.py` —— 用 Python `ast` 解析本机 ComfyUI 的
+  `nodes.py` / `comfy_extras/*.py`，提取每个节点 `INPUT_TYPES()` 的 `required` / `optional` 键
+  （新式 `io.ComfyNode.define_schema()` 也支持），并**正确处理继承** ——
+  仅当子类调用了 `super().INPUT_TYPES()` 才合并基类键（`LoadImageMask` 是这种），
+  完整重写的（如 `LoraLoaderModelOnly`）**不合并**，否则会污染契约。
+  本机实测：扫描 150 个 `.py`、提取 **631 个节点**。
+- `scripts/comfy-node-contract.json` —— 上述解析结果，固化成文件。
+- `scripts/test-workflow-contract.mjs` —— **74 项断言**，读契约比对 `lib/` 里构建的所有工作流：
+  ① 必需输入必须齐全；② 不得出现 ComfyUI 不认识的输入名；③ **回归锁**（三个坑必须保持修好）。
+  **纯 JS、不需要 ComfyUI 在跑、不需要联网、不派生任何子进程**。
 
 ## 0.17.3 新增说明（第二轮复核整改：补上第二个端点 + 装包/Shell 披露对齐）
 

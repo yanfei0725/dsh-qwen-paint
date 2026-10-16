@@ -10,6 +10,9 @@
 scripts/_*
 scripts/pack.mjs
 scripts/make_loading_gif.py
+# 契约 JSON 的**生成器**（用 Python ast 解析 ComfyUI 源码）。
+# 生成结果 comfy-node-contract.json 要**保留** —— 回归测试读它做断言。
+scripts/extract_comfy_schema.py
 
 # ── 构建产物 ──
 dist/
