@@ -20,7 +20,7 @@
 > 这是**用户主动选择**的行为，不是默认状态。
 
 > **原作者**：@奇迹与你（<https://github.com/wonderandyou/dsh-qwen-paint>）  
-> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.6`
+> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.7`
 
 ---
 
@@ -59,6 +59,55 @@
 > ⚠ 关于 DSH STORE 的如实说明：本插件**必然**具备文件 / 网络 / 命令能力，
 > 因此**不满足其"自动准入"要求**（`automaticApproval.permissionSignals` 必须全为 `false`），
 > 只能走 **`user-reviewed`** 人工通道。这是**功能决定**的，不是缺陷，也不打算为此阉割功能。
+
+## 0.17.7 新增说明（AUTH001 整改：本机 HTTP 接口的调用方与写入边界）
+
+审核在 Issue #1390 复核 `0.17.6` 后，确认此前各项整改已通过
+（含 Tool-view 归属"已审清，不再作为待审理由"），并给出**唯一**剩余项 **AUTH001**：
+
+> `lib/index.js` 的 `isLocalRequest` 只看 Host 和 socket 的本机地址；**缺失值也放行**，
+> 不检查 Origin、Sec-Fetch-Site 或宿主调用方身份。状态 GET 处理器修改运行配置…
+> **让状态 GET 保持只读，写配置移到显式 POST JSON。**
+
+**两条都属实。** 这是典型的 confused-deputy 面：**来自其它网页、但目标地址为本机的请求，
+Host 和 socket 仍然是本机** —— 单纯"只允许本机连接"并不证明**发起请求的网页**可信
+（CORS 也挡不住有副作用的 GET）。
+
+### ① 请求信任判定：与官方 `api-request-trust.ts` 等价
+
+`isLocalRequest` → **`isTrustedRequest`**（旧名保留为兼容别名），判定顺序逐条照官方实现：
+
+1. **Host 围栏**（防 DNS rebinding）：**每个请求都过**。Host 缺失 / 无法解析 / 不是回环 ⇒ **拒绝**。
+   理由：Host 是 rebinding **唯一无法伪造**的头 —— 浏览器按"它以为在跟谁说话"填 Host。
+   > 原版这里是 `host === '' → 放行`，即审核点名的"缺失值也放行"，已改为**缺失即拒**。
+2. **跨站围栏**：`Sec-Fetch-Site: cross-site` ⇒ **拒绝**（不论 Origin）。
+3. **Origin 围栏**：带了 Origin 就必须与本机 Host **同源**；`Origin: null`（沙箱 iframe / `file:`）
+   是不透明源 ⇒ 拒绝；**没带 Origin 则放行**（官方原文：*"Absent Origin is fine —
+   the Host fence above already bound the request."*）。
+
+另外保留 socket 检查（有值时必须是回环）作为附加一层。**不做**"必须有 Origin"的硬性要求 ——
+官方实现同样不要求，把它变成硬性条件会误伤非浏览器客户端。
+
+### ② 状态端点：GET 只读，写配置移到 POST JSON
+
+- 原先 `?idleMinutes=` / `?flowStyle=` / `?drawTrigger=` / `?preset=` / `?start=1`（**启动 ComfyUI**）/
+  各类开关与档位 / `?outputDir=` 全部是 **GET 带 query 就能改配置**。
+- 现在 `queryLc` 这张参数表**只从 POST 的 JSON body 填充**；GET 时它是空的 ⇒
+  下面所有写分支**自然全部失效**（无需逐个改，也就不会漏）。
+- GET 若携带任何非只读参数（白名单仅 `ping`）⇒ **405 并明确提示改用 POST**，不静默忽略。
+- 客户端 `lib/client.js` 同步：新增统一入口 `postStatus(params)`，**9 处写调用全部改走它**。
+- **顺手修掉一个真 bug**：客户端"改目录"那处写的是 `` `${API}/status.json` ``，
+  而 **`API` 这个标识符在 `client.js` 里从未定义** ⇒ 拼出来是 `undefined/status.json`，
+  请求必然失败（此前被 `window.prompt` 被拦后提前 `return` 掩盖了）。
+
+### ③ 回归测试（`scripts/test-request-trust.mjs`，34 项）
+
+覆盖审核的验收条件：本机 Host + `Origin: https://untrusted.example` / `Sec-Fetch-Site: cross-site`
+**必须被拒**；同源 Origin 与"无 Origin"正常放行；`Origin: null` / `file:` / 伪装域名
+（`localhost.evil.com`）/ Host 缺失 一律拒绝；跨站标记**压过**同源 Origin；
+以及源码级回归锁（服务端 GET 只读 + 客户端无 GET 写调用 + 不再引用未定义的 `${API}`）。
+
+> 三套测试合计 **170 项**（net-guard 62 + workflow-contract 74 + request-trust 34），全部通过。
 
 ## 0.17.6 新增说明（修正一处"注释与实现不一致"）
 
