@@ -3,16 +3,24 @@
 面向 **DeepSeek Harness** 的本地图像生成插件。经由本机 **ComfyUI** 调用 **Qwen-Image 2.1** 模型，  
 在对话中直接完成文生图与图生图；生成的图像落盘保存，并在会话界面内直接呈现。
 
-**网络边界（请以本节为准）**：插件**默认**只与**本机回环地址**（`127.0.0.1` / `localhost` / `::1`）的 ComfyUI 通信，
-且这一约束由代码层强制（`lib/net-guard.js`）——`comfyUrl` 若被配成本机以外的地址，**插件会拒绝启动**而不是照发请求；
-所有出站请求都强制 `redirect: 'error'`，不跟随任何 HTTP 重定向。因此**默认配置下不依赖外部网络，无需任何 API 密钥，亦不产生调用费用**。
+**网络边界（请以本节为准）**：插件的网络出口有**两类，边界不同**。
+
+**① 出图数据流**（提示词、参考图）—— 只发往 `comfyUrl`（ComfyUI）与 `hipfireUrl`（hipfire serve）。
+**默认仅本机回环**（`127.0.0.1` / `localhost` / `::1`），且这一约束**由代码层强制**（`lib/net-guard.js`）：
+任一地址被配成本机以外时，**插件会拒绝启动**而不是照发请求。所有出站请求统一走 `guardedFetch`，
+强制 `redirect: 'error'`（不跟随任何 HTTP 重定向）。因此**出图全程不依赖外部网络，无需任何 API 密钥，亦不产生调用费用**。
+
+**② 加速包下载**（可选，**默认开启**）—— `accelAutoInstall`（默认 `true`）时，插件会从 **pip 源与 GitHub**
+下载厂商专用加速包（`pip install --upgrade` / `git clone`）。**这会访问外部地址**，
+但**不发送任何提示词或图片**。设为 `accelAutoInstall: false` 即可完全关闭，出图功能不受影响。
+详见下文「权限与已知风险」。
 
 > ⚠ 为如实披露能力：插件提供了 `allowRemoteComfy` 开关（默认 `false`）。用户**显式**设为 `true` 后，
-> 才可把 `comfyUrl` 指向局域网（如 `192.168.1.100`）或远程主机——此时插件会向你指定的地址发送提示词与图片数据。
+> 才可把 `comfyUrl` / `hipfireUrl` 指向局域网（如 `192.168.1.100`）或远程主机——此时插件会向你指定的地址发送提示词与图片数据。
 > 这是**用户主动选择**的行为，不是默认状态。
 
 > **原作者**：@奇迹与你（<https://github.com/wonderandyou/dsh-qwen-paint>）  
-> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.2`
+> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.3`
 
 ---
 
@@ -51,6 +59,63 @@
 > ⚠ 关于 DSH STORE 的如实说明：本插件**必然**具备文件 / 网络 / 命令能力，
 > 因此**不满足其"自动准入"要求**（`automaticApproval.permissionSignals` 必须全为 `false`），
 > 只能走 **`user-reviewed`** 人工通道。这是**功能决定**的，不是缺陷，也不打算为此阉割功能。
+
+## 0.17.3 新增说明（第二轮复核整改：补上第二个端点 + 装包/Shell 披露对齐）
+
+DSH STORE 自动审核在 Issue #1390 的**第二轮**反馈中确认：0.17.2 的整改**已被读到并采信** ——
+*"ComfyUI 的启动校验、三处 HTTP helper 的 `redirect: 'error'` 和子进程环境过滤均已读到，
+旧的'完全没有拦截 comfyUrl'结论已撤换"*。
+
+但它同时指出**两处我上一轮漏掉的**，且都属实。本版逐条修复：
+
+### ① `hipfireUrl` —— 独立于 `comfyUrl` 的**第二个外部端点**（已接入守卫）
+
+审核原文：
+> `lib/hipfire-img.js` 的 `probeHipfireHttp` / `generateViaHttp` 直接使用可配置 `cfg.hipfireUrl`，
+> 没有调用回环校验，也不受 `allowRemoteComfy` 控制；`guardedFetch` 目前只有定义、没有调用。
+
+**完全属实。** 上一轮我只收口了 `comfyUrl`，而 hipfire 出图后端有**自己的一条 HTTP 链路**。
+本版：
+
+- `guardedFetch` **从"只有定义"变成"所有出站的唯一出口"**：`config.js` 的 `fetchWithTimeout`、
+  `hipfire-img.js` 的 `fetchJson`、`index.js` 的参考图上传，**全部改走它** ——
+  回环校验与禁重定向收口在一处，不会再有"某条链路只做了一半"。
+- `apply()` 启动校验**扩成两个端点**：`comfyUrl` 与 `hipfireUrl` 都过 `assertLocalUrl`。
+  - `imageBackend: 'hipfire'` 时 `hipfireUrl` 非回环 → **拒绝启动**；
+  - 当前用 comfyui 后端时**不阻断**（避免误伤），但如实记 `warn` 告知"切到 hipfire 就会被拦"。
+- `generateWithHipfire` 在**进入 HTTP 路径前**显式校验并返回**结构化可读错误** ——
+  否则错误会被 `probeHipfireHttp` 的 `catch` 吞成 `online=false`，用户看到的是
+  *"hipfire HTTP 服务不在线，请先启动它"*，**报错指错方向**（会去反复重启一个根本不该连的地址）。
+- 新增**全局开关** `setAllowRemote()`：`allowRemoteComfy` 是启动时确定的全局配置，
+  而 `fetchWithTimeout` 在 `config.js` 内有 8 处调用 —— 逐处传参**漏一处就是一个未受控出口**，
+  故由 `apply()` 设置一次、所有守卫自动继承（显式传参仍可覆盖，收紧优先）。
+
+### ② 装包与 Shell 能力 —— 披露与实现对齐（**不改功能**）
+
+审核原文：
+> README 权限表仍写"不装包"，但 `lib/index.js` 的 `runInstallSource` 会经 `runShell` 执行
+> `pip install --upgrade`；`lib/config.js` 使用 PowerShell / `sh -c`。请对齐网络、装包与 Shell
+> 能力的披露和实际确认边界，无需删掉正常功能或把真实信号标为 false。
+
+**也属实，而且比"措辞不准"更严重**：`accelAutoInstall` **默认为 `true`**，
+插件加载后会自动 `pip install --upgrade` / `git clone` 从 **pip 源与 GitHub** 下载厂商加速包。
+这意味着 README 里"默认仅本机回环"的说法**本身也不完整** —— 装包是一条真实的**外部网络出口**。
+
+本版按"如实披露 + 明确边界"处理（**不删功能**）：
+
+- **权限表重写**：网络拆成**两类出口**（出图数据流 / 加速包下载），命令行如实写明
+  `runShell` 走 PowerShell 或 `sh -c`、且默认会 `pip install` / `git clone`。
+- **新增已知风险第 4 条**：明确 `accelAutoInstall: true`（默认）会装包、会出网、
+  **不发送提示词或图片**，并给出**关闭方法**（`accelAutoInstall: false`，关掉后出图不受影响）。
+- **顶部「网络边界」段落重写**为两类出口，不再用"不依赖外部网络"这种绝对化说法。
+- **区分清楚"不下载什么"**：插件**不下载模型权重**、**不自动安装第三方自定义节点**
+  （这两条原本就是事实，保留并写明确）。
+
+### 回归测试
+
+`scripts/test-net-guard.mjs` 从 48 项扩到 **62 项**，新增覆盖：
+全局开关语义（含"显式传参收紧优先"）、`hipfireUrl` 作为第二端点被拒/放行、
+`guardedFetch` 在非回环时**底层 fetch 调用次数为 0**（证明确实没发出去）。
 
 ## 0.17.2 新增说明（网络边界代码层强制 + 文档对齐）
 
@@ -124,7 +189,7 @@
     - 判据**宁漏不误**：端口占用、显存不足、普通报错**绝不会**被误判成 SageAttention 的锅，也不会因此关掉你想要的功能。
 - **NVFP4 检测与提示**（仅 50 系 / Blackwell 出现）
   - 面板会多一条信息项「NVFP4 量化模型（Blackwell 专属，可选）」，指出社区已有 Qwen-Image 2.1 的 NVFP4 checkpoint（`BennyDaBall/Qwen-Image-2.1-NVFP4`），供你在 50 系卡上自行下载、自行选择模型。
-  - ⚠ 只**检测 + 提示**，插件**不会**替你切换模型、也不自动下载；它不是开关。**该路径未在开发机（AMD）上实测**，实际提速请以你的 5060 机器为准。
+  - ⚠ 只**检测 + 提示**，插件**不会**替你切换模型、也**不下载模型权重**（NVFP4 checkpoint 等一律由你自行下载）；它不是开关。**该路径未在开发机（AMD）上实测**，实际提速请以你的 5060 机器为准。
 - **稳定性修正**：修好了一处"面板说已生效、端点其实不认"的假开关白名单遗漏（SADA / OOM 两个开关）；`lib/config.js` 拆出 `lib/describe.js` 以符合发布体积上限。
 
 ## 优化版说明
@@ -723,7 +788,9 @@ node scripts/selftest.mjs
 | 字段                      | 默认                               | 说明                             |
 | ----------------------- | -------------------------------- | ------------------------------ |
 | `comfyUrl`              | `http://127.0.0.1:8188`          | ComfyUI 地址。**非本机地址会被拒绝启动**（除非同时设 `allowRemoteComfy: true`） |
-| `allowRemoteComfy`      | `false`                          | 是否允许 `comfyUrl` 指向非本机地址。默认 `false`（仅本机回环，代码层强制）。设为 `true` 后可连局域网/远程 ComfyUI，请自行确认那是你信任的机器 |
+| `hipfireUrl`            | `http://127.0.0.1:11580`         | hipfire serve 地址（`imageBackend: 'hipfire'` 时使用）。**独立于 `comfyUrl` 的第二个端点，同样受回环校验** |
+| `allowRemoteComfy`      | `false`                          | 是否允许 `comfyUrl` / `hipfireUrl` 指向非本机地址。默认 `false`（仅本机回环，代码层强制）。设为 `true` 后可连局域网/远程服务，请自行确认那是你信任的机器 |
+| `accelAutoInstall`      | `true`                           | 是否自动安装厂商加速包。**`true` 时会执行 `pip install` / `git clone` 并从 pip 源与 GitHub 下载（访问外部网络，但不发送提示词或图片）**。设为 `false` 完全关闭，出图不受影响 |
 | `outputDir`             | `C:\Users\<你的用户名>\Desktop\千问1生图` | 成品落盘目录                         |
 | `comfyOutputDir`        | `D:\ComfyUI\ComfyUI\output`      | 先在本地取文件，取不到才走 `/view`          |
 | `unet` / `clip` / `vae` | 三个千问文件名                          | 换模型时改这里                        |
@@ -843,13 +910,13 @@ LoRA 与缓存节点现在**无条件**接在模型链上。最小可行回退�
 | 能力 | 本插件的实际情况 | 等级 |
 | --- | --- | --- |
 | **文件（files）** | **读写**：读你给的参考图 / 控制图；把生成的图**写到你指定的目录**（默认桌面「千问1生图」）；读 ComfyUI 的模型清单与日志 | `write` |
-| **网络（network）** | **默认为本机回环** `127.0.0.1:8188`（ComfyUI），**由代码层强制**（`lib/net-guard.js`：非回环地址拒绝启动）。无遥测、无上报。⚠ 提供 `allowRemoteComfy` 开关（默认关闭），用户显式开启后可连接局域网 / 远程 ComfyUI | `specified-services` |
-| **命令（commands）** | **受限调用**：启动 / 探测本机 ComfyUI（`python main.py` 及 `nvidia-smi` / `rocm-smi` 类只读探测）。子进程**传入过滤后的环境变量**（剔除代理与凭据类）。**不执行下载来的脚本，不装包** | `restricted` |
+| **网络（network）** | **两类出口，边界不同** —— ① **出图数据流**（提示词 / 图片）：发往 `comfyUrl`（ComfyUI）与 `hipfireUrl`（hipfire serve），**默认仅本机回环、由代码层强制**（`lib/net-guard.js`：非回环地址拒绝启动），可用 `allowRemoteComfy` 显式放开；② **加速包下载**（见下行「命令」）：`accelAutoInstall`（**默认 `true`**）时插件会从 **pip 源与 GitHub** 下载第三方加速包 —— **会访问外部地址**，但**不发送任何提示词或图片**，设为 `false` 可完全关闭。**无遥测、无上报** | `specified-services` |
+| **命令（commands）** | **受限调用，但不止"只读探测"**：① 启动 / 探测本机 ComfyUI（`python main.py`）与 `nvidia-smi` / `rocm-smi` 只读探测；② **`runShell` 是系统命令的唯一入口**，Windows 走 `powershell -NoProfile -NonInteractive -Command`、Linux/macOS 走 `sh -c`；③ **`accelAutoInstall: true`（默认）时会执行 `pip install --upgrade` 与 `git clone` 安装白名单内的加速包**（见下）。子进程**传入过滤后的环境变量**（剔除代理与凭据类）。**不执行从网络下载后立刻运行的脚本**（下载的包由 ComfyUI 在重启后加载） | `restricted` |
 | **凭据（credentials）** | **无**。不需要 API 密钥、不需要登录、不读写系统钥匙串 | `none` |
 | **生命周期脚本** | **无** —— manifest 里没有 `preinstall` / `install` / `postinstall` / `prepare` | — |
 | **运行依赖** | **零** —— 不 `import` 任何第三方包，纯 Node ESM | — |
 
-综合等级：**medium**（能力范围明确且**默认**限于本机，但确实会写文件与起进程）。
+综合等级：**medium**（能力范围明确，出图数据流**默认**限于本机，但确实会写文件、起进程、并在默认配置下装包）。
 
 ### 已知风险（如实列出）
 
@@ -857,26 +924,38 @@ LoRA 与缓存节点现在**无条件**接在模型链上。最小可行回退�
    插件不会写到别处。
 2. **会起进程**：为省显存，插件可启动 / 关停本机 ComfyUI。它会**先探测**再启动，
    但如果你已手动开着 ComfyUI，请确认 `comfyUrl` 指向的是你想要的那个实例。
-   > 子进程（ComfyUI / 探测命令）使用**过滤后的环境变量**：`HTTP_PROXY` / `HTTPS_PROXY` /
+   > 子进程（ComfyUI / 探测命令 / 装包）使用**过滤后的环境变量**：`HTTP_PROXY` / `HTTPS_PROXY` /
    > `ALL_PROXY` 等代理变量，以及 `*TOKEN*` / `*KEY*` / `*SECRET*` / `*PASSWORD*` /
    > `*CREDENTIAL*` 类变量**不会**传给子进程（`lib/net-guard.js` 的 `filteredEnv`）。
-3. **会调用本机 Python**：仅用于**读取**显卡显存等只读探测；失败时如实跳过，不影响出图。
-4. **模型与加速节点由你自己安装**：插件**不自动下载**任何权重或第三方节点；
-   缺失时会给明确指引，**不会假装已装上**。
+3. **会调用本机 Python**：① 只读探测显卡显存；② **装加速包时会 `pip install`**（见第 4 条）。
+4. **⚠ 会装包（默认开启，可关）**：`accelAutoInstall` 默认为 `true` —— 插件加载后会检测本机缺哪个
+   **厂商专用加速包**（NVIDIA / Intel / AMD 各自的加速件），缺就**自动执行 `pip install --upgrade` 或 `git clone`**
+   从 pip 源 / GitHub 下载安装。**这是真实的、会改动你环境的操作**，且**会访问外部网络**（不发送提示词或图片）。
+   - **关闭方法**：配置 `accelAutoInstall: false`。关掉后出图功能**不受任何影响**，只是少了厂商专用加速；
+     需要时可手动调用 `check_acceleration(action:'install')`。
+   - **模型权重不在此列**：插件**不下载** Qwen-Image 等模型权重，也不自动安装第三方自定义节点 ——
+     这些必须你自己准备（缺失时插件会给明确指引，**不会假装已装上**）。
 5. **`--novram` / `--lowvram` 等档位是拿速度换空间**：显存不够时能跑，但**会明显变慢**，
    这不是 bug（见上文「显存 / 内存档位」）。
-6. **`comfyUrl` 可被用户改成外部地址**（必须显式开启 `allowRemoteComfy`）：
-   一旦开启，提示词与图片数据会发送到该地址。**默认关闭**，且关闭时由代码强制拦截。
+6. **`comfyUrl` / `hipfireUrl` 可被用户改成外部地址**（必须显式开启 `allowRemoteComfy`）：
+   一旦开启，提示词与图片数据会发送到该地址。**默认关闭**，且关闭时由代码强制拦截
+   （两个端点都受同一开关控制）。
 7. **本插件的开发机是 AMD RX 7900 XT 20 GB**：N 卡（L20 / RTX Pro 6000）、
    Intel（Arc Pro B70）与 macOS 上的**效果未经本机实测**，请以你自己的机器为准。
 
-> 本插件**默认**不做任何网络外传、不收集使用数据、不需要账号。如果你发现任何与上表不符的行为，
-> 请开 Issue —— 这份披露的准确性本身也是承诺。
+> 本插件**出图数据流**默认不做任何外部传输、不收集使用数据、不需要账号。
+> 唯一默认开启的外部访问是**加速包下载**（第 4 条，可用 `accelAutoInstall: false` 关闭）。
+> 如果你发现任何与上表不符的行为，请开 Issue —— 这份披露的准确性本身也是承诺。
 >
 > **网络边界的实现与自测**：`lib/net-guard.js` 提供 `isLoopbackUrl` / `assertLocalUrl` /
-> `guardedFetch` / `filteredEnv`；回归用例在 `scripts/test-net-guard.mjs`
-> （48 项断言，覆盖 127.0.0.1/localhost/::1 放行、192.168.x / 10.x / 域名与
-> `localhost.evil.com` 式伪装拒绝、重定向强制 `error`、代理与凭据环境变量剔除）。
+> `guardedFetch` / `filteredEnv` / `setAllowRemote`。**所有 Node 侧出站请求统一走 `guardedFetch`**
+> （`config.js` 的 `fetchWithTimeout`、`hipfire-img.js` 的 `fetchJson`、`index.js` 的参考图上传），
+> 出站前校验回环 + 强制 `redirect: 'error'`。
+> 客户端 `lib/client.js` 只向**同源相对路径**（`api/qwen-paint/…`）发请求，不含任何可配置的绝对地址。
+> 回归用例在 `scripts/test-net-guard.mjs`（**62 项断言**，覆盖 127.0.0.1/localhost/::1 放行、
+> 192.168.x / 10.x / 域名与 `localhost.evil.com` 式伪装拒绝、两个端点各自受控、
+> 全局开关与显式传参的优先级、重定向强制 `error`、非回环地址**根本不发起请求**、
+> 代理与凭据环境变量剔除）。
 
 ## 许可
 

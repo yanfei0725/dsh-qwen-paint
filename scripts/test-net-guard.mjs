@@ -10,7 +10,7 @@
  *
  * 运行：node scripts/test-net-guard.mjs
  */
-import { isLoopbackUrl, assertLocalUrl, guardedFetch, filteredEnv } from '../lib/net-guard.js'
+import { isLoopbackUrl, assertLocalUrl, guardedFetch, filteredEnv, setAllowRemote, isRemoteAllowed } from '../lib/net-guard.js'
 
 let pass = 0
 let fail = 0
@@ -154,6 +154,70 @@ console.log('\n[6] filteredEnv —— 剔除代理与凭据，保留系统键')
       if (v === undefined) delete process.env[k]; else process.env[k] = v
     }
   }
+}
+
+console.log('\n[7] 全局开关 setAllowRemote —— 不传参时守卫读它')
+{
+  // 默认必须是 false（安全默认）
+  setAllowRemote(false)
+  ok(isRemoteAllowed() === false, '默认开关为 false')
+  let threw = null
+  try { assertLocalUrl('http://192.168.1.100:8188') } catch (e) { threw = e }
+  ok(threw !== null, '开关 false 时不传 allowRemote → 拒绝')
+
+  // 打开后：不传 allowRemote 也应放行
+  setAllowRemote(true)
+  ok(isRemoteAllowed() === true, 'setAllowRemote(true) 生效')
+  let t2 = null
+  try { assertLocalUrl('http://192.168.1.100:8188') } catch (e) { t2 = e }
+  ok(t2 === null, '开关 true 时不传 allowRemote → 放行')
+
+  // 显式传参**覆盖**全局（这是 hipfire 链路的用法）
+  let t3 = null
+  try { assertLocalUrl('http://192.168.1.100:8188', { allowRemote: false }) } catch (e) { t3 = e }
+  ok(t3 !== null, '显式 allowRemote:false 能覆盖全局 true（收紧优先）')
+
+  // 关回去，避免影响后续断言
+  setAllowRemote(false)
+}
+
+console.log('\n[8] hipfire 链路 —— 第二个外部端点也必须受控')
+{
+  // hipfireUrl 默认值是回环，放行
+  ok(isLoopbackUrl('http://127.0.0.1:11580').ok, 'hipfire 默认地址（11580）是回环')
+
+  // 远端 hipfireUrl 在默认开关下必须被拒
+  let threw = null
+  try { assertLocalUrl('http://192.168.1.5:11580', { what: 'hipfireUrl' }) } catch (e) { threw = e }
+  ok(threw !== null, '远端 hipfireUrl 被拒绝')
+  ok(threw && /hipfireUrl/.test(threw.message), '错误信息指明是 hipfireUrl 这一项')
+  ok(threw && /11580/.test(threw.message), '错误信息给出 hipfire 的正确默认地址')
+
+  // 但显式 opt-in 后可放行
+  let t2 = null
+  try { assertLocalUrl('http://192.168.1.5:11580', { allowRemote: true, what: 'hipfireUrl' }) } catch (e) { t2 = e }
+  ok(t2 === null, '远端 hipfireUrl + opt-in → 放行')
+}
+
+console.log('\n[9] guardedFetch 是出站统一出口（三个模块都走它）')
+{
+  // 用桩验证：远端地址时 guardedFetch 不会调用底层 fetch
+  const realFetch = globalThis.fetch
+  let called = 0
+  globalThis.fetch = async () => { called += 1; return { ok: true } }
+  setAllowRemote(false)
+  let threw = null
+  try { await guardedFetch('http://10.0.0.9:8188/x') } catch (e) { threw = e }
+  ok(threw !== null, '远端地址抛错')
+  eq(called, 0, '远端地址底层 fetch 调用次数为 0（请求根本没发出）')
+
+  // 回环地址正常调用，且 redirect 被强制
+  let seen = null
+  globalThis.fetch = async (u, init) => { called += 1; seen = init; return { ok: true } }
+  await guardedFetch('http://127.0.0.1:8188/x')
+  eq(called, 1, '回环地址底层 fetch 被调用')
+  eq(seen && seen.redirect, 'error', 'redirect 强制为 error')
+  globalThis.fetch = realFetch
 }
 
 console.log(`\n${'='.repeat(52)}\n结果：${pass} 通过 / ${fail} 失败`)
