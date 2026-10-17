@@ -10,6 +10,7 @@
  *
  * 运行：node scripts/test-net-guard.mjs
  */
+import { readFileSync } from 'node:fs'
 import { isLoopbackUrl, assertLocalUrl, guardedFetch, filteredEnv, setAllowRemote, isRemoteAllowed } from '../lib/net-guard.js'
 
 let pass = 0
@@ -218,6 +219,36 @@ console.log('\n[9] guardedFetch 是出站统一出口（三个模块都走它）
   eq(called, 1, '回环地址底层 fetch 被调用')
   eq(seen && seen.redirect, 'error', 'redirect 强制为 error')
   globalThis.fetch = realFetch
+}
+
+console.log('\n[10] ★★★ URL 规范化后的「双斜杠」坑（2026-10-17 真机实测发现，0.17.2 起一直存在）')
+{
+  // 事实：`new URL()` 会把空路径补成 `/`，所以 toString() 出来带尾斜杠。
+  const norm = assertLocalUrl('http://127.0.0.1:8188', {}).toString()
+  eq(norm, 'http://127.0.0.1:8188/', 'toString() 会补尾斜杠 —— 这就是坑的来源')
+  ok(
+    `${norm}/system_stats` === 'http://127.0.0.1:8188//system_stats',
+    '直接用规范化结果拼路径 → 双斜杠（实测 ComfyUI 对 //system_stats 返回 404）',
+  )
+
+  // 修法：去尾斜杠后再拼。
+  const trimmed = norm.replace(/\/+$/, '')
+  eq(trimmed, 'http://127.0.0.1:8188', '去尾斜杠后恢复成"可直接拼路径"的形态')
+  eq(trimmed + '/system_stats', 'http://127.0.0.1:8188/system_stats', '拼出来的探活 URL 正确')
+
+  // 带路径前缀的地址不能被误伤（用户可能反代到子路径）。
+  const withPath = assertLocalUrl('http://127.0.0.1:8188/comfy', {}).toString().replace(/\/+$/, '')
+  eq(withPath, 'http://127.0.0.1:8188/comfy', '带路径前缀的地址去斜杠后原样保留')
+
+  // 源码级回归锁：apply() 里两个端点都必须经过 trimTrailingSlashes，
+  // 否则下一次"顺手改成 assertLocalUrl(...).toString()"就会再犯一次。
+  const src = readFileSync(new URL('../lib/index.js', import.meta.url), 'utf8')
+  ok(/cfg\.comfyUrl = trimTrailingSlashes\(/.test(src), 'index.js：comfyUrl 赋值走 trimTrailingSlashes')
+  ok(/cfg\.hipfireUrl = trimTrailingSlashes\(/.test(src), 'index.js：hipfireUrl 赋值走 trimTrailingSlashes')
+  ok(
+    !/cfg\.comfyUrl = assertLocalUrl\([^\n]*\)\.toString\(\)\s*$/m.test(src),
+    'index.js：没有残留"直接 toString() 赋给 comfyUrl"的写法',
+  )
 }
 
 console.log(`\n${'='.repeat(52)}\n结果：${pass} 通过 / ${fail} 失败`)

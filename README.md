@@ -20,7 +20,7 @@
 > 这是**用户主动选择**的行为，不是默认状态。
 
 > **原作者**：@奇迹与你（<https://github.com/wonderandyou/dsh-qwen-paint>）  
-> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.9`
+> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.10`
 
 ---
 
@@ -59,6 +59,77 @@
 > ⚠ 关于 DSH STORE 的如实说明：本插件**必然**具备文件 / 网络 / 命令能力，
 > 因此**不满足其"自动准入"要求**（`automaticApproval.permissionSignals` 必须全为 `false`），
 > 只能走 **`user-reviewed`** 人工通道。这是**功能决定**的，不是缺陷，也不打算为此阉割功能。
+
+## 0.17.10 新增说明（修一个阻断级 bug：ComfyUI 请求被拼成 `//xxx` → 404）
+
+这一版**不是**合规整改，是**真机上实测出来的功能性 bug**，而且很严重。
+
+### 现象
+
+在本机把 DSH 更新到 `0.2.1-rc.2` 之后做兼容性验证，插件**加载完全正常**
+（5 个工具注册成功、3 条状态端点注册成功、ComfyUI 也被成功拉起），
+但状态日志里**从第一条起就是 `online=false`** —— 界面一直停在"未就绪 / 启动超时"。
+
+### 根因
+
+`apply()` 里做回环校验时写的是：
+
+```js
+cfg.comfyUrl = assertLocalUrl(cfg.comfyUrl, { … }).toString()
+```
+
+而 `new URL('http://127.0.0.1:8188').toString()` 会**把空路径补成 `/`**，结果是
+`http://127.0.0.1:8188/`。代码里又有 **15 处** `${cfg.comfyUrl}/xxx` 拼接，于是实际请求变成：
+
+```
+http://127.0.0.1:8188//system_stats
+```
+
+实测（本机 ComfyUI 正在运行）：
+
+| 请求 | 结果 |
+| --- | --- |
+| `GET http://127.0.0.1:8188/system_stats` | **200** |
+| `GET http://127.0.0.1:8188//system_stats` | **404** |
+| `GET http://127.0.0.1:8188//prompt` | **404** |
+
+ComfyUI 用的 aiohttp **不合并重复斜杠**。后果是**整条 ComfyUI 链路全部 404**：
+探活（`/system_stats`）、提交（`/prompt`）、取结果（`/history`）、取图（`/view`）、
+上传参考图（`/upload/image`）。界面上却只表现为"没反应 / 启动超时"，极难定位。
+
+### 影响范围
+
+**`0.17.2` 起一直存在**（`git show v0.17.2:lib/index.js` 里已有这行规范化）。
+也就是说从 0.17.2 到 0.17.9，**ComfyUI 后端实际是不可用的**。
+
+> 顺带说明为什么之前没被发现：`lib/hipfire-img.js` 里**早就自己做了**
+> `String(cfg.hipfireUrl).replace(/\/+$/u, '')` —— 说明这个坑在 hipfire 链路上踩过并修了，
+> 但 `comfyUrl` 这一侧漏了。而且这条链路的测试一直只测"函数被调用"，
+> **没有任何一条断言去检查"拼出来的 URL 长什么样"**。
+
+### 修法
+
+在 `apply()` 里统一去掉**末尾的**斜杠（只去尾部，带路径前缀的地址如
+`http://127.0.0.1:8188/comfy` 不受影响）：
+
+```js
+const trimTrailingSlashes = (u) => u.replace(/\/+$/, '')
+cfg.comfyUrl = trimTrailingSlashes(assertLocalUrl(…).toString())
+cfg.hipfireUrl = trimTrailingSlashes(assertLocalUrl(…).toString())
+```
+
+### 回归锁（防止再犯）
+
+`scripts/test-net-guard.mjs` 新增 **`[10]` 组 8 项**，既钉住"坑本身"也钉住"修法"：
+
+- `toString()` 确实会补尾斜杠（把坑的事实写进测试）
+- 直接拿它拼路径会得到 `//system_stats`
+- 去尾斜杠后拼出 `http://127.0.0.1:8188/system_stats`
+- 带路径前缀的地址不被误伤
+- 源码级：`cfg.comfyUrl` / `cfg.hipfireUrl` 的赋值必须走 `trimTrailingSlashes`，
+  且**不许**残留"直接 `toString()` 赋给 comfyUrl"的写法
+
+net-guard 自测因此从 **62 项**增至 **70 项**。
 
 ## 0.17.9 新增说明（COMPAT001：兼容声明改为"实测后填写"）
 
