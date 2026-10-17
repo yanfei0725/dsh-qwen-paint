@@ -15,7 +15,7 @@
  */
 import { __internal } from '../lib/index.js'
 
-const { isTrustedRequest } = __internal
+const { isTrustedRequest, guardWriteRequest } = __internal
 
 let pass = 0
 let fail = 0
@@ -106,6 +106,42 @@ console.log('\n[6] 回归锁：写状态必须走 POST（源码级）')
   // 顺手修掉的那个真 bug：`${API}` 从未定义。
   // ⚠ 只查**代码用法**（fetch 模板串），注释里对这个 bug 的说明不算。
   ok(!/fetch\(`\$\{API\}/u.test(cli), '客户端不再用未定义的 `${API}` 发请求')
+}
+
+console.log('\n[7] 写入口守卫：错误方法 → 405、错误媒体类型 → 415')
+{
+  /** 造一个能捕获状态码的假 res（respondJson 只用 writeHead + end）。 */
+  const mockRes = () => ({
+    code: null,
+    body: null,
+    writeHead(c) { this.code = c },
+    end(t) { this.body = t },
+  })
+  const run = (method, contentType) => {
+    const res = mockRes()
+    const headers = contentType === undefined ? {} : { 'content-type': contentType }
+    const passed = guardWriteRequest({ method, headers }, res)
+    return { passed, code: res.code, body: res.body }
+  }
+
+  // 方法不对 —— 必须在任何动作前 405
+  for (const m of ['GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']) {
+    const r = run(m, 'application/json')
+    ok(r.passed === false && r.code === 405, `${m} + JSON → 405（不放行）`)
+  }
+  // 媒体类型不对 —— 415
+  for (const ct of ['text/plain', 'application/x-www-form-urlencoded', 'multipart/form-data', '']) {
+    const r = run('POST', ct)
+    ok(r.passed === false && r.code === 415, `POST + ${ct || '(缺失)'} → 415`)
+  }
+  // 缺 Content-Type 也是 415
+  ok(run('POST', undefined).code === 415, 'POST + 无 Content-Type → 415')
+  // 正确请求放行
+  ok(run('POST', 'application/json').passed === true, 'POST + application/json → 放行')
+  ok(run('POST', 'application/json; charset=utf-8').passed === true, '带 charset 参数也放行')
+  ok(run('post', 'Application/JSON').passed === true, '方法/类型大小写不敏感')
+  // 405 响应要带 Allow 头（便于调用方纠正）
+  ok(/POST/u.test(run('GET', 'application/json').body ?? ''), '405 响应体提示应使用 POST')
 }
 
 console.log(`\n${'='.repeat(52)}\n结果：${pass} 通过 / ${fail} 失败`)

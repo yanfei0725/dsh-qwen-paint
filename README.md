@@ -20,7 +20,7 @@
 > 这是**用户主动选择**的行为，不是默认状态。
 
 > **原作者**：@奇迹与你（<https://github.com/wonderandyou/dsh-qwen-paint>）  
-> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.7`
+> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.8`
 
 ---
 
@@ -59,6 +59,48 @@
 > ⚠ 关于 DSH STORE 的如实说明：本插件**必然**具备文件 / 网络 / 命令能力，
 > 因此**不满足其"自动准入"要求**（`automaticApproval.permissionSignals` 必须全为 `false`），
 > 只能走 **`user-reviewed`** 人工通道。这是**功能决定**的，不是缺陷，也不打算为此阉割功能。
+
+## 0.17.8 新增说明（AUTH001 收尾：写入口的最后边界）
+
+审核复核 `0.17.7` 后确认 **Host 缺失拒绝、cross-site / Origin 围栏、客户端改用 POST 均已通过**
+（并明确"不要求所有请求必须带 Origin"），AUTH001 缩小到写入口的三条边界。**三条都属实**：
+
+### ① 状态 POST 不检查 `Content-Type`
+原先只校验方法是 POST，没校验媒体类型 —— `text/plain` 的"简单请求"（跨站表单能发、
+且**不触发 CORS 预检**）也能把 JSON 塞进来。现在：非 `application/json` ⇒ **415**。
+
+### ② `repair` 端点不限方法、不限媒体类型
+审核原话：*"任意方法的 JSON `confirm:true` 都会进入 `runRepair`"* —— 确实如此，
+原先连 `GET` 带 body 都能触发修复。现在：非 POST ⇒ **405**；非 JSON ⇒ **415**；
+正文统一走**有界**解析（与状态端点、`memory/preference` 同一套）。
+
+### ③ 状态 GET 的故障分支会改配置
+审核原话：*"`recoverFromSageCrash` 会把 `cfg.nvidiaSageAttention` 改为 false。
+请把配置恢复放到后台生命周期或显式写操作，GET 只展示状态。"*
+这也是一处**有副作用的 GET**，与刚改掉的"GET 写配置"同性质。现在：
+- 状态 GET 只**标记原因 + 记日志**（`launch.sageSuspect`），**绝不改 cfg**；
+- 自动回退**保留**，仍在**后台启动流程**里（`launchComfy` 的失败分支），
+  那条路径不依赖任何 HTTP 请求、本来就会生效。
+
+### 统一的写入口守卫
+
+新增 `guardWriteRequest(req, res)`：**任何动作之前**先判方法与媒体类型，
+不通过就 **405 / 415** 并直接返回 —— 不读 body、不碰 `cfg`。
+状态 POST、`repair`、`memory/preference` 三处全部接入。
+
+回归测试扩到 **48 项**（新增 14 项覆盖 405/415 的各类方法与非 JSON 媒体类型），
+三套合计 **184 项**全部通过。
+
+### 关于 COMPAT001（兼容声明）
+
+审核另提出：当前官方最新三版是 `0.21-alpha.3 / alpha.4 / alpha.5`，
+而本插件 manifest 只声明了 `0.2.0-rc.2`，要求"**在实际验证后**补当前窗口至少一版的准确声明及证据，
+其余保留 unknown"。
+
+**本机实际安装的是 `@deepseek-harness-tui/dsh-tui` 0.13.0**，手上没有 0.21-alpha.x 环境，
+**无法做实际验证**。按"实际验证后才声明"的要求，本版**不做**未经验证的兼容声明
+（`dshReleases` 仍只列已确认的 `0.2.0-rc.2`，其余保持 unknown）。
+拿到可验证的 0.21-alpha.x 环境后会补上。
 
 ## 0.17.7 新增说明（AUTH001 整改：本机 HTTP 接口的调用方与写入边界）
 
