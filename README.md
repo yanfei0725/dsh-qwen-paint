@@ -20,7 +20,7 @@
 > 这是**用户主动选择**的行为，不是默认状态。
 
 > **原作者**：@奇迹与你（<https://github.com/wonderandyou/dsh-qwen-paint>）  
-> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.8`
+> **优化版作者**：@yanfei0725（<https://github.com/yanfei0725/dsh-qwen-paint>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.9`
 
 ---
 
@@ -60,6 +60,87 @@
 > 因此**不满足其"自动准入"要求**（`automaticApproval.permissionSignals` 必须全为 `false`），
 > 只能走 **`user-reviewed`** 人工通道。这是**功能决定**的，不是缺陷，也不打算为此阉割功能。
 
+## 0.17.9 新增说明（COMPAT001：兼容声明改为"实测后填写"）
+
+审核上一轮另提出 **COMPAT001**：称官方最新三版为 `0.21-alpha.3 / alpha.4 / alpha.5`，
+而本插件 manifest 只声明了 `0.2.0-rc.2`，要求「**在实际验证后**补当前窗口至少一版的准确声明
+及证据，其余保留 unknown」。这一条已按原要求做完 —— **先实测，再声明**。
+
+### ① 先厘清版本指代
+
+审核笔下的 `0.21-alpha.x` 是 `@deepseek-ai/dsh`（`dsh` 命令本体）的 **`0.2.1-alpha.x`**。
+该包 npm dist-tags 实测为：`latest 0.2.0-rc.2` / `next 0.2.1-rc.2` / `alpha 0.2.1-alpha.5`
+（`dsh.compatibility.dsh` 声明的就是它）。
+另注：Electron 桌面外壳 `dsh-tui` 是**另一套版本号**（本机 `0.13.0`，npm 最新 `0.15.0`），
+与这里的 `dsh` 版本不是同一个东西 —— 0.17.8 的说明里曾把两者混为一谈，此处更正。
+
+### ② 隔离实测（不动正在使用的环境）
+
+用一次性目录装被测版本，并用 `$DSH_HOME` 指向临时目录做 profile 隔离
+（DSH 的 profile / 配置 / 日志全部在 `$DSH_HOME` 下，因此**不会碰** `~/.dsh`）：
+
+```
+mkdir /tmp/dsh-a5 && cd /tmp/dsh-a5 && npm i --prefix . @deepseek-ai/dsh@0.2.1-alpha.5
+DSH_TEST_INSTALL=/tmp/dsh-a5 node scripts/test-dsh-compat.mjs
+```
+
+### ③ 实测结论（三版各 7 项，全过）
+
+| 被测版本 | 来源 | 结果 |
+| --- | --- | --- |
+| `0.2.1-alpha.5` | 一次性目录安装（审核点名的当前窗口最新 alpha） | 7 / 7 通过 |
+| `0.2.1-rc.1` | 本机实际安装 | 7 / 7 通过 |
+| `0.2.1-rc.2` | 一次性目录安装（`next` 通道） | 7 / 7 通过 |
+
+7 项分别是：模块能被该版本 import、`name` / `inject` / `apply` 契约成立、
+该版本**真实**的 `tools` 服务可用、`apply()` 无异常跑完、确实注册出工具
+（`draw_image`、`list_available_models`、`check_acceleration`、`upscale_image`、`inpaint_image`）。
+
+另外在 `0.2.1-alpha.5` 下还跑通了两条"装载链路"证据：
+`dsh plugin --profile <name> add <本包>` 安装成功（plugin-manager 把本包登记为 bundle），
+`dsh --profile <name> --dump-config` 退出码 0 且合成树里确实出现 `qwen-paint` 条目及其 config。
+（该版本 profile 的 app 启动后无输出并常驻；**用不含本插件的对照 profile 做同样启动，行为一致**
+⇒ 该现象是基线行为，与本插件无关。）
+
+### ④ 诚实边界（"compatible"在这里的准确含义）
+
+- 验证到的是 **manifest + patch + cordis 加载/注册链路**；**不含**端到端出图
+  （出图还需要本机 ComfyUI 与模型权重，是另一件事）。
+- 唯一的替身是 `systemPrompt`：完整 dsh app 才提供它，而该脚本刻意**不启动整个 app**
+  （那会进入交互式 TUI 并需要登录），只挂载 `tools` 这一层；`tools` 本身是被测版本的真实实现。
+- `0.2.1-alpha.3` / `alpha.4` 及其它未实测版本**保持 unknown**，不因为"同系列"就顺手写成兼容。
+
+### ⑤ 声明已写入
+
+`dsh.compatibility.dshReleases` 现为 `0.2.0-rc.2` + 上述三版，并在 `note` 里写明验证范围与日期。
+该结论可由 `scripts/test-dsh-compat.mjs` 一键复跑（环境不具备时它明确 **SKIP**、退出 0，
+不会把"没测"伪装成"通过"）。
+
+### ⑥ 顺带修掉一个真实存在的发布体积问题
+
+做上面这些事的时候顺手核了一遍体积，发现 **`lib/index.js` 已经涨到 263,997 B，
+超过了 DSH Store 的单文件上限 262,144 B**（超限文件会被判"扫描面不完整"，
+等于**审不到主文件**——对一个正在接受安全复核的插件，这比"体积大"本身严重得多）。
+
+这不是新问题：`v0.17.5` 是 253,729 B（达标）、`v0.17.7` 已到 260,375 B（勉强达标），
+`v0.17.8` 就超了。而仓库里**本来就有**这道护栏（`scripts/selftest.mjs` 的
+「发布体积护栏」，逐文件比对 262,144 B），只是它一直没被跑到
+（`selftest.mjs` 卡在需要真机 ComfyUI 的端到端段，跑不到护栏那一段）。
+
+处理方式与之前两次一致（`index.js` → `config.js` → `describe.js` 都这么来的）：
+把**加速包探测与安装**整块搬到 `lib/comfy-accel.js`，**逻辑一行未改**（只给 `function` 加了
+`export`，`lib/index.js` 改为 import）。搬完 `lib/index.js` 降到 **250,350 B**，
+新文件 15,346 B，两者都远低于上限。
+
+**这一块的挑选不是随手挑的**：它自洽（依赖全部来自 `./config.js` 与 node 内置模块）、
+且没有任何测试按名字引用它，所以搬迁面最小。搬完后 14 套离线回归全部通过
+（含用到被搬函数的 `_gpu_vendor_test` / `_mac_env_test` / `_opt_status_test`）。
+
+> ⚠ 如实说一句：`selftest.mjs` 在这台机器上**仍然跑不完整**（卡在需要真机 ComfyUI 的
+> 端到端段，那里会一直等）。所以这道体积护栏目前是**靠人工核算 + 上面那次手工核查**
+> 保证的，不是靠自动跑。要让护栏真正生效，得把 `selftest` 拆成"离线部分 / 需真机部分"
+> 两段——这件事列进后续待办，不在本版范围。
+
 ## 0.17.8 新增说明（AUTH001 收尾：写入口的最后边界）
 
 审核复核 `0.17.7` 后确认 **Host 缺失拒绝、cross-site / Origin 围栏、客户端改用 POST 均已通过**
@@ -97,10 +178,15 @@
 而本插件 manifest 只声明了 `0.2.0-rc.2`，要求"**在实际验证后**补当前窗口至少一版的准确声明及证据，
 其余保留 unknown"。
 
-**本机实际安装的是 `@deepseek-harness-tui/dsh-tui` 0.13.0**，手上没有 0.21-alpha.x 环境，
-**无法做实际验证**。按"实际验证后才声明"的要求，本版**不做**未经验证的兼容声明
-（`dshReleases` 仍只列已确认的 `0.2.0-rc.2`，其余保持 unknown）。
-拿到可验证的 0.21-alpha.x 环境后会补上。
+**本版（0.17.8）当时的处理**：按"实际验证后才声明"的要求，**没有**写未经验证的兼容声明，
+`dshReleases` 仍只列已确认的 `0.2.0-rc.2`，其余保持 unknown。
+
+> ⚠ 这一段的**包名称写错了**，在此更正：本机实际安装的 `dsh` 命令是
+> **`@deepseek-ai/dsh` 0.2.1-rc.1**；上文提到的 `dsh-tui 0.13.0` 是 Electron 桌面外壳的
+> 版本号，两者不是同一套版本。
+>
+> ✅ **已在 0.17.9 完成**：搭了一次性隔离环境实测 `0.2.1-alpha.5 / rc.1 / rc.2`（各 7 项全过），
+> 声明与证据见上方 [0.17.9 新增说明](#0179-新增说明compat001兼容声明改为实测后填写)。
 
 ## 0.17.7 新增说明（AUTH001 整改：本机 HTTP 接口的调用方与写入边界）
 

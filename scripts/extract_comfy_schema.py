@@ -29,8 +29,8 @@ import re
 import sys
 
 CANDIDATE_ROOTS = [
-    r'K:\ComfyUI-rocm\ComfyUI',
-    r'K:\ComfyUI-AMD\ComfyUI',
+    r'X:\ComfyUI-rocm\ComfyUI',
+    r'X:\ComfyUI-AMD\ComfyUI',
     r'D:\ComfyUI',
     r'C:\ComfyUI',
 ]

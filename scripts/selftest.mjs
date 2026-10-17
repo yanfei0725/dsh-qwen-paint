@@ -1132,7 +1132,7 @@ check(
 check(
   '★ 参考图走 /upload/image（不自己往 input 目录里复制 —— 那目录未必是配置里那个）',
   (() => {
-    const code = ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
+    const code = ['index.js', 'config.js', 'describe.js', 'comfy-accel.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
     return code.includes('/upload/image') && !/copyFile[^\n]*input/iu.test(code)
   })(),
 )
@@ -1143,7 +1143,7 @@ section('⑳ 取图编号撞车的事故防线（主人 2026-10-08 那张柴犬�
    SaveImage 编号**都从 00001 开始** → 旧目录里恰好有同名的旧文件
    → 老代码"先读本地"读到了 → 把昨天的图当成这次的成果，还按新 prompt 命名、
      报新请求的尺寸。**修法两条，这里各钉一条。** */
-const hostCode = ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
+const hostCode = ['index.js', 'config.js', 'describe.js', 'comfy-accel.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
 check(
   '★ 取图顺序：先走 ComfyUI 官方的 /view，本地目录只当兜底',
   (() => {
@@ -1174,7 +1174,7 @@ section('㉑ 生图意图优先级 + 每次只生一张（主人 2026-10-08）')
 /* 主人的要求：「把生图目的识别的优先级提到最高，一旦检测到就立刻隐藏思考切动画，切每次只生一张图」。
    ⚠ 有个绕不开的事实：客户端插件**看不到用户消息**，它能感知的最早事件就是"工具开始跑"，
    所以动画起点的早晚完全取决于**模型多快调用 draw_image** —— 提示词越狠，动画来得越早。 */
-const hostSrc = ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
+const hostSrc = ['index.js', 'config.js', 'describe.js', 'comfy-accel.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
 // ★ 2026-10-11 修正：提示词改成"按策略生成"（buildDrawIntentPrompt），
 //   旧文案「【最高优先级】」已被 auto 档的 lead 取代。
 check('★ systemPrompt 里点明生图意图是"优先要判断的一件事"', hostSrc.includes('【生图】判断用户是不是想生成图片'))

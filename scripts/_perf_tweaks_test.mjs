@@ -15,7 +15,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const mod = await import(pathToFileURL(path.join(ROOT, 'lib', 'index.js')).href)
 const { buildWorkflow, planWorkflow, DEFAULTS } = mod.__internal
-const SRC = ['index.js', 'config.js', 'describe.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
+const SRC = ['index.js', 'config.js', 'describe.js', 'comfy-accel.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
 
 let fail = 0
 const ok = (name, cond) => { console.log(`  ${cond ? 'OK  ' : 'FAIL'} ${name}`); if (!cond) fail += 1 }
