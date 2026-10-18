@@ -186,7 +186,14 @@ console.log('\n=== 9. 启动失败 vs 启动超时（两个不同状态，不能
   assert('菜单里超时显示"启动超时，点此重试"', src.includes('启动超时，点此重试'))
 
   const host = ['index.js', 'config.js', 'describe.js', 'comfy-accel.js'].map((f) => readFileSync(fileURLToPath(new URL(`../lib/${f}`, import.meta.url)), 'utf8')).join('\n')
-  assert('host 有 45 秒超时常量', /LAUNCH_TIMEOUT_MS = 45000/u.test(host))
+  // ★ 2026-10-17 更新：原先写死 `= 45000`。真机实测 AMD ROCm 冷启动常 60~90 秒，
+  //   45 秒必然误判超时，已调到 120 秒。这里改成"有常量 + 值在合理区间"，
+  //   避免以后每调一次值就要改一次测试（但也不能让它退回到秒级）。
+  const launchTimeout = Number((host.match(/LAUNCH_TIMEOUT_MS = (\d+)/u) ?? [])[1])
+  assert(
+    `host 有启动超时常量且在合理区间（实测 ${launchTimeout} ms）`,
+    Number.isFinite(launchTimeout) && launchTimeout >= 60000 && launchTimeout <= 300000,
+  )
   // ★ 重写后：超时由 phase='timeout' 表达（原 launchState.timedOut 已删）
   assert('host 有 launchMarkTimeout（超时独立态）', host.includes('function launchMarkTimeout'))
   assert('host 回传 launchTimedOut 字段', host.includes('launchTimedOut:'))

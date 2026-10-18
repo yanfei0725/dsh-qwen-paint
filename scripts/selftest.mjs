@@ -667,6 +667,26 @@ const callStatus = (headers, remoteAddress, url = '/') =>
     hostRoutes[0].handler({ headers, socket: { remoteAddress }, url }, res)
   })
 
+/* ★★★ 2026-10-17：写操作已从「GET 带 query」改为「POST + JSON body」（AUTH001 整改，
+   见 lib/index.js 的 guardWriteRequest / readJsonBody）。
+   本节起用这个假 POST 请求去调**同一个真实 handler** —— 断言意图一字未改，
+   改的只是"怎么把参数送进去"。 */
+
+/** 构造一个最小可用的假 POST 请求：method + application/json + 可 for-await 的 body。 */
+const postStatus = (body, headers = { host: '127.0.0.1:1' }, remoteAddress = '127.0.0.1') =>
+  new Promise((resolve) => {
+    const payload = Buffer.from(JSON.stringify(body), 'utf8')
+    const req = {
+      method: 'POST',
+      url: '/api/qwen-paint/status.json',
+      headers: { ...headers, 'content-type': 'application/json' },
+      socket: { remoteAddress },
+      async *[Symbol.asyncIterator]() { yield payload },
+    }
+    const res = { writeHead() {}, end(text) { resolve(String(text)) } }
+    hostRoutes[0].handler(req, res)
+  })
+
 const statusText = await callStatus({ host: '127.0.0.1:1' }, '127.0.0.1')
 const statusJson = JSON.parse(statusText)
 check('状态体 ok=true', statusJson.ok === true, statusJson)
@@ -744,16 +764,41 @@ fakeDocument.removeEventListener = (type, fn) => {
   if (i >= 0) docListeners.splice(i, 1)
 }
 
-// 假 host：带 idleMinutes=N / flowStyle=x 的请求会改掉"服务器上的值"，之后的查询就回这个 —— 与真实 host 一致
+/* 假 host：写档位 / 写动画会改掉"服务器上的值"，之后的查询就回这个 —— 与真实 host 一致。
+ *
+ * ★★★ 2026-10-17：**从 GET query 迁到 POST JSON body**（AUTH001 之后真实 host 只认 POST）。
+ *   原来这里只用正则从 URL 抓 `idleMinutes=` / `flowStyle=`，而客户端（lib/client.js 的
+ *   postStatus）发的是 `fetch(path, { method:'POST', body: JSON.stringify(...) })` ——
+ *   假 host 抓不到 ⇒ 值没变 ⇒ 菜单高亮不跟 ⇒ 3 项断言红。
+ *   现在两种来源都认（body 优先、query 兜底），取值规则与真实 host 的白名单对齐：
+ *   · idleMinutes 只认纯数字（'abc' 之类的越界值忽略）
+ *   · flowStyle 只认 [a-z]+（'<img src=x>' 之类的注入串忽略）
+ */
 let serverIdleMinutes = 5
 let serverFlowStyle = 'meteor'
+const postedField = (body, name) => {
+  if (body === null || typeof body !== 'object') return undefined
+  const want = String(name).toLowerCase()
+  for (const [k, v] of Object.entries(body)) {
+    if (String(k).toLowerCase() === want && v !== undefined) return String(v)
+  }
+  return undefined
+}
+const queryField = (text, name) => {
+  const hit = new RegExp(`${name}=([^&]*)`, 'iu').exec(text)
+  return hit === null ? undefined : decodeURIComponent(hit[1])
+}
 const realFetch = globalThis.fetch
-globalThis.fetch = async (url) => {
+globalThis.fetch = async (url, init) => {
   const text = String(url)
-  const hit = /idleMinutes=(\d+)/.exec(text)
-  if (hit !== null) serverIdleMinutes = Number(hit[1])
-  const style = /flowStyle=([a-z]+)/.exec(text)
-  if (style !== null) serverFlowStyle = style[1]
+  let posted = null
+  if (init !== null && typeof init === 'object' && typeof init.body === 'string' && init.body.trim() !== '') {
+    try { posted = JSON.parse(init.body) } catch { posted = null }
+  }
+  const idleRaw = postedField(posted, 'idleMinutes') ?? queryField(text, 'idleMinutes')
+  if (idleRaw !== undefined && /^\d+$/u.test(idleRaw)) serverIdleMinutes = Number(idleRaw)
+  const styleRaw = postedField(posted, 'flowStyle') ?? queryField(text, 'flowStyle')
+  if (styleRaw !== undefined && /^[a-z]+$/u.test(styleRaw)) serverFlowStyle = styleRaw
   return {
     ok: true,
     json: async () => ({
@@ -959,24 +1004,26 @@ check('★ 预热确认在线后就开启计时（起点不再是 null）', type
 await new Promise((resolve) => setTimeout(resolve, 40))
 // ⚠ 档位用 1440 分钟（24 小时）**而不是 1 分钟**：这条检查不能把自测挂在这儿等超时，
 //   更不能让 tick 在假 ComfyUI 关掉之后跑去杀主机上真的 ComfyUI。最后再设回 0（不自动关闭）。
-const picked = JSON.parse(
-  await callStatus({ host: '127.0.0.1:1' }, '127.0.0.1', '/api/qwen-paint/status.json?idleMinutes=1440'),
-)
+const picked = JSON.parse(await postStatus({ idleMinutes: 1440 }))
 check('改档位生效（1440 分钟）', picked.idleShutdownMs === 1440 * 60000, picked.idleShutdownMs)
 check('★ 改档位会把计时起点推到此刻', picked.lastActivityAt >= idleStart + 30, [idleStart, picked.lastActivityAt])
 check('★ 计时确实在走（idleShutdownInMs > 0）', picked.idleShutdownInMs > 0, picked.idleShutdownInMs)
 
 // 越界值必须被忽略（不能把档位搞成负数或 NaN）
-const bogus = JSON.parse(
-  await callStatus({ host: '127.0.0.1:1' }, '127.0.0.1', '/api/qwen-paint/status.json?idleMinutes=abc'),
-)
+const bogus = JSON.parse(await postStatus({ idleMinutes: 'abc' }))
 check('非法档位被忽略（仍是 1440 分钟）', bogus.idleShutdownMs === 1440 * 60000, bogus.idleShutdownMs)
 
-const idleOff = JSON.parse(
-  await callStatus({ host: '127.0.0.1:1' }, '127.0.0.1', '/api/qwen-paint/status.json?idleMinutes=0'),
-)
+const idleOff = JSON.parse(await postStatus({ idleMinutes: 0 }))
 check('选「不自动关闭」时档位为 0', idleOff.idleShutdownMs === 0, idleOff.idleShutdownMs)
 check('选「不自动关闭」时剩余时间恒为 0（永不关）', idleOff.idleShutdownInMs === 0, idleOff.idleShutdownInMs)
+
+/* ★ 2026-10-17 新增（不是改旧断言）：写入口迁移到 POST 之后，**GET 带写参数必须被 405 挡住** ——
+   否则"GET 只读"这条约束会被悄悄改回去，而这正是当初催生 15 项过期断言的同一处改动。 */
+{
+  const viaGet = await callStatus({ host: '127.0.0.1:1' }, '127.0.0.1', '/api/qwen-paint/status.json?idleMinutes=1440')
+  const body = JSON.parse(viaGet)
+  check('★★ GET 带写参数被拒（405 + 明确提示改用 POST）', body.ok === false && /POST/u.test(String(body.hint ?? body.reason ?? '')), body)
+}
 
 section('⑰ 生图动画：落盘与白名单（host 半边）')
 
@@ -989,22 +1036,16 @@ check('状态体带 flowStyle 字段', typeof statusJson.flowStyle === 'string',
 check('默认动画是流星（不动原来的观感）', statusJson.flowStyle === 'meteor', statusJson.flowStyle)
 check('默认值不写盘（文件还不存在）', readUi() === null, readUi())
 
-const setAurora = JSON.parse(
-  await callStatus({ host: '127.0.0.1:1' }, '127.0.0.1', '/api/qwen-paint/status.json?flowStyle=aurora'),
-)
+const setAurora = JSON.parse(await postStatus({ flowStyle: 'aurora' }))
 check('★ 选了「极光幻彩」后状态体立刻回它', setAurora.flowStyle === 'aurora', setAurora.flowStyle)
 check('★ 选择已落盘（重启 DSH 之后还记得住）', readUi()?.flowStyle === 'aurora', readUi())
 
 // ⚠ 这是外部输入，而且会被拼进 class 名 —— 必须挡住
-const bogusStyle = JSON.parse(
-  await callStatus({ host: '127.0.0.1:1' }, '127.0.0.1', '/api/qwen-paint/status.json?flowStyle=%3Cimg%20src%3Dx%3E'),
-)
+const bogusStyle = JSON.parse(await postStatus({ flowStyle: '<img src=x>' }))
 check('★ 非法动画 id 被忽略（仍是 aurora）', bogusStyle.flowStyle === 'aurora', bogusStyle.flowStyle)
 check('★ 非法值也不会被写进文件', readUi()?.flowStyle === 'aurora', readUi())
 
-const setMeteor = JSON.parse(
-  await callStatus({ host: '127.0.0.1:1' }, '127.0.0.1', '/api/qwen-paint/status.json?flowStyle=meteor'),
-)
+const setMeteor = JSON.parse(await postStatus({ flowStyle: 'meteor' }))
 check('能切回流星', setMeteor.flowStyle === 'meteor', setMeteor.flowStyle)
 check('切回流星同样落盘', readUi()?.flowStyle === 'meteor', readUi())
 

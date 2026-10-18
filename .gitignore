@@ -20,3 +20,17 @@ _tome_probe/
 # 密钥 / 本地配置
 .env
 .env.*
+
+# ★★★ 私人 / 开发文档 —— 绝不进公开仓库（2026-10-17 主人明确要求）
+#   能推上去的只有三类：README / 包里相关的文件 / 给 DSH 的安装说明。
+#   这里再加一道文件名兜底：就算有人手工拷进来，也不会被 `git add .` 顺手带上。
+#   （同名的 fail-closed 检查见 scripts/_sync_publish.py 与 scripts/_no_private_docs_test.mjs）
+*报告*.md
+*核验*.md
+*勘察*.md
+*清单*.md
+*笔记*.md
+*交接*.md
+*审计*.md
+*诊断*.md
+*私人*.md

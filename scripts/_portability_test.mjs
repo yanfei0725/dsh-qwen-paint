@@ -147,7 +147,13 @@ assert('★ 存活查询异常时不判死', src.includes('存活查询失败，
 console.log('\n=== 7. 状态机（单一真相源）===')
 assert('有纯函数 launchView', src.includes('function launchView('))
 assert('★ 已删除并行的 comfyStartRequestedAt 变量', !/let comfyStartRequestedAt/u.test(src))
-assert('★ 45 秒必然收口', src.includes('LAUNCH_TIMEOUT_MS = 45000'))
+// ★ 2026-10-17 更新：原先写死 `= 45000`；真机实测冷启动常 60~90 秒，已调到 120 秒。
+//   改成"有常量 + 值在合理区间"，锁的是"必然收口"这件事，而不是某个具体数字。
+const launchTimeoutMs = Number((src.match(/LAUNCH_TIMEOUT_MS = (\d+)/u) ?? [])[1])
+assert(
+  `★ 启动超时必然收口（LAUNCH_TIMEOUT_MS = ${launchTimeoutMs} ms）`,
+  Number.isFinite(launchTimeoutMs) && launchTimeoutMs >= 60000 && launchTimeoutMs <= 300000,
+)
 
 console.log('\n=== 8. 诊断取证能力（Electron 里唯一可行）===')
 assert('有同步落盘诊断 diag()', src.includes('function diag('))
