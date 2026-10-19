@@ -172,8 +172,21 @@ console.log('\n[3] 回归锁：历史上踩过的三个坑必须保持修好')
   const lim = byName('LoadImageMask')
   ok(lim.length > 0 && lim.every((x) => x.keys.includes('channel')), '所有 LoadImageMask 都带 `channel`')
   const ali = byName('ControlNetInpaintingAliMamaApply')
-  ok(ali.length > 0 && ali.every((x) => ['strength', 'start_percent', 'end_percent'].every((k) => x.keys.includes(k))),
-    '所有 AliMamaApply 都带 strength/start_percent/end_percent')
+  // ★ 2026-10-19：局部重绘改为**零下载潜空间重绘**（ComfyUI 自带 SetLatentNoiseMask），
+  //   不再加载任何 ControlNet 权重 —— 原锁从"必须有"改成"必须没有"。
+  //   注意只锁 AliMamaApply：config.js 里通用 ControlNet 功能（ControlNetLoader +
+  //   ControlNetApplyAdvanced）是**另一个**用户可选功能，不能一并禁掉。
+  ok(ali.length === 0,
+    '★★ 2026-10-19：局部重绘已零下载，源码里不应再有 ControlNetInpaintingAliMamaApply')
+  // 遗留约束保留（条件式）：万一将来有人把它加回来，这三个必需参数照样不能漏。
+  ok(ali.every((x) => ['strength', 'start_percent', 'end_percent'].every((k) => x.keys.includes(k))),
+    '（遗留约束）凡是用到 AliMamaApply 的，都必须带 strength/start_percent/end_percent')
+  // ★ 新锁：零下载方案的**核心机制**必须到位，防止以后被悄悄改回"整图重绘再贴回"。
+  const slnm = byName('SetLatentNoiseMask')
+  ok(slnm.length > 0 && slnm.every((x) => x.keys.includes('samples') && x.keys.includes('mask')),
+    '★★ 潜空间重绘核心：SetLatentNoiseMask 必须带 samples + mask')
+  ok(byName('VAEEncode').length > 0,
+    '★★ 潜空间重绘核心：必须有 VAEEncode（原图 latent 才是"保留区严格不变"的基准）')
 }
 
 if (unknown.size > 0) {
