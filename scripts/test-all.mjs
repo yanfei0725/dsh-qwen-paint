@@ -57,6 +57,9 @@ const SUITES = [
   { file: '_vae_spectrum_test.mjs', note: 'VAE 分块 + Spectrum 跳步节点图' },
   { file: '_gpu_vendor_test.mjs', note: '显卡判定 + Mac 面板' },
   { file: '_manifest_test.mjs', note: 'manifest 一致性' },
+  // ★ 2026-10-20 新增（0.17.13）：面板圈选重绘三项修复的回归锁
+  //   （蒙版泄漏 / 同毫秒覆盖 / 结果图裂图 / 结果图堆叠 / 浮层双开）
+  { file: '_inpaint_ui_test.mjs', note: '圈选重绘 UI 修复回归' },
   // ★ 2026-10-19 补进回归：它一直没被 `npm test` 跑过，漂移了 16 项都没人发现
   //   （全是"源码字符串搬家了/写操作改 POST 了"导致的过期断言）。
   { file: '_review_fixes_test.mjs', note: '0.17.6 那批修复的源码级回归' },
