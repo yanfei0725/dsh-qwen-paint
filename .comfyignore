@@ -1,0 +1,26 @@
+# ComfyUI Registry 归档排除清单（语法同 .gitignore）
+#
+# ⚠ 本文件**只影响** `comfy node publish` 打出来的归档，**不改动 git 仓库内容**。
+#   `.comfyignore` 叠加在 `.gitignore` 之上 —— 未被 git 跟踪的文件本来就不会进归档。
+#   用途：把「留在 git 里、但不想进 Registry 包」的开发文件剔出去，让包更干净。
+#   依据：https://docs.comfy.org/registry/publishing#exclude-files-with-comfyignore
+
+# ── 开发 / 测试脚本（回归测试、一次性探针、内部工具）──
+#    这些是开发期用的，运行插件**不需要**它们。
+scripts/_*
+scripts/pack.mjs
+scripts/make_loading_gif.py
+# 契约 JSON 的**生成器**（用 Python ast 解析 ComfyUI 源码）。
+# 生成结果 comfy-node-contract.json 要**保留** —— 回归测试读它做断言。
+scripts/extract_comfy_schema.py
+
+# ── 构建产物 ──
+dist/
+
+# ── 内部开发报告（不是插件运行所需）──
+专业卡版-实施报告-20261014.md
+专业卡版-勘察清单-20261014.md
+
+# ── 备份 / 临时 ──
+*.bak-orig
+*.bak

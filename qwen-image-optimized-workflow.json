@@ -1,0 +1,162 @@
+{
+  "1": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "qwen_image_2.1_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_8b_w4a8.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "qwen_image_2.1_vae_bf16.safetensors"
+    }
+  },
+  "5": {
+    "class_type": "TextEncodeQwenImage21",
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "prompt": "【在此输入你的画面描述】",
+      "negative_prompt": "",
+      "resolution": 1024
+    }
+  },
+  "6": {
+    "class_type": "EmptyLatentImage",
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "7": {
+    "class_type": "QwenImage21Cache",
+    "inputs": {
+      "model": [
+        "12",
+        0
+      ],
+      "device": "auto",
+      "dtype": "int8"
+    }
+  },
+  "8": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "14",
+        0
+      ],
+      "seed": 123456789,
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "positive": [
+        "5",
+        0
+      ],
+      "negative": [
+        "5",
+        1
+      ],
+      "latent_image": [
+        "6",
+        0
+      ],
+      "denoise": 1
+    }
+  },
+  "9": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "8",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "10": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "9",
+        0
+      ],
+      "filename_prefix": "dsh-qwen-paint"
+    }
+  },
+  "11": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "lora_name": "turbo8_lora_step2500.safetensors",
+      "strength_model": 1
+    }
+  },
+  "12": {
+    "class_type": "ModelSamplingFlux",
+    "inputs": {
+      "model": [
+        "11",
+        0
+      ],
+      "max_shift": 0.6935,
+      "base_shift": 0.5,
+      "width": 1024,
+      "height": 1024
+    }
+  },
+  "13": {
+    "class_type": "TESpeedQwenImage21",
+    "inputs": {
+      "model": [
+        "7",
+        0
+      ],
+      "attention": "kitchen_int8",
+      "step_cache": "te_predictor",
+      "reuse_threshold": 0.06,
+      "start_percent": 0,
+      "end_percent": 1,
+      "predictor_error_limit": 0.08,
+      "verbose": false
+    }
+  },
+  "14": {
+    "class_type": "QwenImage21Speedup",
+    "inputs": {
+      "model": [
+        "13",
+        0
+      ],
+      "enable_cache": true,
+      "cache_threshold": 0.3,
+      "target_error": 0.05,
+      "cache_start_percent": 0.15,
+      "cache_end_percent": 0.9,
+      "max_consecutive_skips": 3,
+      "forecast": "first",
+      "cache_device": "auto",
+      "debug_log": false
+    }
+  }
+}

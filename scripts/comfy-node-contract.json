@@ -1,0 +1,6464 @@
+{
+  "_comment": "由 scripts/extract_comfy_schema.py 从 ComfyUI 源码解析生成，勿手改。",
+  "_scannedFiles": [
+    "comfy_extras/compositor_blend.py",
+    "comfy_extras/nodes_ace.py",
+    "comfy_extras/nodes_advanced_samplers.py",
+    "comfy_extras/nodes_align_your_steps.py",
+    "comfy_extras/nodes_apg.py",
+    "comfy_extras/nodes_ar_video.py",
+    "comfy_extras/nodes_attention_multiply.py",
+    "comfy_extras/nodes_audio.py",
+    "comfy_extras/nodes_audio_encoder.py",
+    "comfy_extras/nodes_bernini.py",
+    "comfy_extras/nodes_bg_removal.py",
+    "comfy_extras/nodes_boogu.py",
+    "comfy_extras/nodes_bounding_boxes.py",
+    "comfy_extras/nodes_camera.py",
+    "comfy_extras/nodes_camera_angle.py",
+    "comfy_extras/nodes_camera_trajectory.py",
+    "comfy_extras/nodes_canny.py",
+    "comfy_extras/nodes_cfg.py",
+    "comfy_extras/nodes_chroma_radiance.py",
+    "comfy_extras/nodes_clip_sdxl.py",
+    "comfy_extras/nodes_color.py",
+    "comfy_extras/nodes_compositing.py",
+    "comfy_extras/nodes_compositor.py",
+    "comfy_extras/nodes_cond.py",
+    "comfy_extras/nodes_context_windows.py",
+    "comfy_extras/nodes_controlnet.py",
+    "comfy_extras/nodes_cosmos.py",
+    "comfy_extras/nodes_curve.py",
+    "comfy_extras/nodes_custom_sampler.py",
+    "comfy_extras/nodes_dataset.py",
+    "comfy_extras/nodes_depth_anything_3.py",
+    "comfy_extras/nodes_differential_diffusion.py",
+    "comfy_extras/nodes_easycache.py",
+    "comfy_extras/nodes_edit_model.py",
+    "comfy_extras/nodes_eps.py",
+    "comfy_extras/nodes_flux.py",
+    "comfy_extras/nodes_frame_interpolation.py",
+    "comfy_extras/nodes_freelunch.py",
+    "comfy_extras/nodes_fresca.py",
+    "comfy_extras/nodes_gaussian_splat.py",
+    "comfy_extras/nodes_gits.py",
+    "comfy_extras/nodes_glsl.py",
+    "comfy_extras/nodes_hidream.py",
+    "comfy_extras/nodes_hidream_o1.py",
+    "comfy_extras/nodes_hooks.py",
+    "comfy_extras/nodes_hunyuan.py",
+    "comfy_extras/nodes_hunyuan3d.py",
+    "comfy_extras/nodes_hypernetwork.py",
+    "comfy_extras/nodes_hypertile.py",
+    "comfy_extras/nodes_ideogram4.py",
+    "comfy_extras/nodes_image_compare.py",
+    "comfy_extras/nodes_images.py",
+    "comfy_extras/nodes_ip2p.py",
+    "comfy_extras/nodes_joyimage.py",
+    "comfy_extras/nodes_json_prompt.py",
+    "comfy_extras/nodes_kandinsky5.py",
+    "comfy_extras/nodes_latent.py",
+    "comfy_extras/nodes_load_3d.py",
+    "comfy_extras/nodes_logic.py",
+    "comfy_extras/nodes_loop.py",
+    "comfy_extras/nodes_lora_debug.py",
+    "comfy_extras/nodes_lora_extract.py",
+    "comfy_extras/nodes_lotus.py",
+    "comfy_extras/nodes_lt.py",
+    "comfy_extras/nodes_lt_audio.py",
+    "comfy_extras/nodes_lt_keyframes.py",
+    "comfy_extras/nodes_lt_upsampler.py",
+    "comfy_extras/nodes_lumina2.py",
+    "comfy_extras/nodes_mage.py",
+    "comfy_extras/nodes_mahiro.py",
+    "comfy_extras/nodes_marigold.py",
+    "comfy_extras/nodes_mask.py",
+    "comfy_extras/nodes_math.py",
+    "comfy_extras/nodes_mediapipe.py",
+    "comfy_extras/nodes_mesh_postprocess.py",
+    "comfy_extras/nodes_ming.py",
+    "comfy_extras/nodes_minimax_h3.py",
+    "comfy_extras/nodes_minimax_music.py",
+    "comfy_extras/nodes_mochi.py",
+    "comfy_extras/nodes_model_advanced.py",
+    "comfy_extras/nodes_model_downscale.py",
+    "comfy_extras/nodes_model_merging.py",
+    "comfy_extras/nodes_model_merging_model_specific.py",
+    "comfy_extras/nodes_model_patch.py",
+    "comfy_extras/nodes_moge.py",
+    "comfy_extras/nodes_morphology.py",
+    "comfy_extras/nodes_multigpu.py",
+    "comfy_extras/nodes_nag.py",
+    "comfy_extras/nodes_nop.py",
+    "comfy_extras/nodes_number_convert.py",
+    "comfy_extras/nodes_optimalsteps.py",
+    "comfy_extras/nodes_pag.py",
+    "comfy_extras/nodes_painter.py",
+    "comfy_extras/nodes_perpneg.py",
+    "comfy_extras/nodes_photomaker.py",
+    "comfy_extras/nodes_pid.py",
+    "comfy_extras/nodes_pixart.py",
+    "comfy_extras/nodes_post_processing.py",
+    "comfy_extras/nodes_preview_any.py",
+    "comfy_extras/nodes_primitive.py",
+    "comfy_extras/nodes_qwen.py",
+    "comfy_extras/nodes_rebatch.py",
+    "comfy_extras/nodes_replacements.py",
+    "comfy_extras/nodes_resolution.py",
+    "comfy_extras/nodes_rope.py",
+    "comfy_extras/nodes_rtdetr.py",
+    "comfy_extras/nodes_sag.py",
+    "comfy_extras/nodes_sam3.py",
+    "comfy_extras/nodes_sam3d_body.py",
+    "comfy_extras/nodes_save_3d.py",
+    "comfy_extras/nodes_scail.py",
+    "comfy_extras/nodes_sd3.py",
+    "comfy_extras/nodes_sdpose.py",
+    "comfy_extras/nodes_sdupscale.py",
+    "comfy_extras/nodes_seed.py",
+    "comfy_extras/nodes_seedvr.py",
+    "comfy_extras/nodes_sensenova.py",
+    "comfy_extras/nodes_slg.py",
+    "comfy_extras/nodes_sparse_attention.py",
+    "comfy_extras/nodes_stable3d.py",
+    "comfy_extras/nodes_stable_cascade.py",
+    "comfy_extras/nodes_string.py",
+    "comfy_extras/nodes_tcfg.py",
+    "comfy_extras/nodes_text.py",
+    "comfy_extras/nodes_text_overlay.py",
+    "comfy_extras/nodes_textgen.py",
+    "comfy_extras/nodes_tomesd.py",
+    "comfy_extras/nodes_toolkit.py",
+    "comfy_extras/nodes_torch_compile.py",
+    "comfy_extras/nodes_train.py",
+    "comfy_extras/nodes_trellis2.py",
+    "comfy_extras/nodes_triposplat.py",
+    "comfy_extras/nodes_upscale_model.py",
+    "comfy_extras/nodes_video.py",
+    "comfy_extras/nodes_video_model.py",
+    "comfy_extras/nodes_void.py",
+    "comfy_extras/nodes_wan.py",
+    "comfy_extras/nodes_wandancer.py",
+    "comfy_extras/nodes_wanmove.py",
+    "comfy_extras/nodes_webcam.py",
+    "comfy_extras/nodes_yue2.py",
+    "comfy_extras/nodes_zimage.py",
+    "comfy_extras/void_noise_warp.py",
+    "cuda_malloc.py",
+    "execution.py",
+    "folder_paths.py",
+    "latent_preview.py",
+    "nodes.py",
+    "protocol.py",
+    "server.py"
+  ],
+  "_sourceRoot": "X:/ComfyUI-rocm/ComfyUI",
+  "nodes": {
+    "APG": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "eta",
+        "model",
+        "momentum",
+        "norm_threshold"
+      ]
+    },
+    "ARVideoI2V": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "length",
+        "model",
+        "start_image",
+        "vae",
+        "width"
+      ]
+    },
+    "AddLayer": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "blend_mode",
+        "flip_h",
+        "flip_v",
+        "height",
+        "image",
+        "layers",
+        "mask",
+        "name",
+        "opacity",
+        "rotation",
+        "width",
+        "x",
+        "y",
+        "z_index"
+      ]
+    },
+    "AddNoise": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "latent_image",
+        "model",
+        "noise",
+        "sigmas"
+      ]
+    },
+    "AlignYourStepsScheduler": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "denoise",
+        "model_type",
+        "steps"
+      ]
+    },
+    "AndNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "values"
+      ]
+    },
+    "AnimaLLLiteApply": {
+      "optional": [
+        "mask"
+      ],
+      "required": [
+        "end_percent",
+        "image",
+        "model",
+        "model_patch",
+        "start_percent",
+        "strength"
+      ],
+      "schemaInputs": []
+    },
+    "ApplyTextureToMesh": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "base_color",
+        "mesh",
+        "metallic",
+        "normal_map",
+        "occlusion",
+        "roughness"
+      ]
+    },
+    "AudioAdjustVolume": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio",
+        "volume"
+      ]
+    },
+    "AudioConcat": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio1",
+        "audio2",
+        "direction"
+      ]
+    },
+    "AudioEncoderEncode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio",
+        "audio_encoder"
+      ]
+    },
+    "AudioEncoderLoader": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio_encoder_name"
+      ]
+    },
+    "AudioEqualizer3Band": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio",
+        "high_freq",
+        "high_gain_dB",
+        "low_freq",
+        "low_gain_dB",
+        "mid_freq",
+        "mid_gain_dB",
+        "mid_q"
+      ]
+    },
+    "AudioMerge": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio1",
+        "audio2",
+        "merge_method"
+      ]
+    },
+    "AutogrowNamesTestNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "autogrow"
+      ]
+    },
+    "AutogrowPrefixTestNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "autogrow"
+      ]
+    },
+    "BakeAmbientOcclusion": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bias",
+        "high_poly",
+        "low_poly",
+        "max_distance",
+        "resolution",
+        "samples",
+        "strength"
+      ]
+    },
+    "BakeNormalMapFromMesh": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "cage_distance",
+        "high_poly",
+        "ignore_backfaces",
+        "low_poly",
+        "resolution"
+      ]
+    },
+    "BakeTextureFromVoxel": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "mesh",
+        "reference_mesh",
+        "texture_size",
+        "voxel_colors"
+      ]
+    },
+    "BasicGuider": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "conditioning",
+        "model"
+      ]
+    },
+    "BasicScheduler": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "denoise",
+        "model",
+        "scheduler",
+        "steps"
+      ]
+    },
+    "BatchImagesMasksLatentsNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "inputs"
+      ]
+    },
+    "BatchImagesNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "images"
+      ]
+    },
+    "BatchLatentsNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "latents"
+      ]
+    },
+    "BatchMasksNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "masks"
+      ]
+    },
+    "BerniniConditioning": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "length",
+        "negative",
+        "positive",
+        "ref_max_size",
+        "reference_images",
+        "reference_video",
+        "source_video",
+        "vae",
+        "width"
+      ]
+    },
+    "BetaSamplingScheduler": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "alpha",
+        "beta",
+        "model",
+        "steps"
+      ]
+    },
+    "Blend": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "blend_factor",
+        "blend_mode",
+        "image1",
+        "image2"
+      ]
+    },
+    "BlockSparseAttention": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "dense_blocks",
+        "end_percent",
+        "extra_tokens",
+        "min_tokens",
+        "model",
+        "selection",
+        "sink_conditioning",
+        "start_percent",
+        "verbose"
+      ]
+    },
+    "Blur": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "blur_radius",
+        "image",
+        "sigma"
+      ]
+    },
+    "Boolean": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "value"
+      ]
+    },
+    "BoundingBox": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "height",
+        "width",
+        "x",
+        "y"
+      ]
+    },
+    "BuildJsonPromptIdeogram": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "aesthetics",
+        "background",
+        "element",
+        "high_level_description",
+        "lighting",
+        "medium",
+        "style"
+      ]
+    },
+    "BuildPoseFile": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "format",
+        "fps",
+        "pose_data",
+        "sam3d_body_model",
+        "track_index"
+      ]
+    },
+    "CFGGuider": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "cfg",
+        "model",
+        "negative",
+        "positive"
+      ]
+    },
+    "CFGNorm": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model",
+        "pre_cfg",
+        "strength"
+      ]
+    },
+    "CFGOverride": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "cfg",
+        "end_percent",
+        "model",
+        "start_percent"
+      ]
+    },
+    "CFGZeroStar": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model"
+      ]
+    },
+    "CLIPAdd": {
+      "optional": [],
+      "required": [
+        "clip1",
+        "clip2"
+      ],
+      "schemaInputs": []
+    },
+    "CLIPAttentionMultiply": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "k",
+        "out",
+        "q",
+        "v"
+      ]
+    },
+    "CLIPLoader": {
+      "optional": [
+        "device"
+      ],
+      "required": [
+        "clip_name",
+        "type"
+      ],
+      "schemaInputs": []
+    },
+    "CLIPMergeSimple": {
+      "optional": [],
+      "required": [
+        "clip1",
+        "clip2",
+        "ratio"
+      ],
+      "schemaInputs": []
+    },
+    "CLIPSave": {
+      "optional": [],
+      "required": [
+        "clip",
+        "filename_prefix"
+      ],
+      "schemaInputs": []
+    },
+    "CLIPSetLastLayer": {
+      "optional": [],
+      "required": [
+        "clip",
+        "stop_at_clip_layer"
+      ],
+      "schemaInputs": []
+    },
+    "CLIPSubtract": {
+      "optional": [],
+      "required": [
+        "clip1",
+        "clip2",
+        "multiplier"
+      ],
+      "schemaInputs": []
+    },
+    "CLIPTextEncode": {
+      "optional": [],
+      "required": [
+        "clip",
+        "text"
+      ],
+      "schemaInputs": []
+    },
+    "CLIPTextEncodeControlnet": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "conditioning",
+        "text"
+      ]
+    },
+    "CLIPTextEncodeFlux": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "clip_l",
+        "guidance",
+        "t5xxl"
+      ]
+    },
+    "CLIPTextEncodeHiDream": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "clip_g",
+        "clip_l",
+        "llama",
+        "t5xxl"
+      ]
+    },
+    "CLIPTextEncodeHunyuanDiT": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bert",
+        "clip",
+        "mt5xl"
+      ]
+    },
+    "CLIPTextEncodeKandinsky5": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "clip_l",
+        "qwen25_7b"
+      ]
+    },
+    "CLIPTextEncodeLumina2": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "system_prompt",
+        "user_prompt"
+      ]
+    },
+    "CLIPTextEncodePixArtAlpha": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "height",
+        "text",
+        "width"
+      ]
+    },
+    "CLIPTextEncodeSD3": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "clip_g",
+        "clip_l",
+        "empty_padding",
+        "t5xxl"
+      ]
+    },
+    "CLIPTextEncodeSDXL": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "crop_h",
+        "crop_w",
+        "height",
+        "target_height",
+        "target_width",
+        "text_g",
+        "text_l",
+        "width"
+      ]
+    },
+    "CLIPTextEncodeSDXLRefiner": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "ascore",
+        "clip",
+        "height",
+        "text",
+        "width"
+      ]
+    },
+    "CLIPVisionEncode": {
+      "optional": [],
+      "required": [
+        "clip_vision",
+        "crop",
+        "image"
+      ],
+      "schemaInputs": []
+    },
+    "CLIPVisionLoader": {
+      "optional": [],
+      "required": [
+        "clip_name"
+      ],
+      "schemaInputs": []
+    },
+    "CameraAngle": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "horizontal_angle",
+        "image",
+        "vertical_angle",
+        "view",
+        "zoom"
+      ]
+    },
+    "Canny": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "high_threshold",
+        "image",
+        "low_threshold"
+      ]
+    },
+    "CaseConverter": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "mode",
+        "string"
+      ]
+    },
+    "CheckpointLoader": {
+      "optional": [],
+      "required": [
+        "ckpt_name",
+        "config_name"
+      ],
+      "schemaInputs": []
+    },
+    "CheckpointLoaderSimple": {
+      "optional": [],
+      "required": [
+        "ckpt_name"
+      ],
+      "schemaInputs": []
+    },
+    "CheckpointSave": {
+      "optional": [],
+      "required": [
+        "clip",
+        "filename_prefix",
+        "model",
+        "vae"
+      ],
+      "schemaInputs": []
+    },
+    "ColorToRGBInt": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "color"
+      ]
+    },
+    "ColorTransfer": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image_ref",
+        "image_target",
+        "method",
+        "source_stats",
+        "strength"
+      ]
+    },
+    "CombineHooks": {
+      "optional": [
+        "hooks_A",
+        "hooks_B"
+      ],
+      "required": [],
+      "schemaInputs": []
+    },
+    "CombineHooksEight": {
+      "optional": [
+        "hooks_A",
+        "hooks_B",
+        "hooks_C",
+        "hooks_D",
+        "hooks_E",
+        "hooks_F",
+        "hooks_G",
+        "hooks_H"
+      ],
+      "required": [],
+      "schemaInputs": []
+    },
+    "CombineHooksFour": {
+      "optional": [
+        "hooks_A",
+        "hooks_B",
+        "hooks_C",
+        "hooks_D"
+      ],
+      "required": [],
+      "schemaInputs": []
+    },
+    "ComboOutputTestNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "combo",
+        "combo2"
+      ]
+    },
+    "ConcatenateVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "codec",
+        "complete_audio",
+        "videos"
+      ]
+    },
+    "ConditioningAverage": {
+      "optional": [],
+      "required": [
+        "conditioning_from",
+        "conditioning_to",
+        "conditioning_to_strength"
+      ],
+      "schemaInputs": []
+    },
+    "ConditioningCombine": {
+      "optional": [],
+      "required": [
+        "conditioning_1",
+        "conditioning_2"
+      ],
+      "schemaInputs": []
+    },
+    "ConditioningConcat": {
+      "optional": [],
+      "required": [
+        "conditioning_from",
+        "conditioning_to"
+      ],
+      "schemaInputs": []
+    },
+    "ConditioningLoader": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "conditioning_name"
+      ]
+    },
+    "ConditioningMultiply": {
+      "optional": [],
+      "required": [
+        "conditioning",
+        "multiplier"
+      ],
+      "schemaInputs": []
+    },
+    "ConditioningSetArea": {
+      "optional": [],
+      "required": [
+        "conditioning",
+        "height",
+        "strength",
+        "width",
+        "x",
+        "y"
+      ],
+      "schemaInputs": []
+    },
+    "ConditioningSetAreaPercentage": {
+      "optional": [],
+      "required": [
+        "conditioning",
+        "height",
+        "strength",
+        "width",
+        "x",
+        "y"
+      ],
+      "schemaInputs": []
+    },
+    "ConditioningSetAreaPercentageVideo": {
+      "optional": [],
+      "required": [
+        "conditioning",
+        "height",
+        "strength",
+        "temporal",
+        "width",
+        "x",
+        "y",
+        "z"
+      ],
+      "schemaInputs": []
+    },
+    "ConditioningSetAreaStrength": {
+      "optional": [],
+      "required": [
+        "conditioning",
+        "strength"
+      ],
+      "schemaInputs": []
+    },
+    "ConditioningSetDefaultAndCombine": {
+      "optional": [
+        "hooks"
+      ],
+      "required": [
+        "cond",
+        "cond_DEFAULT"
+      ],
+      "schemaInputs": []
+    },
+    "ConditioningSetMask": {
+      "optional": [],
+      "required": [
+        "conditioning",
+        "mask",
+        "set_cond_area",
+        "strength"
+      ],
+      "schemaInputs": []
+    },
+    "ConditioningSetProperties": {
+      "optional": [
+        "hooks",
+        "mask",
+        "timesteps"
+      ],
+      "required": [
+        "cond_NEW",
+        "set_cond_area",
+        "strength"
+      ],
+      "schemaInputs": []
+    },
+    "ConditioningSetPropertiesAndCombine": {
+      "optional": [
+        "hooks",
+        "mask",
+        "timesteps"
+      ],
+      "required": [
+        "cond",
+        "cond_NEW",
+        "set_cond_area",
+        "strength"
+      ],
+      "schemaInputs": []
+    },
+    "ConditioningSetTimestepRange": {
+      "optional": [],
+      "required": [
+        "conditioning",
+        "end",
+        "start"
+      ],
+      "schemaInputs": []
+    },
+    "ConditioningStableAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "negative",
+        "positive",
+        "seconds_start",
+        "seconds_total"
+      ]
+    },
+    "ConditioningTimestepsRange": {
+      "optional": [],
+      "required": [
+        "end_percent",
+        "start_percent"
+      ],
+      "schemaInputs": []
+    },
+    "ConditioningZeroOut": {
+      "optional": [],
+      "required": [
+        "conditioning"
+      ],
+      "schemaInputs": []
+    },
+    "ContextWindowsManualNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "causal_window_fix",
+        "closed_loop",
+        "cond_retain_index_list",
+        "context_length",
+        "context_overlap",
+        "context_schedule",
+        "context_stride",
+        "dim",
+        "freenoise",
+        "fuse_method",
+        "latent_retain_index_list",
+        "model",
+        "split_conds_to_windows"
+      ]
+    },
+    "ControlNetApply": {
+      "optional": [],
+      "required": [
+        "conditioning",
+        "control_net",
+        "image",
+        "strength"
+      ],
+      "schemaInputs": []
+    },
+    "ControlNetApplyAdvanced": {
+      "optional": [
+        "vae"
+      ],
+      "required": [
+        "control_net",
+        "end_percent",
+        "image",
+        "negative",
+        "positive",
+        "start_percent",
+        "strength"
+      ],
+      "schemaInputs": []
+    },
+    "ControlNetApplySD3": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "control_net",
+        "end_percent",
+        "image",
+        "negative",
+        "positive",
+        "start_percent",
+        "strength",
+        "vae"
+      ]
+    },
+    "ControlNetInpaintingAliMamaApply": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "control_net",
+        "end_percent",
+        "image",
+        "mask",
+        "negative",
+        "positive",
+        "start_percent",
+        "strength",
+        "vae"
+      ]
+    },
+    "ControlNetLoader": {
+      "optional": [],
+      "required": [
+        "control_net_name"
+      ],
+      "schemaInputs": []
+    },
+    "ConvertArrayToString": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "array",
+        "indent"
+      ]
+    },
+    "ConvertDictionaryToString": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "dictionary",
+        "indent"
+      ]
+    },
+    "ConvertStringToComboNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "string"
+      ]
+    },
+    "CosmosImageToVideoLatent": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "end_image",
+        "height",
+        "length",
+        "start_image",
+        "vae",
+        "width"
+      ]
+    },
+    "CosmosPredict2ImageToVideoLatent": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "end_image",
+        "height",
+        "length",
+        "start_image",
+        "vae",
+        "width"
+      ]
+    },
+    "CreateBoundingBoxes": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "background",
+        "bboxes",
+        "height",
+        "last_incoming",
+        "width"
+      ]
+    },
+    "CreateCameraInfo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "camera_info_state",
+        "camera_type",
+        "fov",
+        "mode",
+        "roll",
+        "target_x",
+        "target_y",
+        "target_z",
+        "zoom"
+      ]
+    },
+    "CreateHookKeyframe": {
+      "optional": [
+        "prev_hook_kf"
+      ],
+      "required": [
+        "start_percent",
+        "strength_mult"
+      ],
+      "schemaInputs": []
+    },
+    "CreateHookKeyframesFromFloats": {
+      "optional": [
+        "prev_hook_kf"
+      ],
+      "required": [
+        "end_percent",
+        "floats_strength",
+        "print_keyframes",
+        "start_percent"
+      ],
+      "schemaInputs": []
+    },
+    "CreateHookKeyframesInterpolated": {
+      "optional": [
+        "prev_hook_kf"
+      ],
+      "required": [
+        "end_percent",
+        "interpolation",
+        "keyframes_count",
+        "print_keyframes",
+        "start_percent",
+        "strength_end",
+        "strength_start"
+      ],
+      "schemaInputs": []
+    },
+    "CreateHookLora": {
+      "optional": [
+        "prev_hooks"
+      ],
+      "required": [
+        "lora_name",
+        "strength_clip",
+        "strength_model"
+      ],
+      "schemaInputs": []
+    },
+    "CreateHookLoraModelOnly": {
+      "optional": [
+        "prev_hooks"
+      ],
+      "required": [
+        "lora_name",
+        "strength_model"
+      ],
+      "schemaInputs": []
+    },
+    "CreateHookModelAsLora": {
+      "optional": [
+        "prev_hooks"
+      ],
+      "required": [
+        "ckpt_name",
+        "strength_clip",
+        "strength_model"
+      ],
+      "schemaInputs": []
+    },
+    "CreateHookModelAsLoraModelOnly": {
+      "optional": [
+        "prev_hooks"
+      ],
+      "required": [
+        "ckpt_name",
+        "strength_model"
+      ],
+      "schemaInputs": []
+    },
+    "CreateList": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "inputs"
+      ]
+    },
+    "CreateVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio",
+        "bit_depth",
+        "codec",
+        "color_space",
+        "fps",
+        "images"
+      ]
+    },
+    "CropByBBoxes": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bboxes",
+        "image",
+        "keep_aspect",
+        "output_height",
+        "output_width",
+        "padding"
+      ]
+    },
+    "CropMask": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "height",
+        "mask",
+        "width",
+        "x",
+        "y"
+      ]
+    },
+    "CurveEditor": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "curve",
+        "histogram"
+      ]
+    },
+    "CustomComboNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "choice"
+      ]
+    },
+    "DA3GeometryToMesh": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_index",
+        "confidence_threshold",
+        "da3_geometry",
+        "decimation",
+        "discontinuity_threshold",
+        "texture",
+        "use_sky_mask"
+      ]
+    },
+    "DA3GeometryToPointCloud": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_index",
+        "confidence_threshold",
+        "da3_geometry",
+        "downsample",
+        "use_sky_mask"
+      ]
+    },
+    "DA3Inference": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "da3_model",
+        "image",
+        "mode",
+        "resize_method",
+        "resolution"
+      ]
+    },
+    "DA3Render": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "da3_geometry",
+        "output"
+      ]
+    },
+    "DCTestNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "combo"
+      ]
+    },
+    "DecimateMesh": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "mesh",
+        "placement_mode",
+        "target_face_count"
+      ]
+    },
+    "DiffControlNetLoader": {
+      "optional": [],
+      "required": [
+        "control_net_name",
+        "model"
+      ],
+      "schemaInputs": []
+    },
+    "DifferentialDiffusion": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model",
+        "strength"
+      ]
+    },
+    "DiffusersLoader": {
+      "optional": [],
+      "required": [
+        "model_path"
+      ],
+      "schemaInputs": []
+    },
+    "DrawBBoxes": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bboxes",
+        "image"
+      ]
+    },
+    "DualCFGGuider": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "cfg_cond2_negative",
+        "cfg_conds",
+        "cond1",
+        "cond2",
+        "model",
+        "negative",
+        "style"
+      ]
+    },
+    "DualCLIPLoader": {
+      "optional": [
+        "device"
+      ],
+      "required": [
+        "clip_name1",
+        "clip_name2",
+        "type"
+      ],
+      "schemaInputs": []
+    },
+    "DualModelGuider": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "cfg",
+        "model",
+        "model_negative",
+        "negative",
+        "positive"
+      ]
+    },
+    "EasyCacheNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "end_percent",
+        "model",
+        "reuse_threshold",
+        "start_percent",
+        "verbose"
+      ]
+    },
+    "EmptyARVideoLatent": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "length",
+        "width"
+      ]
+    },
+    "EmptyAceStep15LatentAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "seconds"
+      ]
+    },
+    "EmptyAceStepLatentAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "seconds"
+      ]
+    },
+    "EmptyAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "channels",
+        "duration",
+        "sample_rate"
+      ]
+    },
+    "EmptyCosmosLatentVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "length",
+        "width"
+      ]
+    },
+    "EmptyFlux2LatentImage": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "width"
+      ]
+    },
+    "EmptyHunyuanImageLatent": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "width"
+      ]
+    },
+    "EmptyHunyuanLatentVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "length",
+        "width"
+      ]
+    },
+    "EmptyImage": {
+      "optional": [],
+      "required": [
+        "batch_size",
+        "color",
+        "height",
+        "width"
+      ],
+      "schemaInputs": []
+    },
+    "EmptyLTXVLatentVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "length",
+        "width"
+      ]
+    },
+    "EmptyLatentAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "seconds"
+      ]
+    },
+    "EmptyLatentHunyuan3Dv2": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "resolution"
+      ]
+    },
+    "EmptyLatentImage": {
+      "optional": [],
+      "required": [
+        "batch_size",
+        "height",
+        "width"
+      ],
+      "schemaInputs": []
+    },
+    "EmptyMiniMaxH3LatentAV": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "height",
+        "length",
+        "width"
+      ]
+    },
+    "EmptyMiniMaxMusic3LatentAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "seconds"
+      ]
+    },
+    "EmptyMochiLatentVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "length",
+        "width"
+      ]
+    },
+    "EmptyQwenImageLayeredLatentImage": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "layers",
+        "width"
+      ]
+    },
+    "EmptySD3LatentImage": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "width"
+      ]
+    },
+    "EmptyTrellis2LatentStructure": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size"
+      ]
+    },
+    "EmptyYuE2LatentAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "seconds"
+      ]
+    },
+    "EndLoop": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "accumulate",
+        "next_iteration_value",
+        "output_value",
+        "terminations"
+      ]
+    },
+    "EpsilonScaling": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model",
+        "scaling_factor"
+      ]
+    },
+    "ExponentialScheduler": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "sigma_max",
+        "sigma_min",
+        "steps"
+      ]
+    },
+    "ExtendIntermediateSigmas": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "end_at_sigma",
+        "sigmas",
+        "spacing",
+        "start_at_sigma",
+        "steps"
+      ]
+    },
+    "FeatherMask": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bottom",
+        "left",
+        "mask",
+        "right",
+        "top"
+      ]
+    },
+    "FillHoles": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "fill_chains",
+        "max_perimeter",
+        "max_vertices",
+        "mesh",
+        "weld_epsilon_rel"
+      ]
+    },
+    "FlipSigmas": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "sigmas"
+      ]
+    },
+    "Float": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "value"
+      ]
+    },
+    "Flux2Scheduler": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "height",
+        "steps",
+        "width"
+      ]
+    },
+    "FluxDisableGuidance": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "conditioning"
+      ]
+    },
+    "FluxGuidance": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "conditioning",
+        "guidance"
+      ]
+    },
+    "FluxKVCache": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model"
+      ]
+    },
+    "FluxKontextImageScale": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image"
+      ]
+    },
+    "FluxKontextMultiReferenceLatentMethod": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "conditioning",
+        "reference_latents_method"
+      ]
+    },
+    "FrameInterpolate": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "images",
+        "interp_model",
+        "multiplier"
+      ]
+    },
+    "FrameInterpolationModelLoader": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model_name"
+      ]
+    },
+    "FreSca": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "freq_cutoff",
+        "model",
+        "scale_high",
+        "scale_low"
+      ]
+    },
+    "FreeU": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "b1",
+        "b2",
+        "model",
+        "s1",
+        "s2"
+      ]
+    },
+    "FreeU_V2": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "b1",
+        "b2",
+        "model",
+        "s1",
+        "s2"
+      ]
+    },
+    "GITSScheduler": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "coeff",
+        "denoise",
+        "steps"
+      ]
+    },
+    "GLIGENLoader": {
+      "optional": [],
+      "required": [
+        "gligen_name"
+      ],
+      "schemaInputs": []
+    },
+    "GLIGENTextBoxApply": {
+      "optional": [],
+      "required": [
+        "clip",
+        "conditioning_to",
+        "gligen_textbox_model",
+        "height",
+        "text",
+        "width",
+        "x",
+        "y"
+      ],
+      "schemaInputs": []
+    },
+    "GLSLShader": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bools",
+        "curves",
+        "floats",
+        "fragment_shader",
+        "images",
+        "ints",
+        "size_mode"
+      ]
+    },
+    "GenerateTracks": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bezier",
+        "end_x",
+        "end_y",
+        "height",
+        "interpolation",
+        "mid_x",
+        "mid_y",
+        "num_frames",
+        "num_tracks",
+        "start_x",
+        "start_y",
+        "track_mask",
+        "track_spread",
+        "width"
+      ]
+    },
+    "GetICLoRAParameters": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "iclora_model"
+      ]
+    },
+    "GetImageSize": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image"
+      ]
+    },
+    "GetItemFromList": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "index",
+        "list"
+      ]
+    },
+    "GetMeshInfo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "mesh"
+      ]
+    },
+    "GetSplatCount": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "splat"
+      ]
+    },
+    "GetVideoComponents": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "video"
+      ]
+    },
+    "GrowMask": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "expand",
+        "mask",
+        "tapered_corners"
+      ]
+    },
+    "HiDreamO1ReferenceImages": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "images"
+      ]
+    },
+    "Hunyuan3Dv2Conditioning": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip_vision_output"
+      ]
+    },
+    "Hunyuan3Dv2ConditioningMultiView": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "back",
+        "front",
+        "left",
+        "right"
+      ]
+    },
+    "HunyuanImageToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "guidance_type",
+        "height",
+        "length",
+        "positive",
+        "start_image",
+        "vae",
+        "width"
+      ]
+    },
+    "HunyuanRefinerLatent": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "latent",
+        "negative",
+        "noise_augmentation",
+        "positive"
+      ]
+    },
+    "HunyuanVideo15ImageToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "clip_vision_output",
+        "height",
+        "length",
+        "negative",
+        "positive",
+        "start_image",
+        "vae",
+        "width"
+      ]
+    },
+    "HunyuanVideo15LatentUpscaleWithModel": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "crop",
+        "height",
+        "model",
+        "samples",
+        "upscale_method",
+        "width"
+      ]
+    },
+    "HunyuanVideo15SuperResolution": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip_vision_output",
+        "latent",
+        "negative",
+        "noise_augmentation",
+        "positive",
+        "start_image",
+        "vae"
+      ]
+    },
+    "HyperTile": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "max_depth",
+        "model",
+        "scale_depth",
+        "swap_size",
+        "tile_size"
+      ]
+    },
+    "HypernetworkLoader": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "hypernetwork_name",
+        "model",
+        "strength"
+      ]
+    },
+    "Ideogram4Scheduler": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "height",
+        "mu",
+        "std",
+        "steps",
+        "width"
+      ]
+    },
+    "ImageAddNoise": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image",
+        "seed",
+        "strength"
+      ]
+    },
+    "ImageBatch": {
+      "optional": [],
+      "required": [
+        "image1",
+        "image2"
+      ],
+      "schemaInputs": []
+    },
+    "ImageColorSpace": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "destination",
+        "image",
+        "source"
+      ]
+    },
+    "ImageColorToMask": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "color",
+        "image"
+      ]
+    },
+    "ImageCompare": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "compare_view",
+        "image_a",
+        "image_b"
+      ]
+    },
+    "ImageCompositeMasked": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "destination",
+        "mask",
+        "resize_source",
+        "source",
+        "x",
+        "y"
+      ]
+    },
+    "ImageCompositor": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "compositor",
+        "layers"
+      ]
+    },
+    "ImageCrop": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "height",
+        "image",
+        "width",
+        "x",
+        "y"
+      ]
+    },
+    "ImageCropToMask": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "background",
+        "grow_mask",
+        "height",
+        "images",
+        "masks",
+        "pad_factor",
+        "width"
+      ]
+    },
+    "ImageCropV2": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "crop_region",
+        "image"
+      ]
+    },
+    "ImageFlip": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "flip_method",
+        "image"
+      ]
+    },
+    "ImageFromBatch": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_index",
+        "image",
+        "length"
+      ]
+    },
+    "ImageHistogram": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image"
+      ]
+    },
+    "ImageInvert": {
+      "optional": [],
+      "required": [
+        "image"
+      ],
+      "schemaInputs": []
+    },
+    "ImageMergeTileList": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "final_height",
+        "final_width",
+        "image_list",
+        "overlap"
+      ]
+    },
+    "ImageOnlyCheckpointLoader": {
+      "optional": [],
+      "required": [
+        "ckpt_name"
+      ],
+      "schemaInputs": []
+    },
+    "ImageOnlyCheckpointSave": {
+      "optional": [],
+      "required": [
+        "clip_vision",
+        "filename_prefix",
+        "model",
+        "vae"
+      ],
+      "schemaInputs": []
+    },
+    "ImagePadForOutpaint": {
+      "optional": [],
+      "required": [
+        "bottom",
+        "feathering",
+        "image",
+        "left",
+        "right",
+        "top"
+      ],
+      "schemaInputs": []
+    },
+    "ImageRGBToYUV": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image"
+      ]
+    },
+    "ImageRebatch": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "images"
+      ]
+    },
+    "ImageRotate": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image",
+        "rotation"
+      ]
+    },
+    "ImageScale": {
+      "optional": [],
+      "required": [
+        "crop",
+        "height",
+        "image",
+        "upscale_method",
+        "width"
+      ],
+      "schemaInputs": []
+    },
+    "ImageScaleBy": {
+      "optional": [],
+      "required": [
+        "image",
+        "scale_by",
+        "upscale_method"
+      ],
+      "schemaInputs": []
+    },
+    "ImageScaleToMaxDimension": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image",
+        "largest_size",
+        "upscale_method"
+      ]
+    },
+    "ImageScaleToTotalPixels": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image",
+        "megapixels",
+        "resolution_steps",
+        "upscale_method"
+      ]
+    },
+    "ImageStitch": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "direction",
+        "image1",
+        "image2",
+        "match_image_size",
+        "spacing_color",
+        "spacing_width"
+      ]
+    },
+    "ImageToMask": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "channel",
+        "image"
+      ]
+    },
+    "ImageUpscaleWithModel": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image",
+        "upscale_model"
+      ]
+    },
+    "ImageYUVToRGB": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "U",
+        "V",
+        "Y"
+      ]
+    },
+    "InpaintModelConditioning": {
+      "optional": [],
+      "required": [
+        "mask",
+        "negative",
+        "noise_mask",
+        "pixels",
+        "positive",
+        "vae"
+      ],
+      "schemaInputs": []
+    },
+    "InstructPixToPixConditioning": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "negative",
+        "pixels",
+        "positive",
+        "vae"
+      ]
+    },
+    "Int": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "value"
+      ]
+    },
+    "InvertBooleanNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "boolean"
+      ]
+    },
+    "InvertMask": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "mask"
+      ]
+    },
+    "JoinAudioChannels": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio_left",
+        "audio_right"
+      ]
+    },
+    "JoinImageWithAlpha": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "alpha",
+        "image"
+      ]
+    },
+    "JsonExtractString": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "json_string",
+        "key"
+      ]
+    },
+    "KSampler": {
+      "optional": [],
+      "required": [
+        "cfg",
+        "denoise",
+        "latent_image",
+        "model",
+        "negative",
+        "positive",
+        "sampler_name",
+        "scheduler",
+        "seed",
+        "steps"
+      ],
+      "schemaInputs": []
+    },
+    "KSamplerAdvanced": {
+      "optional": [],
+      "required": [
+        "add_noise",
+        "cfg",
+        "end_at_step",
+        "latent_image",
+        "model",
+        "negative",
+        "noise_seed",
+        "positive",
+        "return_with_leftover_noise",
+        "sampler_name",
+        "scheduler",
+        "start_at_step",
+        "steps"
+      ],
+      "schemaInputs": []
+    },
+    "KSamplerSelect": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "sampler_name"
+      ]
+    },
+    "Kandinsky5ImageToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "length",
+        "negative",
+        "positive",
+        "start_image",
+        "vae",
+        "width"
+      ]
+    },
+    "KarrasScheduler": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "rho",
+        "sigma_max",
+        "sigma_min",
+        "steps"
+      ]
+    },
+    "LTXAVTextEncoderLoader": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "ckpt_name",
+        "device",
+        "text_encoder"
+      ]
+    },
+    "LTXVAddGeneratedKeyframes": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "frame_indices",
+        "interval_frames",
+        "keyframes",
+        "latent",
+        "negative",
+        "positive",
+        "vae"
+      ]
+    },
+    "LTXVAddGuide": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "attention_mask",
+        "frame_idx",
+        "iclora_parameters",
+        "image",
+        "latent",
+        "negative",
+        "positive",
+        "strength",
+        "vae"
+      ]
+    },
+    "LTXVAddLatentGuide": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "attention_mask",
+        "guiding_latent",
+        "latent",
+        "latent_idx",
+        "negative",
+        "positive",
+        "strength",
+        "vae"
+      ]
+    },
+    "LTXVAudioVAEDecode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "samples"
+      ]
+    },
+    "LTXVAudioVAEEncode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio"
+      ]
+    },
+    "LTXVAudioVAELoader": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "ckpt_name"
+      ]
+    },
+    "LTXVConcatAVLatent": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio_latent",
+        "video_latent"
+      ]
+    },
+    "LTXVConditioning": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "frame_rate",
+        "negative",
+        "positive"
+      ]
+    },
+    "LTXVCropGuides": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "latent",
+        "negative",
+        "positive"
+      ]
+    },
+    "LTXVDualCFGGuider": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio_cfg",
+        "model",
+        "negative",
+        "positive",
+        "video_cfg"
+      ]
+    },
+    "LTXVDurationPredictor": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "duration_head",
+        "frame_rate",
+        "max_seconds",
+        "min_seconds",
+        "model",
+        "positive"
+      ]
+    },
+    "LTXVEmptyLatentAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "frames_number"
+      ]
+    },
+    "LTXVFreezeLatent": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "latent"
+      ]
+    },
+    "LTXVGeneratedKeyframesToGuides": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "keyframes",
+        "latent",
+        "negative",
+        "override_frame_indices",
+        "positive",
+        "strength",
+        "vae"
+      ]
+    },
+    "LTXVImgToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "image",
+        "length",
+        "negative",
+        "positive",
+        "strength",
+        "vae",
+        "width"
+      ]
+    },
+    "LTXVImgToVideoInplace": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bypass",
+        "image",
+        "latent",
+        "strength",
+        "vae"
+      ]
+    },
+    "LTXVLatentUpsampler": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "samples",
+        "upscale_model",
+        "vae"
+      ]
+    },
+    "LTXVModalityGuidance": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "end_percent",
+        "modality_scale",
+        "model",
+        "start_percent"
+      ]
+    },
+    "LTXVPreprocess": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image"
+      ]
+    },
+    "LTXVReferenceAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "end_percent",
+        "identity_guidance_scale",
+        "model",
+        "negative",
+        "positive",
+        "reference_audio",
+        "start_percent"
+      ]
+    },
+    "LTXVScheduler": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "base_shift",
+        "latent",
+        "max_shift",
+        "steps"
+      ]
+    },
+    "LTXVSeparateAVLatent": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "av_latent"
+      ]
+    },
+    "LTXVSeparateGeneratedKeyframes": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "keyframes_to_batch",
+        "latent",
+        "negative",
+        "positive"
+      ]
+    },
+    "LTXVSpatioTemporalGuidance": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "blocks",
+        "end_percent",
+        "model",
+        "scale",
+        "start_percent"
+      ]
+    },
+    "LaplaceScheduler": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "beta",
+        "mu",
+        "sigma_max",
+        "sigma_min",
+        "steps"
+      ]
+    },
+    "LatentAdd": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "samples1",
+        "samples2"
+      ]
+    },
+    "LatentApplyOperation": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "operation",
+        "samples"
+      ]
+    },
+    "LatentApplyOperationCFG": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model",
+        "operation"
+      ]
+    },
+    "LatentBatch": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "samples1",
+        "samples2"
+      ]
+    },
+    "LatentBatchSeedBehavior": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "samples",
+        "seed_behavior"
+      ]
+    },
+    "LatentBlend": {
+      "optional": [],
+      "required": [
+        "blend_factor",
+        "samples1",
+        "samples2"
+      ],
+      "schemaInputs": []
+    },
+    "LatentComposite": {
+      "optional": [],
+      "required": [
+        "feather",
+        "samples_from",
+        "samples_to",
+        "x",
+        "y"
+      ],
+      "schemaInputs": []
+    },
+    "LatentCompositeMasked": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "destination",
+        "mask",
+        "resize_source",
+        "source",
+        "x",
+        "y"
+      ]
+    },
+    "LatentConcat": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "dim",
+        "samples1",
+        "samples2"
+      ]
+    },
+    "LatentCrop": {
+      "optional": [],
+      "required": [
+        "height",
+        "samples",
+        "width",
+        "x",
+        "y"
+      ],
+      "schemaInputs": []
+    },
+    "LatentCut": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "amount",
+        "dim",
+        "index",
+        "samples"
+      ]
+    },
+    "LatentCutToBatch": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "dim",
+        "samples",
+        "slice_size"
+      ]
+    },
+    "LatentFlip": {
+      "optional": [],
+      "required": [
+        "flip_method",
+        "samples"
+      ],
+      "schemaInputs": []
+    },
+    "LatentFromBatch": {
+      "optional": [],
+      "required": [
+        "batch_index",
+        "length",
+        "samples"
+      ],
+      "schemaInputs": []
+    },
+    "LatentInterpolate": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "ratio",
+        "samples1",
+        "samples2"
+      ]
+    },
+    "LatentMultiply": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "multiplier",
+        "samples"
+      ]
+    },
+    "LatentOperationSharpen": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "alpha",
+        "sharpen_radius",
+        "sigma"
+      ]
+    },
+    "LatentOperationTonemapReinhard": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "multiplier"
+      ]
+    },
+    "LatentRebatch": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "latents"
+      ]
+    },
+    "LatentRotate": {
+      "optional": [],
+      "required": [
+        "rotation",
+        "samples"
+      ],
+      "schemaInputs": []
+    },
+    "LatentSubtract": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "samples1",
+        "samples2"
+      ]
+    },
+    "LatentUpscale": {
+      "optional": [],
+      "required": [
+        "crop",
+        "height",
+        "samples",
+        "upscale_method",
+        "width"
+      ],
+      "schemaInputs": []
+    },
+    "LatentUpscaleBy": {
+      "optional": [],
+      "required": [
+        "samples",
+        "scale_by",
+        "upscale_method"
+      ],
+      "schemaInputs": []
+    },
+    "LatentUpscaleModelLoader": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model_name"
+      ]
+    },
+    "LayersFromBoundingBoxes": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bboxes",
+        "canvas_height",
+        "canvas_width",
+        "crop_to_content",
+        "image",
+        "layers",
+        "mask"
+      ]
+    },
+    "LazyCacheNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "end_percent",
+        "model",
+        "reuse_threshold",
+        "start_percent",
+        "verbose"
+      ]
+    },
+    "Load3D": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "height",
+        "image",
+        "model_file",
+        "width"
+      ]
+    },
+    "Load3DAdvanced": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "height",
+        "model_file",
+        "viewport_state",
+        "width"
+      ]
+    },
+    "LoadAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio"
+      ]
+    },
+    "LoadBackgroundRemovalModel": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bg_removal_name"
+      ]
+    },
+    "LoadDA3Model": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model_name",
+        "weight_dtype"
+      ]
+    },
+    "LoadImage": {
+      "optional": [],
+      "required": [
+        "image"
+      ],
+      "schemaInputs": []
+    },
+    "LoadImageDataSetFromFolderNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "folder"
+      ]
+    },
+    "LoadImageMask": {
+      "optional": [],
+      "required": [
+        "channel",
+        "image"
+      ],
+      "schemaInputs": []
+    },
+    "LoadImageOutput": {
+      "optional": [],
+      "required": [
+        "image"
+      ],
+      "schemaInputs": []
+    },
+    "LoadImageTextDataSetFromFolderNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "folder"
+      ]
+    },
+    "LoadLatent": {
+      "optional": [],
+      "required": [
+        "latent"
+      ],
+      "schemaInputs": []
+    },
+    "LoadMediaPipeFaceLandmarker": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model_name"
+      ]
+    },
+    "LoadMoGeModel": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model_name"
+      ]
+    },
+    "LoadTrainingDataset": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "folder_name"
+      ]
+    },
+    "LoadVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "file"
+      ]
+    },
+    "LoadVideoDataSetFromFolderNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "folder"
+      ]
+    },
+    "LoadVideoTextDataSetFromFolderNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "folder"
+      ]
+    },
+    "LoopIteration": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "current_iteration_value",
+        "is_first",
+        "is_last",
+        "iteration_index",
+        "list_item",
+        "reuse_cache"
+      ]
+    },
+    "LoopProgress": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "position",
+        "start_id",
+        "total"
+      ]
+    },
+    "LoopResult": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "close_id"
+      ]
+    },
+    "LoraLoader": {
+      "optional": [],
+      "required": [
+        "clip",
+        "lora_name",
+        "model",
+        "strength_clip",
+        "strength_model"
+      ],
+      "schemaInputs": []
+    },
+    "LoraLoaderBypass": {
+      "optional": [],
+      "required": [
+        "clip",
+        "lora_name",
+        "model",
+        "strength_clip",
+        "strength_model"
+      ],
+      "schemaInputs": []
+    },
+    "LoraLoaderBypassModelOnly": {
+      "optional": [],
+      "required": [
+        "lora_name",
+        "model",
+        "strength_model"
+      ],
+      "schemaInputs": []
+    },
+    "LoraLoaderModelOnly": {
+      "optional": [],
+      "required": [
+        "lora_name",
+        "model",
+        "strength_model"
+      ],
+      "schemaInputs": []
+    },
+    "LoraModelLoader": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bypass",
+        "lora",
+        "model",
+        "strength_model"
+      ]
+    },
+    "LoraSave": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bias_diff",
+        "filename_prefix",
+        "lora_type",
+        "model_diff",
+        "rank",
+        "text_encoder_diff"
+      ]
+    },
+    "LossGraphNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "filename_prefix",
+        "loss"
+      ]
+    },
+    "Mahiro": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model"
+      ]
+    },
+    "MakeTrainingDataset": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "images",
+        "texts",
+        "vae"
+      ]
+    },
+    "ManualSigmas": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "sigmas"
+      ]
+    },
+    "MarigoldV2PostProcess": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image",
+        "prediction"
+      ]
+    },
+    "MaskComposite": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "destination",
+        "operation",
+        "source",
+        "x",
+        "y"
+      ]
+    },
+    "MaskPreview": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "mask"
+      ]
+    },
+    "MaskToImage": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "mask"
+      ]
+    },
+    "MathExpressionNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "expression",
+        "values"
+      ]
+    },
+    "MediaPipeFaceLandmarker": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "detector_variant",
+        "face_detection_model",
+        "image",
+        "min_confidence",
+        "missing_frame_fallback",
+        "num_faces"
+      ]
+    },
+    "MediaPipeFaceMask": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "face_landmarks",
+        "regions"
+      ]
+    },
+    "MediaPipeFaceMeshVisualize": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "color",
+        "connections",
+        "face_landmarks",
+        "image",
+        "point_size",
+        "thickness"
+      ]
+    },
+    "MergeMeshes": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "meshes"
+      ]
+    },
+    "MergeSplat": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "splats"
+      ]
+    },
+    "MeshSmoothNormals": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "crease_angle",
+        "mesh"
+      ]
+    },
+    "MeshTextureToImage": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "mesh"
+      ]
+    },
+    "MeshToFile3D": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "mesh"
+      ]
+    },
+    "MiniMaxH3AddGuide": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio",
+        "audio_vae",
+        "frame_idx",
+        "image",
+        "latent",
+        "positive",
+        "vae"
+      ]
+    },
+    "MiniMaxH3FunControlNetApply": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "control_video",
+        "end_percent",
+        "mask",
+        "model",
+        "model_patch",
+        "source_video",
+        "start_percent",
+        "strength",
+        "vae"
+      ]
+    },
+    "MiniMaxH3ImageToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "first_frame",
+        "height",
+        "last_frame",
+        "length",
+        "prompt",
+        "vae",
+        "width"
+      ]
+    },
+    "MiniMaxH3ReferenceToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio_vae",
+        "clip",
+        "height",
+        "length",
+        "prompt",
+        "ref_audios",
+        "ref_image_size",
+        "ref_images",
+        "ref_video_audios",
+        "ref_videos",
+        "vae",
+        "width"
+      ]
+    },
+    "MiniMaxH3SigmaShift": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model",
+        "shift_audio",
+        "shift_video"
+      ]
+    },
+    "MiniMaxMusic3TextEncode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "caption",
+        "cfg_scale",
+        "clip",
+        "lyrics",
+        "max_duration",
+        "seed",
+        "top_k"
+      ]
+    },
+    "MoGeGeometryToFOV": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "axis",
+        "moge_geometry",
+        "unit"
+      ]
+    },
+    "MoGeInference": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "apply_mask",
+        "batch_size",
+        "force_projection",
+        "fov_x_degrees",
+        "image",
+        "moge_model",
+        "refine_steps",
+        "resolution_level"
+      ]
+    },
+    "MoGePanoramaInference": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "image",
+        "merge_resolution",
+        "moge_model",
+        "refine_steps",
+        "resolution_level",
+        "split_resolution"
+      ]
+    },
+    "MoGePointMapToMesh": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_index",
+        "decimation",
+        "discontinuity_threshold",
+        "moge_geometry",
+        "texture"
+      ]
+    },
+    "MoGeRender": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "moge_geometry",
+        "output"
+      ]
+    },
+    "ModelAdd": {
+      "optional": [],
+      "required": [
+        "model1",
+        "model2"
+      ],
+      "schemaInputs": []
+    },
+    "ModelAttentionBackend": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "attention",
+        "model"
+      ]
+    },
+    "ModelComputeDtype": {
+      "optional": [],
+      "required": [
+        "dtype",
+        "model"
+      ],
+      "schemaInputs": []
+    },
+    "ModelMergeBlocks": {
+      "optional": [],
+      "required": [
+        "input",
+        "middle",
+        "model1",
+        "model2",
+        "out"
+      ],
+      "schemaInputs": []
+    },
+    "ModelMergeSimple": {
+      "optional": [],
+      "required": [
+        "model1",
+        "model2",
+        "ratio"
+      ],
+      "schemaInputs": []
+    },
+    "ModelNoiseScale": {
+      "optional": [],
+      "required": [
+        "model",
+        "noise_scale"
+      ],
+      "schemaInputs": []
+    },
+    "ModelPatchLoader": {
+      "optional": [],
+      "required": [
+        "name"
+      ],
+      "schemaInputs": []
+    },
+    "ModelSamplingAuraFlow": {
+      "optional": [
+        "sampling"
+      ],
+      "required": [
+        "model",
+        "shift"
+      ],
+      "schemaInputs": []
+    },
+    "ModelSamplingContinuousEDM": {
+      "optional": [],
+      "required": [
+        "model",
+        "sampling",
+        "sigma_max",
+        "sigma_min"
+      ],
+      "schemaInputs": []
+    },
+    "ModelSamplingContinuousV": {
+      "optional": [],
+      "required": [
+        "model",
+        "sampling",
+        "sigma_max",
+        "sigma_min"
+      ],
+      "schemaInputs": []
+    },
+    "ModelSamplingDiscrete": {
+      "optional": [],
+      "required": [
+        "model",
+        "sampling",
+        "zsnr"
+      ],
+      "schemaInputs": []
+    },
+    "ModelSamplingFlux": {
+      "optional": [],
+      "required": [
+        "base_shift",
+        "height",
+        "max_shift",
+        "model",
+        "width"
+      ],
+      "schemaInputs": []
+    },
+    "ModelSamplingLTXV": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "base_shift",
+        "latent",
+        "max_shift",
+        "model"
+      ]
+    },
+    "ModelSamplingSD3": {
+      "optional": [],
+      "required": [
+        "model",
+        "shift"
+      ],
+      "schemaInputs": []
+    },
+    "ModelSamplingStableCascade": {
+      "optional": [],
+      "required": [
+        "model",
+        "shift"
+      ],
+      "schemaInputs": []
+    },
+    "ModelSave": {
+      "optional": [],
+      "required": [
+        "filename_prefix",
+        "model"
+      ],
+      "schemaInputs": []
+    },
+    "ModelSubtract": {
+      "optional": [],
+      "required": [
+        "model1",
+        "model2",
+        "multiplier"
+      ],
+      "schemaInputs": []
+    },
+    "Morphology": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image",
+        "kernel_size",
+        "operation"
+      ]
+    },
+    "MultiGPUCFGSplitNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "max_gpus",
+        "model"
+      ]
+    },
+    "MultiGPUOptionsNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "device_index",
+        "gpu_options",
+        "relative_speed"
+      ]
+    },
+    "NAGuidance": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model",
+        "nag_alpha",
+        "nag_scale",
+        "nag_tau"
+      ]
+    },
+    "NormalizeVideoLatentStart": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "latent",
+        "reference_frame_count",
+        "start_frame_count"
+      ]
+    },
+    "NotNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "value"
+      ]
+    },
+    "NumberConvertNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "value"
+      ]
+    },
+    "OpticalFlowLoader": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model_name"
+      ]
+    },
+    "OptimalStepsScheduler": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "denoise",
+        "model_type",
+        "steps"
+      ]
+    },
+    "OrNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "values"
+      ]
+    },
+    "PaintMesh": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "mesh",
+        "voxel_colors"
+      ]
+    },
+    "PainterNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bg_color",
+        "height",
+        "image",
+        "mask",
+        "width"
+      ]
+    },
+    "PairConditioningCombine": {
+      "optional": [],
+      "required": [
+        "negative_A",
+        "negative_B",
+        "positive_A",
+        "positive_B"
+      ],
+      "schemaInputs": []
+    },
+    "PairConditioningSetDefaultAndCombine": {
+      "optional": [
+        "hooks"
+      ],
+      "required": [
+        "negative",
+        "negative_DEFAULT",
+        "positive",
+        "positive_DEFAULT"
+      ],
+      "schemaInputs": []
+    },
+    "PairConditioningSetProperties": {
+      "optional": [
+        "hooks",
+        "mask",
+        "timesteps"
+      ],
+      "required": [
+        "negative_NEW",
+        "positive_NEW",
+        "set_cond_area",
+        "strength"
+      ],
+      "schemaInputs": []
+    },
+    "PairConditioningSetPropertiesAndCombine": {
+      "optional": [
+        "hooks",
+        "mask",
+        "timesteps"
+      ],
+      "required": [
+        "negative",
+        "negative_NEW",
+        "positive",
+        "positive_NEW",
+        "set_cond_area",
+        "strength"
+      ],
+      "schemaInputs": []
+    },
+    "PatchModelAddDownscale": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "block_number",
+        "downscale_after_skip",
+        "downscale_factor",
+        "downscale_method",
+        "end_percent",
+        "model",
+        "start_percent",
+        "upscale_method"
+      ]
+    },
+    "PerpNeg": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "empty_conditioning",
+        "model",
+        "neg_scale"
+      ]
+    },
+    "PerpNegGuider": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "cfg",
+        "empty_conditioning",
+        "model",
+        "neg_scale",
+        "negative",
+        "positive"
+      ]
+    },
+    "PerturbedAttentionGuidance": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model",
+        "scale"
+      ]
+    },
+    "PhotoMakerEncode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "image",
+        "photomaker",
+        "text"
+      ]
+    },
+    "PhotoMakerLoader": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "photomaker_model_name"
+      ]
+    },
+    "PiDConditioning": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "degrade_sigma",
+        "latent",
+        "latent_format",
+        "positive"
+      ]
+    },
+    "Pixal3DConditioning": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "camera_angle_x",
+        "clip_vision_model",
+        "image"
+      ]
+    },
+    "PolyexponentialScheduler": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "rho",
+        "sigma_max",
+        "sigma_min",
+        "steps"
+      ]
+    },
+    "PorterDuffImageComposite": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "destination",
+        "destination_alpha",
+        "mode",
+        "source",
+        "source_alpha"
+      ]
+    },
+    "Preview3D": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bg_image",
+        "camera_info"
+      ]
+    },
+    "Preview3DAdvanced": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "camera_info",
+        "height",
+        "model_3d",
+        "model_3d_info",
+        "viewport_state",
+        "width"
+      ]
+    },
+    "PreviewAny": {
+      "optional": [],
+      "required": [
+        "source"
+      ],
+      "schemaInputs": []
+    },
+    "PreviewAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio"
+      ]
+    },
+    "PreviewGaussianSplat": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "camera_info",
+        "height",
+        "model_3d",
+        "model_3d_info",
+        "viewport_state",
+        "width"
+      ]
+    },
+    "PreviewImage": {
+      "optional": [],
+      "required": [
+        "images"
+      ],
+      "schemaInputs": []
+    },
+    "PreviewPointCloud": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "camera_info",
+        "height",
+        "model_3d",
+        "model_3d_info",
+        "viewport_state",
+        "width"
+      ]
+    },
+    "QuadrupleCLIPLoader": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip_name1",
+        "clip_name2",
+        "clip_name3",
+        "clip_name4"
+      ]
+    },
+    "Quantize": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "colors",
+        "dither",
+        "image"
+      ]
+    },
+    "QwenImage21Cache": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "device",
+        "dtype",
+        "model"
+      ]
+    },
+    "QwenImageDiffsynthControlnet": {
+      "optional": [
+        "end_percent",
+        "mask",
+        "start_percent"
+      ],
+      "required": [
+        "image",
+        "model",
+        "model_patch",
+        "strength",
+        "vae"
+      ],
+      "schemaInputs": []
+    },
+    "RTDETR_detect": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "class_name",
+        "image",
+        "max_detections",
+        "model",
+        "threshold"
+      ]
+    },
+    "RandomNoise": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "noise_seed"
+      ]
+    },
+    "RecordAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio"
+      ]
+    },
+    "ReferenceAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "conditioning",
+        "latent"
+      ]
+    },
+    "ReferenceLatent": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "conditioning",
+        "latent"
+      ]
+    },
+    "RegexExtract": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "case_insensitive",
+        "dotall",
+        "group_index",
+        "mode",
+        "multiline",
+        "regex_pattern",
+        "string"
+      ]
+    },
+    "RegexMatch": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "case_insensitive",
+        "dotall",
+        "multiline",
+        "regex_pattern",
+        "string"
+      ]
+    },
+    "RegexReplace": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "case_insensitive",
+        "count",
+        "dotall",
+        "multiline",
+        "regex_pattern",
+        "replace",
+        "string"
+      ]
+    },
+    "RemeshMesh": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "band",
+        "drop_small_components",
+        "fix_poles",
+        "mesh",
+        "precluster_max_verts",
+        "project_back",
+        "resolution",
+        "sign_mode",
+        "smooth_iters"
+      ]
+    },
+    "RemoveBackground": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bg_removal_model",
+        "image"
+      ]
+    },
+    "RenderMesh": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "background",
+        "camera_info",
+        "height",
+        "mesh",
+        "mode",
+        "model_3d_info",
+        "width"
+      ]
+    },
+    "RenderSplat": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "background",
+        "bg_image",
+        "camera_info",
+        "frames",
+        "headlight_shading",
+        "height",
+        "opacity_threshold",
+        "render_style",
+        "sharpen",
+        "splat",
+        "splat_scale",
+        "width"
+      ]
+    },
+    "RenderUVAtlas": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "mesh",
+        "resolution"
+      ]
+    },
+    "RenormCFG": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "cfg_trunc",
+        "model",
+        "renorm_cfg"
+      ]
+    },
+    "RepeatImageBatch": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "amount",
+        "image"
+      ]
+    },
+    "RepeatLatentBatch": {
+      "optional": [],
+      "required": [
+        "amount",
+        "samples"
+      ],
+      "schemaInputs": []
+    },
+    "ReplaceVideoLatentFrames": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "destination",
+        "index",
+        "source"
+      ]
+    },
+    "RescaleCFG": {
+      "optional": [],
+      "required": [
+        "model",
+        "multiplier"
+      ],
+      "schemaInputs": []
+    },
+    "ResizeAndPadImage": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image",
+        "interpolation",
+        "padding_color",
+        "target_height",
+        "target_width"
+      ]
+    },
+    "ResizeImageMaskNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "input",
+        "resize_type",
+        "scale_method"
+      ]
+    },
+    "ResolutionBucket": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "conditioning",
+        "latents"
+      ]
+    },
+    "ResolutionSelector": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "aspect_ratio",
+        "megapixels",
+        "preview"
+      ]
+    },
+    "RotateMesh": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "mesh",
+        "mode"
+      ]
+    },
+    "SAM3DBody_FaceExpression": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "blendshape_smooth_window",
+        "brow_strength",
+        "eye_strength",
+        "image",
+        "input_threshold",
+        "mhr_pose_data",
+        "mouth_strength",
+        "sam3d_body_model",
+        "strength"
+      ]
+    },
+    "SAM3DBody_Loader": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model_file"
+      ]
+    },
+    "SAM3DBody_Predict": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "bboxes",
+        "fov",
+        "image",
+        "run_hand_refinement",
+        "sam3d_body_model",
+        "track_data"
+      ]
+    },
+    "SAM3DBody_Render": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "background",
+        "camera_info",
+        "height",
+        "pose_data",
+        "render_style",
+        "width"
+      ]
+    },
+    "SAM3DBody_Smooth": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "method",
+        "mhr_pose_data",
+        "rotation_threshold_degrees",
+        "strength",
+        "window"
+      ]
+    },
+    "SAM3_Detect": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bboxes",
+        "conditioning",
+        "image",
+        "individual_masks",
+        "model",
+        "negative_coords",
+        "positive_coords",
+        "refine_iterations",
+        "threshold"
+      ]
+    },
+    "SAM3_TrackPreview": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "fps",
+        "images",
+        "opacity",
+        "track_data"
+      ]
+    },
+    "SAM3_TrackToMask": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "object_indices",
+        "track_data"
+      ]
+    },
+    "SAM3_VideoTrack": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "conditioning",
+        "detect_interval",
+        "detection_threshold",
+        "images",
+        "initial_mask",
+        "max_objects",
+        "model"
+      ]
+    },
+    "SCAIL2ColoredMask": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "driving_track_data",
+        "object_indices",
+        "ref_track_data",
+        "replacement_mode",
+        "sort_by"
+      ]
+    },
+    "SDPoseDrawKeypoints": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "draw_body",
+        "draw_face",
+        "draw_feet",
+        "draw_hands",
+        "draw_head",
+        "face_point_size",
+        "keypoints",
+        "score_threshold",
+        "stick_width"
+      ]
+    },
+    "SDPoseFaceBBoxes": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "force_square",
+        "keypoints",
+        "scale"
+      ]
+    },
+    "SDPoseKeypointExtractor": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "bboxes",
+        "image",
+        "model",
+        "vae"
+      ]
+    },
+    "SDTurboScheduler": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "denoise",
+        "model",
+        "steps"
+      ]
+    },
+    "SD_4XUpscale_Conditioning": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "images",
+        "negative",
+        "noise_augmentation",
+        "positive",
+        "scale_ratio"
+      ]
+    },
+    "SUPIRApply": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image",
+        "model",
+        "model_patch",
+        "restore_cfg",
+        "restore_cfg_s_tmin",
+        "strength_end",
+        "strength_start",
+        "vae"
+      ]
+    },
+    "SV3D_Conditioning": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip_vision",
+        "elevation",
+        "height",
+        "init_image",
+        "vae",
+        "video_frames",
+        "width"
+      ]
+    },
+    "SVD_img2vid_Conditioning": {
+      "optional": [],
+      "required": [
+        "augmentation_level",
+        "clip_vision",
+        "fps",
+        "height",
+        "init_image",
+        "motion_bucket_id",
+        "vae",
+        "video_frames",
+        "width"
+      ],
+      "schemaInputs": []
+    },
+    "SamplerARVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "num_frame_per_block"
+      ]
+    },
+    "SamplerCustom": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "add_noise",
+        "cfg",
+        "latent_image",
+        "model",
+        "negative",
+        "noise_seed",
+        "positive",
+        "sampler",
+        "sigmas"
+      ]
+    },
+    "SamplerCustomAdvanced": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "guider",
+        "latent_image",
+        "noise",
+        "sampler",
+        "sigmas"
+      ]
+    },
+    "SamplerDPMAdaptative": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "accept_safety",
+        "atol",
+        "dcoeff",
+        "eta",
+        "h_init",
+        "icoeff",
+        "order",
+        "pcoeff",
+        "rtol",
+        "s_noise"
+      ]
+    },
+    "SamplerDPMPP_2M_SDE": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "eta",
+        "noise_device",
+        "s_noise",
+        "solver_type"
+      ]
+    },
+    "SamplerDPMPP_2S_Ancestral": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "eta",
+        "s_noise"
+      ]
+    },
+    "SamplerDPMPP_3M_SDE": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "eta",
+        "noise_device",
+        "s_noise"
+      ]
+    },
+    "SamplerDPMPP_SDE": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "eta",
+        "noise_device",
+        "r",
+        "s_noise"
+      ]
+    },
+    "SamplerER_SDE": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "eta",
+        "max_stage",
+        "s_noise",
+        "solver_type"
+      ]
+    },
+    "SamplerEulerAncestral": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "eta",
+        "s_noise"
+      ]
+    },
+    "SamplerEulerAncestralCFGPP": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "eta",
+        "s_noise"
+      ]
+    },
+    "SamplerEulerCFGpp": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "version"
+      ]
+    },
+    "SamplerLCM": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "noise_clip_std",
+        "s_noise",
+        "s_noise_end"
+      ]
+    },
+    "SamplerLCMUpscale": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "scale_ratio",
+        "scale_steps",
+        "upscale_method"
+      ]
+    },
+    "SamplerLMS": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "order"
+      ]
+    },
+    "SamplerSASolver": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "corrector_order",
+        "eta",
+        "model",
+        "predictor_order",
+        "s_noise",
+        "sde_end_percent",
+        "sde_start_percent",
+        "simple_order_2",
+        "use_pece"
+      ]
+    },
+    "SamplerSEEDS2": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "eta",
+        "r",
+        "s_noise",
+        "solver_type"
+      ]
+    },
+    "SamplingPercentToSigma": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model",
+        "return_actual_sigma",
+        "sampling_percent"
+      ]
+    },
+    "Save3DAdvanced": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "camera_info",
+        "filename_prefix",
+        "height",
+        "model_3d",
+        "model_3d_info",
+        "viewport_state",
+        "width"
+      ]
+    },
+    "SaveAnimatedPNG": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "compress_level",
+        "filename_prefix",
+        "fps",
+        "images"
+      ]
+    },
+    "SaveAnimatedWEBP": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "filename_prefix",
+        "fps",
+        "images",
+        "lossless",
+        "method",
+        "quality"
+      ]
+    },
+    "SaveAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio",
+        "filename_prefix"
+      ]
+    },
+    "SaveAudioAdvanced": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio",
+        "filename_prefix",
+        "format"
+      ]
+    },
+    "SaveAudioMP3": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio",
+        "filename_prefix",
+        "quality"
+      ]
+    },
+    "SaveAudioOpus": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio",
+        "filename_prefix",
+        "quality"
+      ]
+    },
+    "SaveConditioning": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "conditioning",
+        "filename_prefix"
+      ]
+    },
+    "SaveGLB": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "filename_prefix"
+      ]
+    },
+    "SaveGaussianSplat": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "camera_info",
+        "filename_prefix",
+        "height",
+        "model_3d",
+        "model_3d_info",
+        "viewport_state",
+        "width"
+      ]
+    },
+    "SaveImage": {
+      "optional": [],
+      "required": [
+        "filename_prefix",
+        "images"
+      ],
+      "schemaInputs": []
+    },
+    "SaveImageAdvanced": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "filename_prefix",
+        "format",
+        "images"
+      ]
+    },
+    "SaveImageDataSetToFolderNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "filename_prefix",
+        "folder_name",
+        "images",
+        "mode"
+      ]
+    },
+    "SaveImageTextDataSetToFolderNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "filename_prefix",
+        "folder_name",
+        "images",
+        "mode",
+        "texts"
+      ]
+    },
+    "SaveLatent": {
+      "optional": [],
+      "required": [
+        "filename_prefix",
+        "samples"
+      ],
+      "schemaInputs": []
+    },
+    "SaveLoRA": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "lora",
+        "prefix",
+        "steps"
+      ]
+    },
+    "SavePointCloud": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "camera_info",
+        "filename_prefix",
+        "height",
+        "model_3d",
+        "model_3d_info",
+        "viewport_state",
+        "width"
+      ]
+    },
+    "SaveSVGNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "filename_prefix",
+        "svg"
+      ]
+    },
+    "SaveTextNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "filename_prefix",
+        "format",
+        "text"
+      ]
+    },
+    "SaveTrainingDataset": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "conditioning",
+        "folder_name",
+        "latents",
+        "shard_size"
+      ]
+    },
+    "SaveVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "filename_prefix",
+        "format",
+        "video"
+      ]
+    },
+    "SaveWEBM": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "codec",
+        "crf",
+        "filename_prefix",
+        "fps",
+        "images"
+      ]
+    },
+    "ScaleROPE": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model",
+        "scale_t",
+        "scale_x",
+        "scale_y",
+        "shift_t",
+        "shift_x",
+        "shift_y"
+      ]
+    },
+    "SeedNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "seed"
+      ]
+    },
+    "SeedVR2Conditioning": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model",
+        "vae_conditioning"
+      ]
+    },
+    "SeedVR2PostProcessing": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "color_correction_method",
+        "images",
+        "original_resized_images"
+      ]
+    },
+    "SeedVR2Preprocess": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "resized_images"
+      ]
+    },
+    "SeedVR2TemporalChunk": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "chunking_mode",
+        "latent",
+        "temporal_overlap"
+      ]
+    },
+    "SeedVR2TemporalMerge": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "latents",
+        "temporal_overlap"
+      ]
+    },
+    "SelectCLIPDeviceNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "device"
+      ]
+    },
+    "SelectModelDeviceNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "device",
+        "model"
+      ]
+    },
+    "SelectVAEDeviceNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "device",
+        "vae"
+      ]
+    },
+    "SelfAttentionGuidance": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "blur_sigma",
+        "model",
+        "scale"
+      ]
+    },
+    "SetClipHooks": {
+      "optional": [
+        "hooks"
+      ],
+      "required": [
+        "apply_to_conds",
+        "clip",
+        "schedule_clip"
+      ],
+      "schemaInputs": []
+    },
+    "SetFirstSigma": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "sigma",
+        "sigmas"
+      ]
+    },
+    "SetHookKeyframes": {
+      "optional": [
+        "hook_kf"
+      ],
+      "required": [
+        "hooks"
+      ],
+      "schemaInputs": []
+    },
+    "SetLatentNoiseMask": {
+      "optional": [],
+      "required": [
+        "mask",
+        "samples"
+      ],
+      "schemaInputs": []
+    },
+    "SetModelHooksOnCond": {
+      "optional": [],
+      "required": [
+        "conditioning",
+        "hooks"
+      ],
+      "schemaInputs": []
+    },
+    "SetUnionControlNetType": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "control_net",
+        "type"
+      ]
+    },
+    "Sharpen": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "alpha",
+        "image",
+        "sharpen_radius",
+        "sigma"
+      ]
+    },
+    "SheetSage2AudioToABC": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio",
+        "audio_encoder",
+        "mode"
+      ]
+    },
+    "ShuffleImageTextDatasetNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "images",
+        "seed",
+        "texts"
+      ]
+    },
+    "ShuffleVideoDatasetNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "seed",
+        "videos"
+      ]
+    },
+    "ShuffleVideoTextDatasetNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "seed",
+        "texts",
+        "videos"
+      ]
+    },
+    "SkipLayerGuidanceDiT": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "double_layers",
+        "end_percent",
+        "model",
+        "rescaling_scale",
+        "scale",
+        "single_layers",
+        "start_percent"
+      ]
+    },
+    "SkipLayerGuidanceDiTSimple": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "double_layers",
+        "end_percent",
+        "model",
+        "single_layers",
+        "start_percent"
+      ]
+    },
+    "SkipLayerGuidanceSD3": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "end_percent",
+        "layers",
+        "model",
+        "scale",
+        "start_percent"
+      ]
+    },
+    "SoftSwitchNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "on_false",
+        "on_true",
+        "switch"
+      ]
+    },
+    "SolidMask": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "height",
+        "value",
+        "width"
+      ]
+    },
+    "SplatToFile3D": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "format",
+        "splat"
+      ]
+    },
+    "SplatToMesh": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "color_sharpen",
+        "kernel",
+        "level",
+        "min_component",
+        "min_opacity",
+        "resolution",
+        "smooth",
+        "splat"
+      ]
+    },
+    "SplitAudioChannels": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio"
+      ]
+    },
+    "SplitImageToTileList": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image",
+        "overlap",
+        "tile_height",
+        "tile_width"
+      ]
+    },
+    "SplitImageWithAlpha": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image"
+      ]
+    },
+    "SplitSigmas": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "sigmas",
+        "step"
+      ]
+    },
+    "SplitSigmasDenoise": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "denoise",
+        "sigmas"
+      ]
+    },
+    "StableCascade_EmptyLatentImage": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "compression",
+        "height",
+        "width"
+      ]
+    },
+    "StableCascade_StageB_Conditioning": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "conditioning",
+        "stage_c"
+      ]
+    },
+    "StableCascade_StageC_VAEEncode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "compression",
+        "image",
+        "vae"
+      ]
+    },
+    "StableCascade_SuperResolutionControlnet": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "image",
+        "vae"
+      ]
+    },
+    "StableZero123_Conditioning": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "azimuth",
+        "batch_size",
+        "clip_vision",
+        "elevation",
+        "height",
+        "init_image",
+        "vae",
+        "width"
+      ]
+    },
+    "StableZero123_Conditioning_Batched": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "azimuth",
+        "azimuth_batch_increment",
+        "batch_size",
+        "clip_vision",
+        "elevation",
+        "elevation_batch_increment",
+        "height",
+        "init_image",
+        "vae",
+        "width"
+      ]
+    },
+    "StartLoop": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "cache_iterations",
+        "initial_iteration_value",
+        "mode",
+        "parent_iteration"
+      ]
+    },
+    "String": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "value"
+      ]
+    },
+    "StringCompare": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "case_sensitive",
+        "mode",
+        "string_a",
+        "string_b"
+      ]
+    },
+    "StringConcatenate": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "delimiter",
+        "string_a",
+        "string_b"
+      ]
+    },
+    "StringContains": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "case_sensitive",
+        "string",
+        "substring"
+      ]
+    },
+    "StringFormat": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "f_string",
+        "values"
+      ]
+    },
+    "StringLength": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "string"
+      ]
+    },
+    "StringMultiline": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "value"
+      ]
+    },
+    "StringReplace": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "find",
+        "replace",
+        "string"
+      ]
+    },
+    "StringSubstring": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "end",
+        "start",
+        "string"
+      ]
+    },
+    "StringTrim": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "mode",
+        "string"
+      ]
+    },
+    "StyleModelApply": {
+      "optional": [],
+      "required": [
+        "clip_vision_output",
+        "conditioning",
+        "strength",
+        "strength_type",
+        "style_model"
+      ],
+      "schemaInputs": []
+    },
+    "StyleModelLoader": {
+      "optional": [],
+      "required": [
+        "style_model_name"
+      ],
+      "schemaInputs": []
+    },
+    "SwitchNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "on_false",
+        "on_true",
+        "switch"
+      ]
+    },
+    "T5TokenizerOptions": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "min_length",
+        "min_padding"
+      ]
+    },
+    "TCFG": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model"
+      ]
+    },
+    "TemporalScoreRescaling": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model",
+        "tsr_k",
+        "tsr_sigma"
+      ]
+    },
+    "TextEncodeAceStepAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "lyrics",
+        "lyrics_strength",
+        "tags"
+      ]
+    },
+    "TextEncodeAceStepAudio15": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "bpm",
+        "cfg_scale",
+        "clip",
+        "duration",
+        "generate_audio_codes",
+        "keyscale",
+        "language",
+        "lyrics",
+        "min_p",
+        "seed",
+        "tags",
+        "temperature",
+        "timesignature",
+        "top_k",
+        "top_p"
+      ]
+    },
+    "TextEncodeBooguEdit": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "images",
+        "negative_prompt",
+        "prompt",
+        "vae"
+      ]
+    },
+    "TextEncodeHunyuanVideo_ImageToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "clip_vision_output",
+        "image_interleave",
+        "prompt"
+      ]
+    },
+    "TextEncodeJoyImageEdit": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "images",
+        "prompt",
+        "vae"
+      ]
+    },
+    "TextEncodeMageFlowEdit": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "clip",
+        "height",
+        "images",
+        "negative_prompt",
+        "prompt",
+        "vae",
+        "width"
+      ]
+    },
+    "TextEncodeMingImageEdit": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "images",
+        "prompt",
+        "vae"
+      ]
+    },
+    "TextEncodeQwenImage21": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "images",
+        "negative_prompt",
+        "prompt",
+        "resolution",
+        "vae"
+      ]
+    },
+    "TextEncodeQwenImageEdit": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "image",
+        "prompt",
+        "vae"
+      ]
+    },
+    "TextEncodeQwenImageEditPlus": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "image1",
+        "image2",
+        "image3",
+        "prompt",
+        "vae"
+      ]
+    },
+    "TextEncodeZImageOmni": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "auto_resize_images",
+        "clip",
+        "image1",
+        "image2",
+        "image3",
+        "image_encoder",
+        "prompt",
+        "vae"
+      ]
+    },
+    "TextGenerate": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio",
+        "clip",
+        "image",
+        "max_length",
+        "mtp",
+        "prompt",
+        "sampling_mode",
+        "system_prompt",
+        "thinking",
+        "use_default_template",
+        "video"
+      ]
+    },
+    "TextOverlay": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "align",
+        "color",
+        "font_size",
+        "images",
+        "outline",
+        "position",
+        "text"
+      ]
+    },
+    "ThresholdMask": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "mask",
+        "value"
+      ]
+    },
+    "TomePatchModel": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model",
+        "ratio"
+      ]
+    },
+    "TorchCompileModel": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "backend",
+        "model"
+      ]
+    },
+    "TrainLoraNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "algorithm",
+        "batch_size",
+        "bucket_mode",
+        "bypass_mode",
+        "checkpoint_depth",
+        "existing_lora",
+        "grad_accumulation_steps",
+        "gradient_checkpointing",
+        "latents",
+        "learning_rate",
+        "lora_dtype",
+        "loss_function",
+        "model",
+        "offloading",
+        "optimizer",
+        "positive",
+        "quantized_backward",
+        "rank",
+        "seed",
+        "steps",
+        "training_dtype"
+      ]
+    },
+    "TransformSplat": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "rotate_x",
+        "rotate_y",
+        "rotate_z",
+        "scale_x",
+        "scale_y",
+        "scale_z",
+        "splat",
+        "translate_x",
+        "translate_y",
+        "translate_z"
+      ]
+    },
+    "Trellis2Conditioning": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip_vision_model",
+        "image"
+      ]
+    },
+    "Trellis2ShapeStage": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "negative",
+        "positive",
+        "voxel"
+      ]
+    },
+    "Trellis2TextureStage": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "negative",
+        "positive",
+        "shape_latent"
+      ]
+    },
+    "Trellis2UpsampleStage": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "negative",
+        "positive",
+        "shape_latent",
+        "target_resolution",
+        "vae"
+      ]
+    },
+    "TrimAudioDuration": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio",
+        "duration",
+        "start_index"
+      ]
+    },
+    "TrimVideoLatent": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "samples",
+        "trim_amount"
+      ]
+    },
+    "TripleCLIPLoader": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip_name1",
+        "clip_name2",
+        "clip_name3"
+      ]
+    },
+    "TripoSplatConditioning": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip_vision",
+        "image",
+        "vae"
+      ]
+    },
+    "TripoSplatPreprocessImage": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "erode_radius",
+        "image",
+        "mask",
+        "size"
+      ]
+    },
+    "TripoSplatSamplingPreview": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model",
+        "num_gaussians",
+        "octree_level",
+        "pitch",
+        "point_size",
+        "vae",
+        "yaw"
+      ]
+    },
+    "UNETLoader": {
+      "optional": [],
+      "required": [
+        "unet_name",
+        "weight_dtype"
+      ],
+      "schemaInputs": []
+    },
+    "UNetCrossAttentionMultiply": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "k",
+        "model",
+        "out",
+        "q",
+        "v"
+      ]
+    },
+    "UNetSelfAttentionMultiply": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "k",
+        "model",
+        "out",
+        "q",
+        "v"
+      ]
+    },
+    "UNetTemporalAttentionMultiply": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "cross_structural",
+        "cross_temporal",
+        "model",
+        "self_structural",
+        "self_temporal"
+      ]
+    },
+    "USOStyleReference": {
+      "optional": [],
+      "required": [
+        "clip_vision_output",
+        "model",
+        "model_patch"
+      ],
+      "schemaInputs": []
+    },
+    "UnwrapMesh": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "mesh",
+        "padding",
+        "resolution",
+        "segmenter",
+        "weld_distance"
+      ]
+    },
+    "UpscaleModelLoader": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model_name"
+      ]
+    },
+    "VAEDecode": {
+      "optional": [],
+      "required": [
+        "samples",
+        "vae"
+      ],
+      "schemaInputs": []
+    },
+    "VAEDecodeAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "samples",
+        "vae"
+      ]
+    },
+    "VAEDecodeAudioTiled": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "overlap",
+        "samples",
+        "tile_size",
+        "vae"
+      ]
+    },
+    "VAEDecodeHunyuan3D": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "num_chunks",
+        "octree_resolution",
+        "samples",
+        "vae"
+      ]
+    },
+    "VAEDecodeTiled": {
+      "optional": [],
+      "required": [
+        "overlap",
+        "samples",
+        "temporal_overlap",
+        "temporal_size",
+        "tile_size",
+        "vae"
+      ],
+      "schemaInputs": []
+    },
+    "VAEDecodeTripoSplat": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "num_gaussians",
+        "samples",
+        "seed",
+        "vae"
+      ]
+    },
+    "VAEEncode": {
+      "optional": [],
+      "required": [
+        "pixels",
+        "vae"
+      ],
+      "schemaInputs": []
+    },
+    "VAEEncodeAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio",
+        "vae"
+      ]
+    },
+    "VAEEncodeForInpaint": {
+      "optional": [],
+      "required": [
+        "grow_mask_by",
+        "mask",
+        "pixels",
+        "vae"
+      ],
+      "schemaInputs": []
+    },
+    "VAEEncodeTiled": {
+      "optional": [],
+      "required": [
+        "overlap",
+        "pixels",
+        "temporal_overlap",
+        "temporal_size",
+        "tile_size",
+        "vae"
+      ],
+      "schemaInputs": []
+    },
+    "VAELoader": {
+      "optional": [],
+      "required": [
+        "vae_name"
+      ],
+      "schemaInputs": []
+    },
+    "VAESave": {
+      "optional": [],
+      "required": [
+        "filename_prefix",
+        "vae"
+      ],
+      "schemaInputs": []
+    },
+    "VOIDInpaintConditioning": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "length",
+        "negative",
+        "positive",
+        "quadmask",
+        "vae",
+        "video",
+        "width"
+      ]
+    },
+    "VOIDQuadmaskPreprocess": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "dilate_width",
+        "mask"
+      ]
+    },
+    "VOIDWarpedNoise": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "length",
+        "optical_flow",
+        "video",
+        "width"
+      ]
+    },
+    "VOIDWarpedNoiseSource": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "warped_noise"
+      ]
+    },
+    "VPScheduler": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "beta_d",
+        "beta_min",
+        "eps_s",
+        "steps"
+      ]
+    },
+    "VaeDecodeShapeTrellis": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "samples",
+        "vae"
+      ]
+    },
+    "VaeDecodeStructureTrellis2": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "resolution",
+        "samples",
+        "vae"
+      ]
+    },
+    "VaeDecodeTextureTrellis": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "samples",
+        "shape_subdivides",
+        "vae"
+      ]
+    },
+    "VideoCrop": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "crop",
+        "video"
+      ]
+    },
+    "VideoFrameSampleNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "num_frames",
+        "seed",
+        "strategy",
+        "video"
+      ]
+    },
+    "VideoLinearCFGGuidance": {
+      "optional": [],
+      "required": [
+        "min_cfg",
+        "model"
+      ],
+      "schemaInputs": []
+    },
+    "VideoRandomTemporalCropNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "length",
+        "seed",
+        "video"
+      ]
+    },
+    "VideoSlice": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "duration",
+        "start_time",
+        "strict_duration",
+        "video"
+      ]
+    },
+    "VideoTemporalCropNode": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "length",
+        "start_frame",
+        "video"
+      ]
+    },
+    "VideoTriangleCFGGuidance": {
+      "optional": [],
+      "required": [
+        "min_cfg",
+        "model"
+      ],
+      "schemaInputs": []
+    },
+    "VideoTrim": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "strict_duration",
+        "trim",
+        "video"
+      ]
+    },
+    "VoxelToMesh": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "algorithm",
+        "threshold",
+        "voxel"
+      ]
+    },
+    "VoxelToMeshBasic": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "threshold",
+        "voxel"
+      ]
+    },
+    "Wan22FunControlToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "control_video",
+        "height",
+        "length",
+        "negative",
+        "positive",
+        "ref_image",
+        "vae",
+        "width"
+      ]
+    },
+    "Wan22ImageToVideoLatent": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "length",
+        "start_image",
+        "vae",
+        "width"
+      ]
+    },
+    "WanAnimate2Cache": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "device",
+        "dtype",
+        "model"
+      ]
+    },
+    "WanAnimate2ToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "clip_vision_output",
+        "clip_vision_output_pose",
+        "continue_motion",
+        "height",
+        "length",
+        "negative",
+        "pose_end_percent",
+        "pose_start_percent",
+        "pose_strength",
+        "pose_video",
+        "positive",
+        "positive_pose",
+        "reference_image",
+        "reference_image_strength",
+        "vae",
+        "video_frame_offset",
+        "width"
+      ]
+    },
+    "WanAnimateToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "background_video",
+        "batch_size",
+        "character_mask",
+        "clip_vision_output",
+        "continue_motion",
+        "continue_motion_max_frames",
+        "face_video",
+        "height",
+        "length",
+        "negative",
+        "pose_video",
+        "positive",
+        "reference_image",
+        "vae",
+        "video_frame_offset",
+        "width"
+      ]
+    },
+    "WanCameraEmbedding": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "camera_pose",
+        "cx",
+        "cy",
+        "fx",
+        "fy",
+        "height",
+        "length",
+        "speed",
+        "width"
+      ]
+    },
+    "WanCameraImageToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "camera_conditions",
+        "clip_vision_output",
+        "height",
+        "length",
+        "negative",
+        "positive",
+        "start_image",
+        "vae",
+        "width"
+      ]
+    },
+    "WanDancerEncodeAudio": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio",
+        "audio_inject_scale",
+        "video_frames"
+      ]
+    },
+    "WanDancerPadKeyframes": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio",
+        "images",
+        "segment_index",
+        "segment_length"
+      ]
+    },
+    "WanDancerPadKeyframesList": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio",
+        "images",
+        "num_segments",
+        "segment_length"
+      ]
+    },
+    "WanDancerVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio_encoder_output",
+        "clip_vision_output",
+        "clip_vision_output_ref",
+        "height",
+        "length",
+        "mask",
+        "negative",
+        "positive",
+        "start_image",
+        "vae",
+        "width"
+      ]
+    },
+    "WanFirstLastFrameToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "clip_vision_end_image",
+        "clip_vision_start_image",
+        "end_image",
+        "height",
+        "length",
+        "negative",
+        "positive",
+        "start_image",
+        "vae",
+        "width"
+      ]
+    },
+    "WanFunControlToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "clip_vision_output",
+        "control_video",
+        "height",
+        "length",
+        "negative",
+        "positive",
+        "start_image",
+        "vae",
+        "width"
+      ]
+    },
+    "WanFunInpaintToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "clip_vision_output",
+        "end_image",
+        "height",
+        "length",
+        "negative",
+        "positive",
+        "start_image",
+        "vae",
+        "width"
+      ]
+    },
+    "WanHuMoImageToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio_encoder_output",
+        "batch_size",
+        "height",
+        "length",
+        "negative",
+        "positive",
+        "ref_image",
+        "vae",
+        "width"
+      ]
+    },
+    "WanImageToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "clip_vision_output",
+        "height",
+        "length",
+        "negative",
+        "positive",
+        "ref_pad_image",
+        "start_image",
+        "vae",
+        "width"
+      ]
+    },
+    "WanInfiniteTalkToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio_encoder_output_1",
+        "audio_scale",
+        "clip_vision_output",
+        "height",
+        "length",
+        "mode",
+        "model",
+        "model_patch",
+        "motion_frame_count",
+        "negative",
+        "positive",
+        "previous_frames",
+        "start_image",
+        "vae",
+        "width"
+      ]
+    },
+    "WanMoveConcatTrack": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "tracks_1",
+        "tracks_2"
+      ]
+    },
+    "WanMoveTrackToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "clip_vision_output",
+        "height",
+        "length",
+        "negative",
+        "positive",
+        "start_image",
+        "strength",
+        "tracks",
+        "vae",
+        "width"
+      ]
+    },
+    "WanMoveTracksFromCoords": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "track_coords",
+        "track_mask"
+      ]
+    },
+    "WanMoveVisualizeTracks": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "circle_size",
+        "images",
+        "line_resolution",
+        "line_width",
+        "opacity",
+        "tracks"
+      ]
+    },
+    "WanPhantomSubjectToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "height",
+        "images",
+        "length",
+        "negative",
+        "positive",
+        "vae",
+        "width"
+      ]
+    },
+    "WanSCAILToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "clip_vision_output",
+        "height",
+        "length",
+        "negative",
+        "pose_end",
+        "pose_start",
+        "pose_strength",
+        "pose_video",
+        "pose_video_mask",
+        "positive",
+        "previous_frame_count",
+        "previous_frames",
+        "reference_image",
+        "reference_image_mask",
+        "replacement_mode",
+        "vae",
+        "video_frame_offset",
+        "width"
+      ]
+    },
+    "WanSoundImageToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio_encoder_output",
+        "batch_size",
+        "control_video",
+        "height",
+        "length",
+        "negative",
+        "positive",
+        "ref_image",
+        "ref_motion",
+        "vae",
+        "width"
+      ]
+    },
+    "WanSoundImageToVideoExtend": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "audio_encoder_output",
+        "control_video",
+        "length",
+        "negative",
+        "positive",
+        "ref_image",
+        "vae",
+        "video_latent"
+      ]
+    },
+    "WanTrackToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "clip_vision_output",
+        "height",
+        "length",
+        "negative",
+        "positive",
+        "start_image",
+        "temperature",
+        "topk",
+        "tracks",
+        "vae",
+        "width"
+      ]
+    },
+    "WanUni3CControlnetApply": {
+      "optional": [],
+      "required": [
+        "end_percent",
+        "model",
+        "model_patch",
+        "render_video",
+        "start_percent",
+        "strength",
+        "vae"
+      ],
+      "schemaInputs": []
+    },
+    "WanVaceToVideo": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "batch_size",
+        "control_masks",
+        "control_video",
+        "height",
+        "length",
+        "negative",
+        "positive",
+        "reference_image",
+        "strength",
+        "vae",
+        "width"
+      ]
+    },
+    "WebcamCapture": {
+      "optional": [],
+      "required": [
+        "capture_on_queue",
+        "height",
+        "image",
+        "width"
+      ],
+      "schemaInputs": []
+    },
+    "WeldVertices": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "epsilon_abs",
+        "epsilon_rel",
+        "mesh"
+      ]
+    },
+    "YuE2GenerateABC": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "clip",
+        "lyrics",
+        "max_abc_tokens",
+        "mode",
+        "penalty_window",
+        "repetition_penalty",
+        "seed",
+        "style",
+        "temperature",
+        "top_k",
+        "top_p"
+      ]
+    },
+    "YuE2GenerateMusic": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "abc",
+        "cfg_scale",
+        "clip",
+        "lyrics",
+        "max_duration",
+        "mode",
+        "repetition_penalty",
+        "seed",
+        "style",
+        "temperature",
+        "top_k",
+        "top_p"
+      ]
+    },
+    "ZImageFunControlnet": {
+      "optional": [
+        "end_percent",
+        "image",
+        "inpaint_image",
+        "mask",
+        "start_percent"
+      ],
+      "required": [
+        "model",
+        "model_patch",
+        "strength",
+        "vae"
+      ],
+      "schemaInputs": []
+    },
+    "unCLIPCheckpointLoader": {
+      "optional": [],
+      "required": [
+        "ckpt_name"
+      ],
+      "schemaInputs": []
+    },
+    "unCLIPConditioning": {
+      "optional": [],
+      "required": [
+        "clip_vision_output",
+        "conditioning",
+        "noise_augmentation",
+        "strength"
+      ],
+      "schemaInputs": []
+    },
+    "wanBlockSwap": {
+      "optional": [],
+      "required": [],
+      "schemaInputs": [
+        "model"
+      ]
+    }
+  }
+}
