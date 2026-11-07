@@ -6,6 +6,12 @@
  */
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { attachWorkflowMeta, readWorkflowMeta } from '../lib/workflow-meta.js'
+import {
+  TASK_SPECS, buildTaskParameters, normalizeTaskInput, clipOutpaintPercent,
+} from '../lib/task-specs.js'
+import { runTask } from '../lib/task-runner.js'
+import { normalizeReferencePaths, reconcileReferenceUploads } from '../lib/reference-inputs.js'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const idx = await import(pathToFileURL(path.join(ROOT, 'lib', 'index.js')).href)
@@ -66,6 +72,14 @@ console.log('\n[1] officialTurbo 计划')
   ok('文生图 8 步', plan.steps === 8, String(plan.steps))
   ok('编辑 9 步', plan.officialEditSteps === 9, String(plan.officialEditSteps))
   ok('计划标签 official-turbo', plan.samplingProfile === 'official-turbo', plan.samplingProfile)
+  const off = resolvePlan({ ...cfg, officialTurboEnabled: false }, caps)
+  ok('officialTurboEnabled=false 会回退', off.useOfficialTurbo === false)
+  const override = resolvePlan({ ...cfg, mainModelOverride: caps.models.unet }, caps)
+  ok('显式主模型覆写优先', override.useOfficialTurbo === false)
+  const noNodes = resolvePlan(cfg, { ...caps, nodes: { ...caps.nodes, officialSampling: false } })
+  ok('缺官方采样节点会回退', noNodes.useOfficialTurbo === false)
+  const noModel = resolvePlan(cfg, { ...caps, models: { ...caps.models, officialTurbo: null } })
+  ok('无官方 Turbo 文件会回退', noModel.useOfficialTurbo === false)
 }
 
 console.log('\n[2] 官方 Turbo 文生图：8 步精确 sigma')
@@ -157,6 +171,76 @@ console.log('\n[6] 工具 schema 与多图参数')
   ok('普通错误不误判为 ColorMatch 缺失', isColorErr('prompt too long') === false)
   const rendered = remTool.output.render({}, { path: 'p', width: 1, height: 1, seed: 1, seconds: 1, lora: '' })
   ok('缺失任务 LoRA 时用户可见提示', String(rendered?.[0]?.text ?? '').includes('未使用任务 LoRA'))
+}
+
+console.log('\n[7] 元信息与任务配置表')
+{
+  const wf = attachWorkflowMeta({ 1: { class_type: 'UNETLoader', inputs: {} } }, {
+    __plan: { profile: 'official-turbo' },
+    __effective: { width: 64, height: 64 },
+    __cnet: { applied: false },
+  })
+  const meta = readWorkflowMeta(wf)
+  ok('元信息可读', meta.plan?.profile === 'official-turbo')
+  ok('元信息不可枚举', !Object.keys(wf).includes('__plan'))
+  ok('元信息不进 JSON 载荷', !JSON.stringify(wf).includes('__plan'))
+
+  const out = TASK_SPECS.outpaint
+  const normalized = normalizeTaskInput({ image: 'a.png' }, out)
+  ok('扩图默认向右 50%', normalized.outRight === 50, String(normalized.outRight))
+  ok('扩图默认 prompt 生效', normalized.prompt === out.promptDefault)
+  ok('百分比负数夹到 0', clipOutpaintPercent(-5) === 0)
+  ok('百分比超过 300 夹到 300', clipOutpaintPercent(999) === 300)
+  const rem = TASK_SPECS.remove
+  const remInput = normalizeTaskInput({ image: 'a.png', mask: 'm.png' }, rem)
+  ok('移除默认 prompt 生效', remInput.prompt === rem.promptDefault)
+  ok('任务配置表生成 schema', JSON.stringify(buildTaskParameters(rem).required) === '["image","mask"]')
+}
+
+console.log('\n[8] 任务执行器的 ColorMatch 回退')
+{
+  const retryCalls = []
+  let submits = 0
+  const fakeMeta = (profile = 'official-turbo') => attachWorkflowMeta({}, {
+    __plan: { profile, steps: 9, taskLora: '' },
+    __effective: { width: 64, height: 64 },
+    __cnet: { applied: false },
+  })
+  const result = await runTask(
+    { image: 'src.png', mask: 'mask.png' },
+    TASK_SPECS.remove,
+    { cfg, log: () => {}, signal: undefined },
+    {
+      ensureComfyUp: async () => {},
+      probeCapabilities: async () => caps,
+      uploadReference: async (_cfg, file) => `uploaded:${file}`,
+      buildTaskWorkflow: (useCfg) => {
+        retryCalls.push(useCfg.taskColorMatch)
+        return fakeMeta()
+      },
+      submitAndSave: async () => {
+        submits += 1
+        if (submits === 1) throw new Error("Can't import color-matcher")
+        return { path: 'out.png', width: 64, height: 64, seconds: 1, files: ['out.png'] }
+      },
+    },
+  )
+  ok('ColorMatch 失败会自动重跑一次', submits === 2, String(submits))
+  ok('重跑时关闭 taskColorMatch', retryCalls[1] === false, String(retryCalls))
+  ok('移除任务默认 prompt 进入结果', result.path === 'out.png')
+}
+
+console.log('\n[9] 参考图入参归一与部分上传')
+{
+  const paths = normalizeReferencePaths({ references: ['a.png', '', 'b.png', 'c.png', 'd.png'] })
+  ok('最多保留 3 张并过滤空项', paths.length === 3 && paths[0] === 'a.png', JSON.stringify(paths))
+  const single = normalizeReferencePaths({ reference: 'one.png' })
+  ok('旧 reference 兼容', single.length === 1 && single[0] === 'one.png')
+  const partial = reconcileReferenceUploads(['a.png', 'b.png'], ['ua.png'])
+  ok('部分上传保留成功项', partial.references.length === 1 && partial.warning.includes('只成功上传'))
+  let threw = false
+  try { reconcileReferenceUploads(['a.png'], []) } catch { threw = true }
+  ok('全部上传失败直接报错', threw)
 }
 
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项）`)
