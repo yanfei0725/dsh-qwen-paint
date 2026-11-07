@@ -102,8 +102,8 @@ if (first !== 0) {
 line('  检测通过。')
 line()
 line('  ⚠ 真正安装会下载：')
-line('      · AMD 卡：ROCm 版 PyTorch 约 3 GB + 三个模型约 13.3 GB')
-line('      · N 卡 ：ComfyUI 便携包 + 三个模型约 13.3 GB')
+line('      · AMD 卡：ROCm 版 PyTorch 约 3 GB + 三个模型约 14.2 GB')
+line('      · N 卡 ：ComfyUI 便携包 + 三个模型约 14.2 GB')
 line('    中途断了不要紧，直接重跑会**接着下**。')
 line()
 

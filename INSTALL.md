@@ -43,7 +43,8 @@
 | 依赖 | 说明 |
 |---|---|
 | **ComfyUI** | 本机已装且能启动（默认端口 `8188`）。[官方仓库](http<本地路径>) |
-| **千问 Qwen-Image 2.1 模型** | 三个文件，共约 **13.3 GB**（见下表） |
+| **千问 Qwen-Image 2.1 模型** | 三个文件，共约 **14.2 GB**（官方 Turbo 主模型，见下表） |
+| **裁剪回贴节点** | `ComfyUI-Inpaint-CropAndStitch`（提供 `InpaintCropImproved / InpaintStitchImproved`） |
 | **Node.js** | DSH 自带的环境就够 |
 | **curl.exe** | Windows 10 及以上**系统自带**，无需安装 |
 
@@ -79,7 +80,7 @@ node scripts/setup.mjs --tier full|lite       直接指定主模型档位（★ 
 
 | 选项 | 主模型 | 大小 | 适合 |
 |---|---|---|---|
-| **1）完整档**（默认） | `qwen_image_2.1_int8_convrot.safetensors` | 约 7.26 GB | 显存 ≥ 8 GB —— 之前一直在用的那个 |
+| **1）完整档**（默认） | `qwen_image_2.1_turbo_int8_convrot.safetensors` | 约 7.26 GB | 显存 ≥ 8 GB —— 官方 Turbo 8/9 步工作点 |
 | **2）轻量档** | `qwen-image-2.1-Q4_K_M.gguf` | 约 **4.2 GB** | 显存较小（8 GB 及以下，如 **RTX 5060**） |
 
 - **CLIP / VAE 两档共用**，只换主模型。
@@ -162,7 +163,7 @@ winget install --id=Python.Python.3.12 -e
 
 | 文件（放到 `models\` 下） | 大小（字节） | SHA256 |
 |---|---|---|
-| `diffusion_models\qwen_image_2.1_int8_convrot.safetensors` | 7256783064 | `cb74113cb03faecd79611b01fd7fd642f0aa60d6f0b95086abee214d75eaa57d` |
+| `diffusion_models\qwen_image_2.1_turbo_int8_convrot.safetensors` | 7256787829 | `8144a0182964aa8403ad6dbc011db837304167d235161b9aabaa8532e967314c` |
 | `text_encoders\qwen3vl_8b_w4a8.safetensors` | 6312105364 | `7754425e55e7bea2bfde4dde59a4cc236cb44e5ee9c215ea66ef8d47012824eb` |
 | `vae\qwen_image_2.1_vae_bf16.safetensors` | 675509688 | `bb21f7473051e1ac368515dd3f2e15cd44d7a11748ee8823e1ddca3e4876b7c9` |
 
@@ -178,7 +179,7 @@ winget install --id=Python.Python.3.12 -e
 
 | 档位 | 主模型 | 体积 |
 |---|---|---|
-| **完整档**（默认，回车） | `qwen_image_2.1_int8_convrot.safetensors` | 6.8 GB |
+| **完整档**（默认，回车） | `qwen_image_2.1_turbo_int8_convrot.safetensors` | 6.8 GB |
 | **轻量档** | `qwen-image-2.1-UC-Q4_K_M.gguf`（GGUF Q4_K_M） | 4.3 GB |
 
 > 轻量档**必须另装 ComfyUI-GGUF 节点**（`git clone http<本地路径> "<你的ComfyUI>/custom_nodes/ComfyUI-GGUF"`），
@@ -191,7 +192,7 @@ winget install --id=Python.Python.3.12 -e
 
 ### 体积与时间
 
-约 **13.3 GB**（轻量档约 **10.8 GB**）。脚本每 3 秒打一行进度（已下字节数 + 速度），不会让你干等。
+约 **14.2 GB**（轻量档约 **10.8 GB**）。脚本每 3 秒打一行进度（已下字节数 + 速度），不会让你干等。
 
 ### macOS（Apple Silicon）★ 2026-10-11 新增
 

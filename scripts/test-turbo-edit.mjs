@@ -58,6 +58,7 @@ const cfg = { ...DEFAULTS, outputDir: path.join(ROOT, '.tmp-turbo-edit') }
 
 console.log('\n[1] officialTurbo 计划')
 {
+  ok('冷启动超时 ≥ 10 分钟', DEFAULTS.timeoutMs >= 600000, String(DEFAULTS.timeoutMs))
   const plan = resolvePlan(cfg, caps)
   ok('选中官方 Turbo', plan.useOfficialTurbo === true)
   ok('不再挂 turbo8 LoRA', plan.useTurbo === false)
