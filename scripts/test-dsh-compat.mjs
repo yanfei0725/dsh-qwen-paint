@@ -41,7 +41,7 @@
  */
 import { createRequire } from 'node:module'
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -81,30 +81,55 @@ function candidateBaseDirs() {
   return list
 }
 
-/** 在候选目录里解析 `@deepseek-ai/cordis`，返回 { base, cordisUrl, dshVersion } */
-function resolveDsh() {
-  for (const base of candidateBaseDirs()) {
-    if (!base) continue
-    let cordisPath = ''
+/** 从一个探测目录解析 cordis；版本号从安装根目录的 @deepseek-ai/dsh 读。 */
+function tryResolveFrom(probeBase, installRoot) {
+  let cordisPath = ''
+  let toolsPath = ''
+  try {
+    const req = createRequire(path.join(probeBase, '__compat_probe__.js'))
+    cordisPath = req.resolve('@deepseek-ai/cordis')
+    toolsPath = req.resolve('@deepseek-ai/dsh-tools')
+  } catch {
+    return null
+  }
+  let dshVersion = 'unknown'
+  for (const rel of ['node_modules/@deepseek-ai/dsh/package.json', 'package.json']) {
     try {
-      const req = createRequire(path.join(base, '__compat_probe__.js'))
-      cordisPath = req.resolve('@deepseek-ai/cordis')
-    } catch {
-      continue
-    }
-    let dshVersion = 'unknown'
-    for (const rel of ['node_modules/@deepseek-ai/dsh/package.json', 'package.json']) {
-      try {
-        const p = JSON.parse(readFileSync(path.join(base, rel), 'utf8'))
-        if (p.name === '@deepseek-ai/dsh') {
-          dshVersion = p.version
-          break
-        }
-      } catch {
-        /* 继续找 */
+      const p = JSON.parse(readFileSync(path.join(installRoot, rel), 'utf8'))
+      if (p.name === '@deepseek-ai/dsh') {
+        dshVersion = p.version
+        break
       }
+    } catch {
+      /* 继续找 */
     }
-    return { base, cordisUrl: pathToFileURL(cordisPath).href, dshVersion }
+  }
+  return {
+    base: probeBase,
+    cordisUrl: pathToFileURL(cordisPath).href,
+    toolsUrl: pathToFileURL(toolsPath).href,
+    dshVersion,
+  }
+}
+
+/**
+ * 0.2.1-rc.5 起，`dsh-tools` 不再被提升到安装根，而是嵌在
+ * `dsh-sdk-minimal` / `dsh-sdk-app` 自己的 node_modules 里。
+ * 所以先试根目录，再扫 `@deepseek-ai/dsh-sdk-*`。
+ */
+function resolveDsh() {
+  for (const installRoot of candidateBaseDirs()) {
+    if (!installRoot) continue
+    const direct = tryResolveFrom(installRoot, installRoot)
+    if (direct) return direct
+    const scope = path.join(installRoot, 'node_modules', '@deepseek-ai')
+    let entries = []
+    try { entries = readdirSync(scope, { withFileTypes: true }) } catch { entries = [] }
+    for (const entry of entries) {
+      if (!entry.isDirectory() || !entry.name.startsWith('dsh-sdk-')) continue
+      const hit = tryResolveFrom(path.join(scope, entry.name), installRoot)
+      if (hit) return hit
+    }
   }
   return null
 }
@@ -115,18 +140,11 @@ if (!found) {
     '未找到可用的 dsh 安装（未设 DSH_TEST_INSTALL，全局 npm 里也没有 @deepseek-ai/cordis）'
   )
 }
-const { base, cordisUrl, dshVersion } = found
+const { base, cordisUrl, toolsUrl: toolsEntry, dshVersion } = found
 console.log(`\n=== test-dsh-compat：被测 dsh ${dshVersion}（${base}）===`)
 
 // ── ② 用**被测版本自己**的 cordis / dsh-tools ────────────────────────────────
 const { Context } = await import(cordisUrl)
-let toolsEntry = ''
-try {
-  const req = createRequire(path.join(base, '__compat_probe__.js'))
-  toolsEntry = pathToFileURL(req.resolve('@deepseek-ai/dsh-tools')).href
-} catch (error) {
-  skip(`该 dsh 安装里解析不到 @deepseek-ai/dsh-tools（${String(error?.message ?? error)}）`)
-}
 
 // ③ 模块加载
 let mod
