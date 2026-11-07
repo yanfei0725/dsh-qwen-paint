@@ -181,12 +181,17 @@ console.log('\n[3] 回归锁：历史上踩过的三个坑必须保持修好')
   // 遗留约束保留（条件式）：万一将来有人把它加回来，这三个必需参数照样不能漏。
   ok(ali.every((x) => ['strength', 'start_percent', 'end_percent'].every((k) => x.keys.includes(k))),
     '（遗留约束）凡是用到 AliMamaApply 的，都必须带 strength/start_percent/end_percent')
-  // ★ 新锁：零下载方案的**核心机制**必须到位，防止以后被悄悄改回"整图重绘再贴回"。
-  const slnm = byName('SetLatentNoiseMask')
-  ok(slnm.length > 0 && slnm.every((x) => x.keys.includes('samples') && x.keys.includes('mask')),
-    '★★ 潜空间重绘核心：SetLatentNoiseMask 必须带 samples + mask')
+  // ★ 0.18 新锁：局部重绘改为「裁剪 → 采样 → 回贴」。
+  //   不再整图 VAE 往返，因此 SetLatentNoiseMask 必须消失；
+  //   否则说明有人把旧的整图重绘路径又接回来了。
+  ok(byName('SetLatentNoiseMask').length === 0,
+    '★★ 0.18：局部重绘不再使用整图 SetLatentNoiseMask')
+  ok(byName('InpaintCropImproved').length > 0,
+    '★★ 0.18：必须有 InpaintCropImproved')
+  ok(byName('InpaintStitchImproved').length > 0,
+    '★★ 0.18：必须有 InpaintStitchImproved')
   ok(byName('VAEEncode').length > 0,
-    '★★ 潜空间重绘核心：必须有 VAEEncode（原图 latent 才是"保留区严格不变"的基准）')
+    '★★ 裁剪图像仍需 VAEEncode 生成编辑 latent')
 }
 
 if (unknown.size > 0) {

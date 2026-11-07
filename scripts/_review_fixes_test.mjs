@@ -231,8 +231,10 @@ console.log('\n=== 17. 主模型加载器（GGUF 路线已撤，但手动配置�
   ok('17. 轻量档装完提示必须装 ComfyUI-GGUF', SETUP.includes('city96/ComfyUI-GGUF'))
   ok('17. 死函数 writeConfigUnet 已删', !SETUP.includes('function writeConfigUnet'))
   ok('17. 死函数不残留调用', !SETUP.includes('writeConfigUnet('))
-  ok('17. int8 主模型的 sha256 仍是官方值',
-    SETUP.includes('cb74113cb03faecd79611b01fd7fd642f0aa60d6f0b95086abee214d75eaa57d'))
+  ok('17. 官方 Turbo 主模型的 sha256 是官方值',
+    SETUP.includes('8144a0182964aa8403ad6dbc011db837304167d235161b9aabaa8532e967314c'))
+  ok('17. setup 默认下载官方 Turbo 主模型',
+    SETUP.includes("name: 'qwen_image_2.1_turbo_int8_convrot.safetensors'"))
 
   // ---- resolvePlan 仍会把加载器带出来（手动配 .gguf 时自动切换）----
   const planGguf = resolvePlan({ ...DEF, unet: GGUF }, null)

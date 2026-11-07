@@ -1,7 +1,6 @@
 # dsh-qwen-paint · (绘图)千问（优化版）
 
-面向 **DeepSeek Harness** 的本地图像生成插件。经由本机 **ComfyUI** 调用 **Qwen-Image 2.1** 模型，  
-在对话中直接完成文生图与图生图；生成的图像落盘保存，并在会话界面内直接呈现。
+面向 **DeepSeek Harness** 的本地图像生成与编辑插件。经由本机 **ComfyUI** 调用 **Qwen-Image 2.1 / 官方 Turbo** 模型，在对话中完成文生图、1–3 图编辑、局部重绘、元素移除与四向扩图；结果落盘并在会话界面内直接呈现。
 
 **网络边界（请以本节为准）**：插件的网络出口有**两类，边界不同**。
 
@@ -20,7 +19,60 @@
 > 这是**用户主动选择**的行为，不是默认状态。
 
 > **原作者**：@奇迹与你（<http<本地路径>>）  
-> **优化版作者**：@yanfei0725（<http<本地路径>>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.17.13`
+> **优化版作者**：@yanfei0725（<http<本地路径>>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.18.0`
+
+---
+
+## 0.18.0 新增说明（官方 Turbo 全功能编辑链）
+
+### 1. 官方 Qwen-Image 2.1 Turbo 成为首选链路
+
+- 自动探测 `qwen_image_2.1_turbo_*` 主模型；命中后**不再挂 turbo8 LoRA**。
+- 文生图使用官方 **8 步** sigma；编辑/重绘/移除/扩图使用 **9 步** sigma
+  （尾部 `0.150000`），CFG 固定 `1.0`。
+- 采样改用 `SamplerCustomAdvanced + ManualSigmas`，不再依赖 `simple` scheduler 猜时间步。
+- 想回旧链路：`officialTurboEnabled: false`。
+
+### 2. `draw_image` 支持 1–3 张参考图
+
+- 新参数 `references: [图一, 图二, 图三]`；旧 `reference` 单图写法继续可用。
+- 官方链路使用 `TextEncodeQwenImageEditPlus`；图一决定画布，图二/图三用于换装、换头、多图合成。
+- 旧 turbo8 链路会自动退化为单图，不静默假装多图生效。
+
+### 3. 局部重绘改为「裁剪 → 采样 → 回贴」
+
+- `InpaintCropImproved → TextEncodeQwenImageEditPlus → SamplerCustomAdvanced → InpaintStitchImproved`
+- 采样前可用 `taskMaxCanvasEdge`（默认 `2048`）限制长边；原图回贴尺寸不受影响。
+- 上下文扩展默认 `inpaintContextFactor: 1.3`，蒙版外扩 `8px`、羽化 `32px`。
+- 回贴前可做 `ColorMatch` 颜色匹配（`taskColorMatch`，默认开）。若 ComfyUI 只有节点、
+  却没装 Python 依赖 `color-matcher`，插件会自动摘掉颜色匹配重跑，主任务不失败。
+- 修复旧描述过强的问题：**不是“蒙版外每个像素绝对不变”**；羽化/接缝带会有过渡，
+  其余区域由原图回贴，不再整图 VAE 往返。
+
+### 4. 新增 `remove_image` / `outpaint_image`
+
+| 工具 | 用途 | 关键参数 |
+|---|---|---|
+| `inpaint_image` | 按蒙版局部重绘 | `image` / `mask` / `prompt` |
+| `remove_image` | 移除蒙版内物体并补全背景 | `image` / `mask` / 可选 `prompt` |
+| `outpaint_image` | 四向扩图 | `image` / `left` / `right` / `up` / `down`（百分比） |
+
+### 5. 任务 LoRA 插槽
+
+自动探测并在对应任务里使用：
+
+- `Qwen2.1 一致性无偏移_GH*` → 重绘/多图编辑，默认强度 `0.48`
+- `Qwen2.1_万物移除Remove_GH*` → 元素移除，默认 `1.0`
+- `Qwen2.1_扩图_GH_3750*` / `*outpaint*` → 扩图，默认 `0.7`
+
+也可用 `consistencyLora` / `removalLora` / `outpaintLora` 手动指定。
+**没装任务 LoRA 时任务仍能跑**，返回值和日志会明确写“未使用任务 LoRA”，不会假装已加载。
+
+### 6. DSH 兼容与实测
+
+- 适配 **DSH `0.2.1-rc.5`**（cordis `4.0.5` / Node `24.22.1`），注册 7 个工具。
+- 真机验证：官方 Turbo 文生图成功；裁剪回贴局部重绘成功，输出尺寸与原图一致。
+- 首次加载约 13–14 GB 主模型可能很慢；这不是采样卡死，后续同模型任务会显著加快。
 
 ---
 
@@ -352,10 +404,13 @@ DSH_TEST_INSTALL=/tmp/dsh-a5 node scripts/test-dsh-compat.mjs
 | `0.2.1-alpha.5` | 一次性目录安装（审核点名的当前窗口最新 alpha） | 7 / 7 通过 |
 | `0.2.1-rc.1` | 本机实际安装 | 7 / 7 通过 |
 | `0.2.1-rc.2` | 一次性目录安装（`next` 通道） | 7 / 7 通过 |
+| **`0.2.1-rc.5`** | **当前桌面端版本 / 一次性目录安装** | **7 / 7 通过** |
 
 7 项分别是：模块能被该版本 import、`name` / `inject` / `apply` 契约成立、
 该版本**真实**的 `tools` 服务可用、`apply()` 无异常跑完、确实注册出工具
-（`draw_image`、`list_available_models`、`check_acceleration`、`upscale_image`、`inpaint_image`）。
+（`draw_image`、`list_available_models`、`check_acceleration`、`upscale_image`、
+`inpaint_image`、`remove_image`、`outpaint_image`）。
+0.18 另在本机 `0.2.1-rc.5` 桌面上完成官方 Turbo 文生图与裁剪回贴重绘的真机冒烟。
 
 另外在 `0.2.1-alpha.5` 下还跑通了两条"装载链路"证据：
 `dsh plugin --profile <name> add <本包>` 安装成功（plugin-manager 把本包登记为 bundle），
@@ -958,11 +1013,15 @@ UNETLoader → CLIPLoader → VAELoader → TextEncodeQwenImage21
 ## 依赖
 
 - **ComfyUI** 跑在 `127.0.0.1:8188`（自己手动启动 or 让插件按需后台拉起；安装位置自动探测）
-- 三个千问模型文件（共约 13.3 GB）：
-  - `qwen_image_2.1_int8_convrot.safetensors`（UNET，放 `models\diffusion_models\`）
+- 三个千问模型文件（共约 14.2 GB）：
+  - `qwen_image_2.1_turbo_int8_convrot.safetensors`（官方 Turbo UNET，放 `models\diffusion_models\`）
   - `qwen3vl_8b_w4a8.safetensors`（CLIP、`type=qwen_image`，放 `models\text_encoders\`）
   - `qwen_image_2.1_vae_bf16.safetensors`（VAE，放 `models\vae\`）
+- 旧安装里的 `qwen_image_2.1_int8_convrot.safetensors` 仍可回退使用；
+  只要 Turbo 文件存在，0.18 默认优先官方 Turbo。
 - **不需要**任何 Python 环境、不装任何第三方包 —— 插件本体是纯 Node ESM，**零外部依赖**。
+- 裁剪回贴需要 `ComfyUI-Inpaint-CropAndStitch`（提供 `InpaintCropImproved / InpaintStitchImproved`）；
+  官方采样需要 ComfyUI 自带的 `ManualSigmas / SamplerCustomAdvanced`。
 
 ### 默认加速链（★ 2026-10-09 更新：四层叠加，额外三个依赖）
 
@@ -1095,7 +1154,7 @@ node scripts/setup.mjs --tier full|lite       # 直接指定主模型档位（�
 
 | 档位 | 主模型 | 体积 | 适合 |
 |---|---|---|---|
-| **完整档**（默认） | `qwen_image_2.1_int8_convrot.safetensors` | 6.8 GB | 显存 ≥ 8 GB，画质最好 |
+| **完整档**（默认） | `qwen_image_2.1_turbo_int8_convrot.safetensors`（官方 Turbo） | 6.8 GB | 显存 ≥ 8 GB，官方 8/9 步工作点 |
 | **轻量档** | `qwen-image-2.1-UC-Q4_K_M.gguf`（GGUF Q4_K_M） | 4.3 GB | 8 GB 及以下（如 RTX 5060） |
 
 CLIP 与 VAE 两档共用，**只有主模型不同**。
@@ -1196,6 +1255,16 @@ node scripts/install.mjs --dry-run
 | `steps`      | 采样步数。⚠ **默认被强制钉在 8 步**（turbo8 的工作点），手填别的数会被忽略 —— 详见下面「加速链」 |
 | `seed`       | 随机种子。同提示词 + 同种子 = 同一张图；不填则每次不同                             |
 | `negative`   | 负面提示词。⚠ 千问模型 `cfg=1`，**负面词基本不生效**，一般别填                     |
+| `references` | 1–3 张参考图路径；官方 Turbo 走 `TextEncodeQwenImageEditPlus`，图二/图三用于换装、换头、多图合成 |
+| `controlImage` | ControlNet 控制图路径；官方 Turbo 图暂不接 ControlNet，会自动留在旧链路 |
+
+另有两个专用工具：
+
+| 工具 | 说明 |
+|---|---|
+| `inpaint_image` | 局部重绘：`image` + `mask` + `prompt`；裁剪回贴，9 步 |
+| `remove_image` | 元素移除：`image` + `mask`；可选 `prompt` |
+| `outpaint_image` | 四向扩图：`image` + `left/right/up/down` 百分比 |
 
 尺寸按 **32 的倍数**对齐（`r32(v)=max(32, round(v/32)*32)`），与 `app.py` 的算法一致：  
 `1:1@1MP → 992×992`；`16:9@1MP → 1344×736`；`2:3@1MP → 832×1216`。

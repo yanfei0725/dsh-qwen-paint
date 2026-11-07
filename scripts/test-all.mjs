@@ -45,6 +45,8 @@ const SUITES = [
   { file: 'test-net-guard.mjs', note: '网络边界 + URL 规范化（双斜杠坑）' },
   { file: 'test-request-trust.mjs', note: '本机 HTTP 接口的调用方信任判定 + 405/415 守卫' },
   { file: 'test-workflow-contract.mjs', note: 'ComfyUI 工作流节点契约' },
+  // ★ 0.18：官方 Turbo 8/9 步、多图编辑、裁剪回贴、移除、扩图
+  { file: 'test-turbo-edit.mjs', note: '官方 Turbo / Crop→Sample→Stitch 任务链' },
   // —— 契约 / 面板 / 步骤 ——
   { file: '_tool_contract_test.mjs', note: '工具契约' },
   { file: '_step4_dry_test.mjs', note: '4 步干跑' },

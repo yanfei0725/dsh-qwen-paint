@@ -75,10 +75,10 @@ const IS_MAC = process.platform === 'darwin'
  */
 const UNET_FULL = {
   dir: 'diffusion_models',
-  name: 'qwen_image_2.1_int8_convrot.safetensors',
-  size: 7256783064,
-  sha256: 'cb74113cb03faecd79611b01fd7fd642f0aa60d6f0b95086abee214d75eaa57d',
-  note: 'UNet（出图主模型 · int8）',
+  name: 'qwen_image_2.1_turbo_int8_convrot.safetensors',
+  size: 7256787829,
+  sha256: '8144a0182964aa8403ad6dbc011db837304167d235161b9aabaa8532e967314c',
+  note: 'UNet（官方 Qwen-Image 2.1 Turbo · int8 · 文生图 8 步 / 编辑 9 步）',
 }
 /**
  * GGUF 档主模型（小显存档，★ 2026-10-12 用户要求保留轻量档并接上可用文件）。
