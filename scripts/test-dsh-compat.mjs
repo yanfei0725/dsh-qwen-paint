@@ -202,6 +202,16 @@ const names = registered
   .map((a) => (a[0] && typeof a[0] === 'object' ? a[0].name : String(a[0])))
   .filter(Boolean)
 record(registered.length > 0, '工具注册', `注册 ${names.length} 个：${names.join(', ')}`)
+const expectedTools = [
+  'draw_image', 'list_available_models', 'check_acceleration',
+  'upscale_image', 'inpaint_image', 'remove_image', 'outpaint_image',
+]
+const missingTools = expectedTools.filter((name) => !names.includes(name))
+record(
+  missingTools.length === 0,
+  '0.18 工具集合完整',
+  missingTools.length === 0 ? expectedTools.join(', ') : `缺 ${missingTools.join(', ')}`
+)
 
 const failed = results.filter((r) => !r.ok).length
 console.log(`\n结果：${results.length - failed} 通过 / ${failed} 失败`)

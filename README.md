@@ -397,20 +397,21 @@ mkdir /tmp/dsh-a5 && cd /tmp/dsh-a5 && npm i --prefix . @deepseek-ai/dsh@0.2.1-a
 DSH_TEST_INSTALL=/tmp/dsh-a5 node scripts/test-dsh-compat.mjs
 ```
 
-### ③ 实测结论（三版各 7 项，全过）
+### ③ 实测结论（历史版本各 7 项；0.18 的 rc.5 为 8 项）
 
 | 被测版本 | 来源 | 结果 |
 | --- | --- | --- |
 | `0.2.1-alpha.5` | 一次性目录安装（审核点名的当前窗口最新 alpha） | 7 / 7 通过 |
 | `0.2.1-rc.1` | 本机实际安装 | 7 / 7 通过 |
 | `0.2.1-rc.2` | 一次性目录安装（`next` 通道） | 7 / 7 通过 |
-| **`0.2.1-rc.5`** | **当前桌面端版本 / 一次性目录安装** | **7 / 7 通过** |
+| **`0.2.1-rc.5`** | **当前桌面端版本 / 一次性目录安装** | **8 / 8 通过** |
 
-7 项分别是：模块能被该版本 import、`name` / `inject` / `apply` 契约成立、
-该版本**真实**的 `tools` 服务可用、`apply()` 无异常跑完、确实注册出工具
+前 7 项：模块能被该版本 import、`name` / `inject` / `apply` 契约成立、
+该版本**真实**的 `tools` 服务可用、`apply()` 无异常跑完、确实注册出工具。
+第 8 项：0.18 的 7 个工具集合完整
 （`draw_image`、`list_available_models`、`check_acceleration`、`upscale_image`、
 `inpaint_image`、`remove_image`、`outpaint_image`）。
-0.18 另在本机 `0.2.1-rc.5` 桌面上完成官方 Turbo 文生图与裁剪回贴重绘的真机冒烟。
+0.18 另在本机 `0.2.1-rc.5` 桌面上完成官方 Turbo 文生图、裁剪回贴重绘与四向扩图的真机冒烟。
 
 另外在 `0.2.1-alpha.5` 下还跑通了两条"装载链路"证据：
 `dsh plugin --profile <name> add <本包>` 安装成功（plugin-manager 把本包登记为 bundle），

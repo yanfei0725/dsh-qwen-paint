@@ -135,7 +135,7 @@ console.log('\n[5] 元素移除 / 四向扩图')
   ok('扩图开启 extend_for_outpainting', crop?.inputs?.extend_for_outpainting === true)
   ok('向右扩展 1.5x', crop?.inputs?.extend_right_factor === 1.5, String(crop?.inputs?.extend_right_factor))
   ok('向下扩展 1.25x', crop?.inputs?.extend_down_factor === 1.25, String(crop?.inputs?.extend_down_factor))
-  ok('扩图不接蒙版', !find(out, 'LoadImageMask'))
+  ok('扩图不接蒙版（InpaintCropImproved 的 mask 是 optional，已真机验证）', !find(out, 'LoadImageMask'))
   ok('扩图使用扩图 LoRA', find(out, 'LoraLoaderModelOnly')?.inputs?.lora_name === OUTPAINT)
 }
 
@@ -152,6 +152,11 @@ console.log('\n[6] 工具 schema 与多图参数')
   ok('draw_image 暴露 references[1..3]', refsSpec?.type === 'array' && refsSpec?.maxItems === 3)
   const wf = planWorkflow(cfg, { prompt: 'x', size: '1:1', references: ['r1.png', 'r2.png'] }, caps)
   ok('planWorkflow 接受 references', all(wf, 'LoadImage').length === 2, String(all(wf, 'LoadImage').length))
+  const isColorErr = idx.__internal.isColorMatcherError
+  ok('ColorMatch 依赖缺失可识别', isColorErr("Can't import color-matcher") === true)
+  ok('普通错误不误判为 ColorMatch 缺失', isColorErr('prompt too long') === false)
+  const rendered = remTool.output.render({}, { path: 'p', width: 1, height: 1, seed: 1, seconds: 1, lora: '' })
+  ok('缺失任务 LoRA 时用户可见提示', String(rendered?.[0]?.text ?? '').includes('未使用任务 LoRA'))
 }
 
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项）`)
