@@ -163,7 +163,7 @@ console.log('\n[6] 工具 schema 与多图参数')
   ok('remove_image 要求 image + mask', JSON.stringify(remTool.parameters.required) === '["image","mask"]')
   const drawTool = idx.__internal.makeDrawTool({ tools: { register: () => {} } }, cfg, () => {}, null, () => {})
   const refsSpec = drawTool.parameters.properties.references
-  ok('draw_image 暴露 references[1..3]', refsSpec?.type === 'array' && refsSpec?.maxItems === 3)
+  ok('draw_image 暴露 references[1..16]', refsSpec?.type === 'array' && refsSpec?.maxItems === 16, String(refsSpec?.maxItems))
   const wf = planWorkflow(cfg, { prompt: 'x', size: '1:1', references: ['r1.png', 'r2.png'] }, caps)
   ok('planWorkflow 接受 references', all(wf, 'LoadImage').length === 2, String(all(wf, 'LoadImage').length))
   const isColorErr = idx.__internal.isColorMatcherError
@@ -233,7 +233,15 @@ console.log('\n[8] 任务执行器的 ColorMatch 回退')
 console.log('\n[9] 参考图入参归一与部分上传')
 {
   const paths = normalizeReferencePaths({ references: ['a.png', '', 'b.png', 'c.png', 'd.png'] })
-  ok('最多保留 3 张并过滤空项', paths.length === 3 && paths[0] === 'a.png', JSON.stringify(paths))
+  ok('过滤空项、不再截断到 3 张', paths.length === 4 && paths[0] === 'a.png', JSON.stringify(paths))
+  const sixteen = Array.from({ length: 16 }, (_, i) => `r${i + 1}.png`)
+  ok('恰好 16 张放行', normalizeReferencePaths({ references: sixteen }).length === 16)
+  let overErr = ''
+  try {
+    normalizeReferencePaths({ references: [...sixteen, 'r17.png'] })
+  } catch (error) { overErr = String(error?.message ?? error) }
+  ok('17 张明确报错（不静默丢弃）',
+    overErr.includes('最多 16 张') && overErr.includes('17 张'), overErr.slice(0, 90))
   const single = normalizeReferencePaths({ reference: 'one.png' })
   ok('旧 reference 兼容', single.length === 1 && single[0] === 'one.png')
   const partial = reconcileReferenceUploads(['a.png', 'b.png'], ['ua.png'])
@@ -241,6 +249,64 @@ console.log('\n[9] 参考图入参归一与部分上传')
   let threw = false
   try { reconcileReferenceUploads(['a.png'], []) } catch { threw = true }
   ok('全部上传失败直接报错', threw)
+}
+
+console.log('\n[10] 多参考图接线（issue #1：image_1 … image_16）')
+{
+  // ---- 官方 Turbo：1-3 张仍走 EditPlus（不为什么"统一"去换掉实测过的编辑链）----
+  const wf3 = buildWorkflow({ ...cfg }, { prompt: 'p', width: 704, height: 704, seed: 1, references: ['a.png', 'b.png', 'c.png'] }, caps)
+  const enc3 = find(wf3, 'TextEncodeQwenImageEditPlus')
+  ok('3 张仍走 EditPlus', !!enc3 && !find(wf3, 'TextEncodeQwenImage21')?.inputs?.['images.image_1'])
+  ok('3 张接到 image1..image3', ['image1', 'image2', 'image3'].every((k) => Array.isArray(enc3?.inputs?.[k])))
+
+  // ---- 4 张：切到 2.1 原生编码器 ----
+  const wf4 = buildWorkflow({ ...cfg }, { prompt: 'p', width: 704, height: 704, seed: 1, references: ['a.png', 'b.png', 'c.png', 'd.png'] }, caps)
+  const enc4 = find(wf4, 'TextEncodeQwenImage21')
+  ok('4 张切到 TextEncodeQwenImage21', !!enc4 && !find(wf4, 'TextEncodeQwenImageEditPlus'))
+  ok('4 张接满 images.image_1..4',
+    [1, 2, 3, 4].every((n) => Array.isArray(enc4?.inputs?.[`images.image_${n}`]))
+    && enc4?.inputs?.['images.image_5'] === undefined)
+  ok('4 张各一个 LoadImage', all(wf4, 'LoadImage').length === 4, String(all(wf4, 'LoadImage').length))
+  ok('编码器拿到 clip/vae', Array.isArray(enc4?.inputs?.clip) && Array.isArray(enc4?.inputs?.vae))
+  const sampler4 = find(wf4, 'SamplerCustomAdvanced')
+  ok('latent 取编码节点第 3 个输出（不再 VAEEncode 第 1 张）',
+    sampler4?.inputs?.latent_image?.[0] === '20' && sampler4?.inputs?.latent_image?.[1] === 2,
+    JSON.stringify(sampler4?.inputs?.latent_image))
+  ok('4 张仍用 9 步编辑 sigma', find(wf4, 'ManualSigmas')?.inputs?.sigmas === OFFICIAL_EDIT_SIGMAS_9
+    || JSON.stringify(find(wf4, 'ManualSigmas')?.inputs?.sigmas) === JSON.stringify(OFFICIAL_EDIT_SIGMAS_9))
+  ok('元信息记下编码器', readWorkflowMeta(wf4).plan?.referenceEncoder === 'qwen21-images',
+    String(readWorkflowMeta(wf4).plan?.referenceEncoder))
+
+  // ---- 16 张：槽位刚好用满 ----
+  const refs16 = Array.from({ length: 16 }, (_, i) => `r${i + 1}.png`)
+  const wf16 = buildWorkflow({ ...cfg }, { prompt: 'p', width: 704, height: 704, seed: 1, references: refs16 }, caps)
+  const enc16 = find(wf16, 'TextEncodeQwenImage21')
+  ok('16 张接满 image_1..image_16',
+    Array.from({ length: 16 }, (_, i) => i + 1).every((n) => Array.isArray(enc16?.inputs?.[`images.image_${n}`])))
+  ok('16 张没有多出 image_17', enc16?.inputs?.['images.image_17'] === undefined)
+  ok('16 张各一个 LoadImage', all(wf16, 'LoadImage').length === 16, String(all(wf16, 'LoadImage').length))
+  ok('节点号不撞车（手工数一遍）',
+    new Set(types(wf16).map((n) => n.id)).size === types(wf16).length)
+  let wfThrow = ''
+  try {
+    buildWorkflow({ ...cfg }, { prompt: 'p', references: [...refs16, 'r17.png'] }, caps)
+  } catch (error) { wfThrow = String(error?.message ?? error) }
+  ok('17 张在组装前就报错', wfThrow.includes('最多 16 张'), wfThrow.slice(0, 60))
+
+  // ---- 旧链路（非官方 Turbo）也支持 16 槽位 ----
+  const capsOld = { ...caps, models: { ...caps.models, officialTurbo: null } }
+  const wfOld = buildWorkflow({ ...cfg }, { prompt: 'p', width: 704, height: 704, seed: 1, references: refs16.slice(0, 5) }, capsOld)
+  const encOld = find(wfOld, 'TextEncodeQwenImage21')
+  ok('旧链路 5 张接满 image_1..image_5',
+    [1, 2, 3, 4, 5].every((n) => Array.isArray(encOld?.inputs?.[`images.image_${n}`])))
+  ok('旧链路 5 张各一个 LoadImage', all(wfOld, 'LoadImage').length === 5, String(all(wfOld, 'LoadImage').length))
+
+  // ---- 单图老写法：工作流与"只有 image_1"的旧形态一致 ----
+  const wfSingle = buildWorkflow({ ...cfg }, { prompt: 'p', width: 704, height: 704, seed: 1, reference: 'one.png' }, capsOld)
+  const encSingle = find(wfSingle, 'TextEncodeQwenImage21')
+  ok('单图仍只接 image_1', Array.isArray(encSingle?.inputs?.['images.image_1'])
+    && encSingle?.inputs?.['images.image_2'] === undefined)
+  ok('单图只有一个 LoadImage', all(wfSingle, 'LoadImage').length === 1)
 }
 
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项）`)

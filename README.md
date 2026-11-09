@@ -19,9 +19,51 @@
 > 这是**用户主动选择**的行为，不是默认状态。
 
 > **原作者**：@奇迹与你（<http<本地路径>>）  
-> **优化版作者**：@yanfei0725（<http<本地路径>>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.18.0`
+> **优化版作者**：@yanfei0725（<http<本地路径>>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.19.0`
 
 ---
+
+## 0.19.0 新增说明（多参考图批量输入：1–16 张）
+
+### 1. `references` 上限从 3 张提到 16 张
+
+- 依据是 ComfyUI 源码：`TextEncodeQwenImage21` 的 `images` 是 `io.Autogrow.Input`，
+  模板名单为 `image_1 … image_16`（`min=0`）。也就是**节点侧本来就有 16 个槽位**，
+  旧的 3 张上限只是插件接口层的自我限制（`TextEncodeQwenImageEditPlus` 只有 `image1..3`）。
+- 调用方式不变，只是数组可以更长：
+
+  ```json
+  { "prompt": "…", "references": ["角色A.png", "角色B.png", "场景.png", "构图.png"] }
+  ```
+
+- 接线规则：第 N 张 → `images.image_N`，一个参考图一个 `LoadImage`，按数组顺序。
+- **超过 16 张直接报错**（并说明节点只有 16 个槽位），绝不静默截断 —— 传 20 张只用 16 张
+  是最坏的失败方式：用户以为生效了，其实后 4 张根本没进链路。
+
+### 2. 编码器按张数分档（旧行为不变）
+
+| 张数 | 编码器 | latent 来源 | sigma |
+| --- | --- | --- | --- |
+| 0 | `TextEncodeQwenImage21` | `EmptyLatentImage` / `EmptyLatent` | 文生图 8 步 |
+| 1–3 | `TextEncodeQwenImageEditPlus`（`image1..3`） | `VAEEncode(第 1 张)` | 编辑 9 步 |
+| 4–16 | `TextEncodeQwenImage21`（`images.image_1..16`） | 该节点的第 3 个输出（`LATENT`） | 编辑 9 步 |
+
+1–3 张**继续走 EditPlus**：那是本机真机验证过的编辑链，不为了“统一”去换掉它。
+4 张起才切到 2.1 原生编码器，因为 EditPlus 没有第 4 个槽位。
+
+### 3. 同名参考图不再互相覆盖
+
+上一版上传时用 `path.basename(filePath)` 当文件名，`overwrite=true` —— 于是
+`refs/1/ref.png` 和 `refs/2/ref.png` 会**静默**变成同一张（后到的赢）。多参考图场景下
+这几乎必然发生。现在按序号加前缀：`dshqp-ref-<序号>-<原名>`，一轮内唯一。
+
+### 4. 真机验收（本机 RX 7900 XT / ComfyUI）
+
+- 4 张参考图，旧链路：128 s 出图（`704×704`），槽位 `images.image_1..4` 全部接上。
+- 4 张参考图，官方 Turbo：99 s 出图，`latent_image = ["20", 2]`、9 步 sigma 对齐。
+- 决定性 A/B：同一 seed / prompt，参考图从全红换全蓝 → 输出平均 RGB 从
+  `(219.7, 30.8, 26.7)` 变为 `(26.1, 62.7, 215.3)`，证明 4 个槽位真的被模型吃进去了
+  （不是“接上了但没生效”）。
 
 ## 0.18.0 新增说明（官方 Turbo 全功能编辑链）
 
@@ -33,7 +75,7 @@
 - 采样改用 `SamplerCustomAdvanced + ManualSigmas`，不再依赖 `simple` scheduler 猜时间步。
 - 想回旧链路：`officialTurboEnabled: false`。
 
-### 2. `draw_image` 支持 1–3 张参考图
+### 2. `draw_image` 支持多参考图（0.19.0 起 1–16 张）
 
 - 新参数 `references: [图一, 图二, 图三]`；旧 `reference` 单图写法继续可用。
 - 官方链路使用 `TextEncodeQwenImageEditPlus`；图一决定画布，图二/图三用于换装、换头、多图合成。
@@ -1256,7 +1298,7 @@ node scripts/install.mjs --dry-run
 | `steps`      | 采样步数。⚠ **默认被强制钉在 8 步**（turbo8 的工作点），手填别的数会被忽略 —— 详见下面「加速链」 |
 | `seed`       | 随机种子。同提示词 + 同种子 = 同一张图；不填则每次不同                             |
 | `negative`   | 负面提示词。⚠ 千问模型 `cfg=1`，**负面词基本不生效**，一般别填                     |
-| `references` | 1–3 张参考图路径；官方 Turbo 走 `TextEncodeQwenImageEditPlus`，图二/图三用于换装、换头、多图合成 |
+| `references` | 1–16 张参考图路径（按数组顺序接 `image_1…image_16`）；1–3 张走 `TextEncodeQwenImageEditPlus`，4–16 张走 `TextEncodeQwenImage21` 的 `images.image_N`；超过 16 张直接报错 |
 | `controlImage` | ControlNet 控制图路径；官方 Turbo 图暂不接 ControlNet，会自动留在旧链路 |
 
 另有两个专用工具：
