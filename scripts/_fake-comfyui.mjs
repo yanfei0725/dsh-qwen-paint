@@ -67,18 +67,21 @@ export function createFakeComfyUI() {
     send(404, {})
   })
 
-  const handle = {
+  let port = 0
+
+  const listen = async () => {
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+    port = server.address().port
+    return port
+  }
+  const close = () => new Promise((resolve) => server.close(resolve))
+
+  return {
     server,
     state,
-    port: 0,
-    async listen() {
-      await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
-      handle.port = server.address().port
-      return handle.port
-    },
-    async close() {
-      await new Promise((resolve) => server.close(resolve))
-    },
+    /** 监听之后才有值（启动前是 0）。 */
+    get port() { return port },
+    listen,
+    close,
   }
-  return handle
 }
