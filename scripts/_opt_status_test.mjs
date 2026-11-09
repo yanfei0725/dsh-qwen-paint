@@ -80,6 +80,20 @@ console.log('=== 1. 全部就位 → 报"优化已启用" ===')
   assert('★ 默认配置：2 项按尺寸让位（TE-Speed + Speedup）', r.stats.superseded === 2)
   assert('★ 默认配置：没有项目被吞（on + superseded + optional = total）',
     r.stats.on + r.stats.superseded + r.stats.optional === r.stats.total)
+
+  // ★★★ 2026-11-08（审计）：分界阈值的**显示**曾自己内联重算一遍，且漏了 `> 0` 校验 ——
+  //   把 wrapperAutoTokensThreshold 设成负数时，判定按 16384 走、面板却写「latent > -1 tokens」。
+  //   现在两处同口径：非法值一律按默认 16384 显示。
+  const rNeg = I.describeOptimization({ ...cfg, wrapperAutoTokensThreshold: -1 }, mk())
+  const teItem = rNeg.detail.find((d) => d.name.includes('TE-Speed'))
+  assert('★ 阈值非法（-1）时面板不出现负值', !/latent > -1\b/u.test(teItem?.whyOff ?? ''), teItem?.whyOff?.slice(0, 120))
+  assert('★ 阈值非法（-1）时按默认 16384 显示', (teItem?.whyOff ?? '').includes('latent > 16384'), teItem?.whyOff?.slice(0, 120))
+  const rZer = I.describeOptimization({ ...cfg, wrapperAutoTokensThreshold: 0 }, mk())
+  assert('★ 阈值 0 也按默认 16384 显示',
+    (rZer.detail.find((d) => d.name.includes('TE-Speed'))?.whyOff ?? '').includes('latent > 16384'))
+  const rOk = I.describeOptimization({ ...cfg, wrapperAutoTokensThreshold: 4096 }, mk())
+  assert('★ 合法阈值原样显示 4096',
+    (rOk.detail.find((d) => d.name.includes('TE-Speed'))?.whyOff ?? '').includes('latent > 4096'))
 }
 
 console.log('\n=== 2. 没装 turbo8 LoRA → 必须说清"叫什么、放哪" ===')

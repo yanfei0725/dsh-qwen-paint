@@ -140,7 +140,8 @@ def _schema_keys(fn):
 
 
 def parse_file(path):
-    """返回 {类名: {'required': set, 'bases': [基类名], 'schema': set}}"""
+    """返回 {类名: {'required': set, 'optional': set, 'bases': [基类名],
+                    'schema': set, 'uses_super': bool}}"""
     try:
         with _io.open(path, 'r', encoding='utf-8', errors='replace') as f:
             tree = ast.parse(f.read())

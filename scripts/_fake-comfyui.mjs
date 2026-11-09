@@ -26,7 +26,8 @@ export const FAKE_PROMPT_ID = 'selftest-pid'
 
 /**
  * 造一个假 ComfyUI。**不自动 listen**（调用方要能先建临时目录、写假的出图文件）。
- * @returns {{ server: import('node:http').Server, state: object, port: number, listen: () => Promise<number>, close: () => Promise<void> }}
+ * 只暴露调用方真正需要的四样：state / port / listen / close。
+ * @returns {{ state: object, readonly port: number, listen: () => Promise<number>, close: () => Promise<void> }}
  */
 export function createFakeComfyUI() {
   const state = {
@@ -77,7 +78,6 @@ export function createFakeComfyUI() {
   const close = () => new Promise((resolve) => server.close(resolve))
 
   return {
-    server,
     state,
     /** 监听之后才有值（启动前是 0）。 */
     get port() { return port },
