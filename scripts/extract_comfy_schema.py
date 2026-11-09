@@ -91,6 +91,54 @@ def schema_input_names(call):
     return names
 
 
+def _bases_of(node):
+    """类定义里出现的基类名（`Name` 与 `Attribute` 两种写法都收）。"""
+    bases = []
+    for b in node.bases:
+        if isinstance(b, ast.Name):
+            bases.append(b.id)
+        elif isinstance(b, ast.Attribute):
+            bases.append(b.attr)
+    return bases
+
+
+def _calls_super(fn):
+    """`INPUT_TYPES` 里**有没有** `super()` 调用。
+
+    ★ 关键判据：**只有调用了 `super().INPUT_TYPES()` 的才是"继承+追加"**
+      （如 `LoadImageMask(LoadImage)`），这种要把基类的键并进来。
+      而像 `LoraLoaderModelOnly(LoraLoader)` 那样**完整重写** required 的
+      （不调 super），基类的键就**不该**继承 —— 否则会凭空多出
+      `clip` / `strength_clip` 这类该节点根本没有的键，把契约污染成假的。
+    """
+    for sub in ast.walk(fn):
+        if (isinstance(sub, ast.Call)
+                and isinstance(sub.func, ast.Name)
+                and sub.func.id == 'super'):
+            return True
+    return False
+
+
+def _input_types_keys(fn):
+    """把一个 `INPUT_TYPES` 里所有 return 的 required / optional 键并起来。"""
+    req, opt = set(), set()
+    for sub in ast.walk(fn):
+        if isinstance(sub, ast.Return) and sub.value is not None:
+            r, o = dict_keys(sub.value)
+            req |= r
+            opt |= o
+    return req, opt
+
+
+def _schema_keys(fn):
+    """把一个 `define_schema` 里所有 return 的输入名并起来。"""
+    names = set()
+    for sub in ast.walk(fn):
+        if isinstance(sub, ast.Return) and sub.value is not None:
+            names |= schema_input_names(sub.value)
+    return names
+
+
 def parse_file(path):
     """返回 {类名: {'required': set, 'bases': [基类名], 'schema': set}}"""
     try:
@@ -98,43 +146,45 @@ def parse_file(path):
             tree = ast.parse(f.read())
     except Exception:
         return {}
-    out = {}
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.ClassDef):
-            continue
-        bases = []
-        for b in node.bases:
-            if isinstance(b, ast.Name):
-                bases.append(b.id)
-            elif isinstance(b, ast.Attribute):
-                bases.append(b.attr)
-        info = {'required': set(), 'optional': set(), 'bases': bases, 'schema': set(), 'uses_super': False}
+
+    def _info_of(node):
+        info = {
+            'required': set(),
+            'optional': set(),
+            'bases': _bases_of(node),
+            'schema': set(),
+            'uses_super': False,
+        }
         for item in node.body:
             if not isinstance(item, ast.FunctionDef):
                 continue
-            # 老式 INPUT_TYPES
-            if item.name == 'INPUT_TYPES':
-                # ★ 关键判据：**只有调用了 `super().INPUT_TYPES()` 的才是"继承+追加"**
-                #   （如 `LoadImageMask(LoadImage)`），这种要把基类的键并进来。
-                #   而像 `LoraLoaderModelOnly(LoraLoader)` 那样**完整重写** required 的
-                #   （不调 super），基类的键就**不该**继承 —— 否则会凭空多出
-                #   `clip` / `strength_clip` 这类该节点根本没有的键，把契约污染成假的。
-                for sub in ast.walk(item):
-                    if (isinstance(sub, ast.Call) and isinstance(sub.func, ast.Name)
-                            and sub.func.id == 'super'):
-                        info['uses_super'] = True
-                for sub in ast.walk(item):
-                    if isinstance(sub, ast.Return) and sub.value is not None:
-                        r, o = dict_keys(sub.value)
-                        info['required'] |= r
-                        info['optional'] |= o
-            # 新式 define_schema
-            if item.name == 'define_schema':
-                for sub in ast.walk(item):
-                    if isinstance(sub, ast.Return) and sub.value is not None:
-                        info['schema'] |= schema_input_names(sub.value)
-        out[node.name] = info
-    return out
+            if item.name == 'INPUT_TYPES':          # 老式 INPUT_TYPES
+                info['uses_super'] = _calls_super(item)
+                r, o = _input_types_keys(item)
+                info['required'] |= r
+                info['optional'] |= o
+            if item.name == 'define_schema':        # 新式 define_schema
+                info['schema'] |= _schema_keys(item)
+        return info
+
+    return {node.name: _info_of(node) for node in ast.walk(tree) if isinstance(node, ast.ClassDef)}
+
+
+def _classes_in_dir(root, sub):
+    """扫一个子目录，返回 ({类名: info}, [相对根目录的 posix 路径])。"""
+    d = os.path.join(root, sub) if sub else root
+    if not os.path.isdir(d):
+        return {}, []
+    got, scanned = {}, []
+    for fn in os.listdir(d):
+        if not fn.endswith('.py'):
+            continue
+        p = os.path.join(d, fn)
+        parsed = parse_file(p)
+        if parsed:
+            scanned.append(os.path.relpath(p, root).replace('\\', '/'))
+            got.update(parsed)
+    return got, scanned
 
 
 def main():
@@ -147,17 +197,9 @@ def main():
     all_classes = {}
     scanned = []
     for sub in SCAN_SUBDIRS:
-        d = os.path.join(root, sub) if sub else root
-        if not os.path.isdir(d):
-            continue
-        for fn in os.listdir(d):
-            if not fn.endswith('.py'):
-                continue
-            p = os.path.join(d, fn)
-            got = parse_file(p)
-            if got:
-                scanned.append(os.path.relpath(p, root).replace('\\', '/'))
-                all_classes.update(got)
+        got, files = _classes_in_dir(root, sub)
+        all_classes.update(got)
+        scanned.extend(files)
 
     # 处理继承：**仅当子类显式调用了 `super().INPUT_TYPES()`** 才把基类的键并进来
     #   （`LoadImageMask` 就是这种：super() 之后追加 `channel`）。

@@ -55,6 +55,34 @@ def lerp(a, b, t):
     return tuple(int(round(a[i] + (b[i] - a[i]) * t)) for i in range(3))
 
 
+def draw_glow(draw, phase):
+    """一道白色流光从左上扫到右下（phase 0→1 走完全程）。"""
+    cx = -W * 0.5 + phase * (W * 2.0)
+    cy = -H * 0.5 + phase * (H * 2.0)
+    for k in range(-68, 69):
+        a = max(0.0, 1.0 - abs(k) / 68.0) ** 2
+        if a <= 0.02:
+            continue
+        off = k * 3.6
+        draw.line(
+            [(cx + off - W, cy + off - H), (cx + off + W, cy + off + H)],
+            fill=(255, 255, 255, int(130 * a)),
+            width=14,
+        )
+
+
+def draw_label(draw, font):
+    """居中写「正在生成图片」：先描一层半透明阴影，浅色背景上也读得清。"""
+    text = '正在生成图片'
+    if font is None:
+        return
+    box = draw.textbbox((0, 0), text, font=font)
+    tw, th = box[2] - box[0], box[3] - box[1]
+    x, y = (W - tw) // 2 - box[0], (H - th) // 2 - box[1]
+    draw.text((x + 1, y + 1), text, font=font, fill=(0, 0, 0, 90))
+    draw.text((x, y), text, font=font, fill=(255, 255, 255, 240))
+
+
 def build_frames():
     font = pick_font(40)     # 分辨率翻倍，字号同步翻倍
     frames = []
@@ -76,32 +104,21 @@ def build_frames():
         img = Image.new('RGB', (W, H), base)
         draw = ImageDraw.Draw(img, 'RGBA')
 
-        # ---- 白色流光：从左上扫到右下 ----
-        cx = -W * 0.5 + phase * (W * 2.0)
-        cy = -H * 0.5 + phase * (H * 2.0)
-        for k in range(-68, 69):
-            a = max(0.0, 1.0 - abs(k) / 68.0) ** 2
-            if a <= 0.02:
-                continue
-            off = k * 3.6
-            draw.line(
-                [(cx + off - W, cy + off - H), (cx + off + W, cy + off + H)],
-                fill=(255, 255, 255, int(130 * a)),
-                width=14,
-            )
-
-        # ---- 小字 ----
-        text = '正在生成图片'
-        if font is not None:
-            box = draw.textbbox((0, 0), text, font=font)
-            tw, th = box[2] - box[0], box[3] - box[1]
-            x, y = (W - tw) // 2 - box[0], (H - th) // 2 - box[1]
-            # 先描一层半透明阴影，浅色背景上也读得清
-            draw.text((x + 1, y + 1), text, font=font, fill=(0, 0, 0, 90))
-            draw.text((x, y), text, font=font, fill=(255, 255, 255, 240))
+        draw_glow(draw, phase)           # ---- 白色流光：从左上扫到右下 ----
+        draw_label(draw, font)           # ---- 小字 ----
 
         frames.append(img)
     return frames
+
+
+def save_webp(frames):
+    """顺带出一份动图 webp（老版本 Pillow 可能不支持，失败只提示不抛）。"""
+    try:
+        frames[0].save(WEBP_PATH, save_all=True, append_images=frames[1:],
+                       duration=DUR_MS, loop=0, quality=82, method=4)
+        print('WebP:', WEBP_PATH, os.path.getsize(WEBP_PATH), '字节')
+    except Exception as exc:
+        print('WebP 生成失败（可忽略）：', exc)
 
 
 def main():
@@ -112,12 +129,7 @@ def main():
                    duration=DUR_MS, loop=0, optimize=True, disposal=2)
     print('GIF :', GIF_PATH, os.path.getsize(GIF_PATH), '字节')
 
-    try:
-        frames[0].save(WEBP_PATH, save_all=True, append_images=frames[1:],
-                       duration=DUR_MS, loop=0, quality=82, method=4)
-        print('WebP:', WEBP_PATH, os.path.getsize(WEBP_PATH), '字节')
-    except Exception as exc:      # 老版本 Pillow 可能不支持动图 webp
-        print('WebP 生成失败（可忽略）：', exc)
+    save_webp(frames)
 
 
 if __name__ == '__main__':

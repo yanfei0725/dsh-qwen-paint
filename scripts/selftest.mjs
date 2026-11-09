@@ -16,11 +16,11 @@
  * ============================================================================
  */
 
-import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
 import { promises as fsp, existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { createFakeComfyUI } from './_fake-comfyui.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 // Windows 上动态 import 绝对路径必须是 file:// URL，直接给 'C:\...' 会报
@@ -43,40 +43,12 @@ function section(title) {
 
 /* ------------------------------------------------- 假 ComfyUI HTTP 服务器 ---- */
 
-let submittedBody = null
-let historyCalls = 0
-/** 空闲关停判定"忙不忙"要读它；默认空队列 = 不忙。 */
-let queuePayload = { queue_running: [], queue_pending: [] }
-const server = http.createServer((req, res) => {
-  const url = new URL(req.url, 'http://127.0.0.1')
-  const send = (code, obj) => {
-    res.writeHead(code, { 'Content-Type': 'application/json' })
-    res.end(JSON.stringify(obj))
-  }
-  if (url.pathname === '/system_stats') return send(200, { system: { comfyui_version: 'selftest' } })
-  if (url.pathname === '/queue') return send(200, queuePayload)
-  if (url.pathname === '/prompt') {
-    let body = ''
-    req.on('data', (chunk) => { body += chunk })
-    req.on('end', () => {
-      submittedBody = JSON.parse(body)
-      send(200, { prompt_id: 'selftest-pid' })
-    })
-    return
-  }
-  if (url.pathname === '/history/selftest-pid') {
-    historyCalls += 1
-    return send(200, {
-      'selftest-pid': {
-        status: { status_str: 'success', completed: true },
-        outputs: { 10: { images: [{ filename: 'fake_out.png', subfolder: '', type: 'output' }] } },
-      },
-    })
-  }
-  send(404, {})
-})
-await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
-const port = server.address().port
+// 桩件在 `scripts/_fake-comfyui.mjs`（自带状态、不依赖被测代码）。
+// 三个状态位现在走显式的 `fakeState`，不再靠模块级 let 跨段落共享。
+const fakeComfy = createFakeComfyUI()
+const fakeState = fakeComfy.state
+await fakeComfy.listen()
+const port = fakeComfy.port
 
 /* ------------------------------------------------------------- 临时目录 ---- */
 
@@ -333,11 +305,11 @@ const onDisk = value?.path === undefined ? null : await fsp.readFile(value.path)
 check('文件真的落盘了', onDisk !== null)
 check('落盘字节与来源一致', onDisk !== null && Buffer.compare(onDisk, FAKE_PNG) === 0)
 check('文件名符合约定', /_Qwen2\.1_1344x736_01\.png$/u.test(path.basename(value?.path ?? '')), path.basename(value?.path ?? ''))
-check('提交体带 client_id', typeof submittedBody?.client_id === 'string' && submittedBody.client_id.length > 0, submittedBody?.client_id)
-check('提交的是 prompt 字段包裹的 workflow', submittedBody?.prompt?.['5']?.inputs?.prompt === '一只在雪地里的柴犬')
-check('提交的尺寸正确', submittedBody?.prompt?.['6']?.inputs?.width === 1344 && submittedBody?.prompt?.['6']?.inputs?.height === 736)
-check('提交的 seed 正确', submittedBody?.prompt?.['8']?.inputs?.seed === 42)
-check('轮询确实发生了', historyCalls > 0, historyCalls)
+check('提交体带 client_id', typeof fakeState.submittedBody?.client_id === 'string' && fakeState.submittedBody.client_id.length > 0, fakeState.submittedBody?.client_id)
+check('提交的是 prompt 字段包裹的 workflow', fakeState.submittedBody?.prompt?.['5']?.inputs?.prompt === '一只在雪地里的柴犬')
+check('提交的尺寸正确', fakeState.submittedBody?.prompt?.['6']?.inputs?.width === 1344 && fakeState.submittedBody?.prompt?.['6']?.inputs?.height === 736)
+check('提交的 seed 正确', fakeState.submittedBody?.prompt?.['8']?.inputs?.seed === 42)
+check('轮询确实发生了', fakeState.historyCalls > 0, fakeState.historyCalls)
 
 section('⑧ 交付事件（与官方 present 同一套载荷）')
 for (const handler of listeners.get('tools/result') ?? []) handler(exec, { isError: false })
@@ -611,9 +583,9 @@ const idleCfg = { ...DEFAULTS, comfyUrl: `http://127.0.0.1:${port}`, statusCache
 const liveStatus = makeComfyStatus(idleCfg)
 check('探活：假 ComfyUI 在线', (await liveStatus.probe(true)) === true)
 check('队列为空 → 不忙', (await liveStatus.queueBusy()) === false)
-queuePayload = { queue_running: [[0, 'x']], queue_pending: [] }
+fakeState.queue = { queue_running: [[0, 'x']], queue_pending: [] }
 check('队列有任务 → 忙', (await liveStatus.queueBusy()) === true)
-queuePayload = { queue_running: [], queue_pending: [] }
+fakeState.queue = { queue_running: [], queue_pending: [] }
 
 const quiet = () => {}
 const idleFresh = makeIdleShutdown({ ...idleCfg, idleShutdownMs: 1000 }, quiet, liveStatus)
@@ -1781,7 +1753,7 @@ const wfW = (cfg, args, caps) => bwW(cfg, { prompt: 't', width: 1024, height: 10
 }
 
 /* ------------------------------------------------------------------ 收尾 ---- */
-server.close()
+await fakeComfy.close()
 await fsp.rm(tmp, { recursive: true, force: true }).catch(() => {})
 
 console.log(`\n${failures === 0 ? '全部通过 ✓' : `有 ${failures} 项失败 ✗`}`)
