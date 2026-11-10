@@ -140,6 +140,12 @@ const desc = describeControls({ aspect: 5, speedPercent: 100 })
 ok('摘要含模式/比例/速度/吸附档/参考图预算',
   desc.includes('生图模式') && desc.includes('16:9') && desc.includes('100%')
   && desc.includes('吸附') && desc.includes('该档参考图预算'), desc)
+ok('★ 视频模式摘要说帧数/帧率/高度，不再写图链的「长边/参考图预算」', (() => {
+  const d = describeControls({ mode: 'video', speedPercent: 50 })
+  return d.includes('25 帧') && d.includes('12 fps') && !d.includes('参考图预算')
+})())
+ok('★ 生图模式摘要仍写长边与参考图预算（行为不变）',
+  describeControls(DEFAULT_CONTROLS).includes('参考图预算'))
 ok('摘要把速度标为"吸附档"，不谎称精确档位', /吸附 \d+ 档/.test(desc), desc)
 ok('quantizeSpeedPercent 与 speedEdge 口径一致（每个 tier 的 edge 不同）',
   new Set(SPEED_TIERS.map((t) => speedEdge(t))).size === SPEED_TIERS.length)
