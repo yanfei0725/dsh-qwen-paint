@@ -216,6 +216,13 @@
     return n
   }
 
+  /** 卡片化分区容器：统一 .cp-card 外观 + 一行小标题（UI 现代化重构）。 */
+  function card(title, cls) {
+    var c = el('div', 'cp-card' + (cls ? ' ' + cls : ''))
+    if (title) c.appendChild(el('div', 'cp-card-title', title))
+    return c
+  }
+
   function setStatus(text, kind) {
     if (!nodes || !nodes.status) return
     nodes.status.textContent = text
@@ -437,6 +444,15 @@
       } else {
         val.textContent = String(v)
       }
+      // 胶囊滑块「已划过」的填充色：把当前值换算成轨道百分比写进 CSS 变量。
+      // 假 DOM 的 style 是普通对象（无 setProperty），守卫后跳过即可，不影响真渲染。
+      if (input.type === 'range' && input.style && typeof input.style.setProperty === 'function') {
+        var lo = Number(input.min)
+        var hi = Number(input.max)
+        var num = Number(v)
+        var pct = Number.isFinite(num) && hi > lo ? ((num - lo) / (hi - lo)) * 100 : 0
+        input.style.setProperty('--cp-fill', Math.max(0, Math.min(100, pct)) + '%')
+      }
       if (opts && typeof opts.onPaint === 'function') opts.onPaint(v, hint)
     }
     paint()
@@ -517,7 +533,7 @@
     var note = el('p', 'cp-note', '')
     panel.appendChild(note)
 
-    var common = el('div', 'cp-common')
+    var common = card('画面设置', 'cp-common')
     common.appendChild(field('画幅比例', 'aspect', { ticks: ticks }))
     common.appendChild(field('速度百分比', 'speedPercent', {
       hint: '',
@@ -532,7 +548,7 @@
     // ★ 视频参数组：帧数与帧率**真接** generate_video（见 lib/video-workflow.js）。
     //   没切到视频模式时禁用，但仍展示——先看得见能拨什么，再决定切不切。
     var videoOn = state.mode === 'video'
-    var vgroup = el('div', 'cp-video-group')
+    var vgroup = card('视频参数', 'cp-video-group')
     vgroup.appendChild(field('帧数', 'frames', {
       disabled: !videoOn,
       hint: videoOn ? '' : '先切到视频模式。',
@@ -551,8 +567,7 @@
     panel.appendChild(vgroup)
 
     // ★ 素材库（用户定义：设计风格 + 用户指令 + 自行装载的 skill）
-    var library = el('div', 'cp-library')
-    library.appendChild(el('div', 'cp-section-title', '素材库'))
+    var library = card('素材库', 'cp-library')
     library.appendChild(el('div', 'cp-field-label', '设计风格'))
     var styleSel = el('select', 'cp-select')
     styleSel.addEventListener('change', function () { saveLibrary({ selected: styleSel.value }) })
@@ -568,7 +583,7 @@
     library.appendChild(el('p', 'cp-hint cp-library-hint', ''))
     panel.appendChild(library)
 
-    var adv = el('details', 'cp-adv')
+    var adv = el('details', 'cp-card cp-adv')
     adv.appendChild(el('summary', null, '高级设置'))
     var body = el('div', 'cp-adv-body')
     body.appendChild(field('种子（-1 = 每次随机）', 'seed', { hint: '同提示词 + 同种子 = 同一张图；-1 每次都不一样。' }))
