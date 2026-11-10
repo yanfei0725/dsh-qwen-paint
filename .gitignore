@@ -3,6 +3,14 @@ node_modules/
 dist/
 _vendor/
 
+# ★ 报告 v3 §13.1：Go L3 调度器是**独立原型**（只动 <1%，不随插件发布）。
+#   scheduler/ 源码要提交，但 go build 产出的 bin/comfy-scheduler.exe 不进仓库；
+#   package.json 的 files 白名单也不含 scheduler/，发布物里根本不会出现。
+bin/
+# A 线 derive-slots.py 的运行残留
+__pycache__/
+*.pyc
+
 # 开发残留：备份、日志、临时输出
 *.bak*
 *.bak-before-*

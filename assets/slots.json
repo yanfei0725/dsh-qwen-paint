@@ -1,0 +1,1055 @@
+{
+  "_source": "python-ast",
+  "_files": [
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>",
+    "<本地路径>"
+  ],
+  "classes": 869,
+  "slots": {
+    "CLIPTextEncode": [
+      "text"
+    ],
+    "ConditioningSetArea": [
+      "height",
+      "width"
+    ],
+    "ConditioningSetAreaPercentage": [
+      "height",
+      "width"
+    ],
+    "LoraLoader": [
+      "lora_name"
+    ],
+    "LoraLoaderModelOnly": [
+      "lora_name"
+    ],
+    "ControlNetApply": [
+      "image"
+    ],
+    "ControlNetApplyAdvanced": [
+      "image"
+    ],
+    "CLIPVisionEncode": [
+      "image"
+    ],
+    "GLIGENTextBoxApply": [
+      "height",
+      "text",
+      "width"
+    ],
+    "EmptyLatentImage": [
+      "height",
+      "width"
+    ],
+    "LatentFromBatch": [
+      "length"
+    ],
+    "LatentUpscale": [
+      "height",
+      "width"
+    ],
+    "LatentCrop": [
+      "height",
+      "width"
+    ],
+    "KSampler": [
+      "cfg",
+      "denoise",
+      "seed",
+      "steps"
+    ],
+    "KSamplerAdvanced": [
+      "cfg",
+      "steps"
+    ],
+    "LoadImage": [
+      "image"
+    ],
+    "LoadImageOutput": [
+      "image"
+    ],
+    "ImageScale": [
+      "height",
+      "image",
+      "width"
+    ],
+    "ImageScaleBy": [
+      "image"
+    ],
+    "ImageInvert": [
+      "image"
+    ],
+    "EmptyImage": [
+      "height",
+      "width"
+    ],
+    "ImagePadForOutpaint": [
+      "image"
+    ],
+    "TextEncodeAceStepAudio15": [
+      "seed"
+    ],
+    "AlignYourStepsScheduler": [
+      "denoise",
+      "steps"
+    ],
+    "EmptyARVideoLatent": [
+      "height",
+      "length",
+      "width"
+    ],
+    "ARVideoI2V": [
+      "height",
+      "length",
+      "width"
+    ],
+    "BerniniConditioning": [
+      "height",
+      "length",
+      "width"
+    ],
+    "RemoveBackground": [
+      "image"
+    ],
+    "TextEncodeBooguEdit": [
+      "image"
+    ],
+    "CreateBoundingBoxes": [
+      "height",
+      "width"
+    ],
+    "CameraAngle": [
+      "image"
+    ],
+    "WanCameraEmbedding": [
+      "height",
+      "length",
+      "width"
+    ],
+    "Canny": [
+      "image"
+    ],
+    "CLIPTextEncodeSDXLRefiner": [
+      "height",
+      "text",
+      "width"
+    ],
+    "CLIPTextEncodeSDXL": [
+      "height",
+      "width"
+    ],
+    "SplitImageWithAlpha": [
+      "image"
+    ],
+    "JoinImageWithAlpha": [
+      "image"
+    ],
+    "AddLayer": [
+      "height",
+      "image",
+      "width"
+    ],
+    "LayersFromBoundingBoxes": [
+      "image"
+    ],
+    "CLIPTextEncodeControlnet": [
+      "text"
+    ],
+    "ControlNetInpaintingAliMamaApply": [
+      "image"
+    ],
+    "EmptyCosmosLatentVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "CosmosImageToVideoLatent": [
+      "height",
+      "length",
+      "width"
+    ],
+    "CosmosPredict2ImageToVideoLatent": [
+      "height",
+      "length",
+      "width"
+    ],
+    "ImageHistogram": [
+      "image"
+    ],
+    "BasicScheduler": [
+      "denoise",
+      "steps"
+    ],
+    "KarrasScheduler": [
+      "steps"
+    ],
+    "ExponentialScheduler": [
+      "steps"
+    ],
+    "PolyexponentialScheduler": [
+      "steps"
+    ],
+    "LaplaceScheduler": [
+      "steps"
+    ],
+    "SDTurboScheduler": [
+      "denoise",
+      "steps"
+    ],
+    "BetaSamplingScheduler": [
+      "steps"
+    ],
+    "VPScheduler": [
+      "steps"
+    ],
+    "SplitSigmasDenoise": [
+      "denoise"
+    ],
+    "ExtendIntermediateSigmas": [
+      "steps"
+    ],
+    "SamplerCustom": [
+      "cfg"
+    ],
+    "CFGGuider": [
+      "cfg"
+    ],
+    "DualModelGuider": [
+      "cfg"
+    ],
+    "CFGOverride": [
+      "cfg"
+    ],
+    "ShuffleImageTextDatasetNode": [
+      "seed"
+    ],
+    "VideoFrameSampleNode": [
+      "num_frames",
+      "seed"
+    ],
+    "VideoTemporalCropNode": [
+      "length"
+    ],
+    "VideoRandomTemporalCropNode": [
+      "length",
+      "seed"
+    ],
+    "ShuffleVideoDatasetNode": [
+      "seed"
+    ],
+    "ShuffleVideoTextDatasetNode": [
+      "seed"
+    ],
+    "DA3Inference": [
+      "image"
+    ],
+    "EmptyFlux2LatentImage": [
+      "height",
+      "width"
+    ],
+    "FluxKontextImageScale": [
+      "image"
+    ],
+    "Flux2Scheduler": [
+      "height",
+      "steps",
+      "width"
+    ],
+    "RenderSplat": [
+      "height",
+      "width"
+    ],
+    "GITSScheduler": [
+      "denoise",
+      "steps"
+    ],
+    "GLSLShader": [
+      "height",
+      "image",
+      "width"
+    ],
+    "HiDreamO1ReferenceImages": [
+      "image"
+    ],
+    "CreateHookLora": [
+      "lora_name"
+    ],
+    "CreateHookLoraModelOnly": [
+      "lora_name"
+    ],
+    "EmptyHunyuanLatentVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "HunyuanVideo15ImageToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "HunyuanVideo15LatentUpscaleWithModel": [
+      "height",
+      "width"
+    ],
+    "HunyuanImageToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "EmptyHunyuanImageLatent": [
+      "height",
+      "width"
+    ],
+    "Ideogram4Scheduler": [
+      "height",
+      "steps",
+      "width"
+    ],
+    "ImageCrop": [
+      "height",
+      "image",
+      "width"
+    ],
+    "ImageCropV2": [
+      "image"
+    ],
+    "ImageCropToMask": [
+      "height",
+      "width"
+    ],
+    "BoundingBox": [
+      "height",
+      "width"
+    ],
+    "RepeatImageBatch": [
+      "image"
+    ],
+    "ImageFromBatch": [
+      "image",
+      "length"
+    ],
+    "ImageAddNoise": [
+      "image",
+      "seed"
+    ],
+    "SaveAnimatedWEBP": [
+      "fps"
+    ],
+    "SaveAnimatedPNG": [
+      "fps"
+    ],
+    "ResizeAndPadImage": [
+      "image"
+    ],
+    "GetImageSize": [
+      "image"
+    ],
+    "ImageRotate": [
+      "image"
+    ],
+    "ImageFlip": [
+      "image"
+    ],
+    "ImageScaleToMaxDimension": [
+      "image"
+    ],
+    "SplitImageToTileList": [
+      "image"
+    ],
+    "ImageColorSpace": [
+      "image"
+    ],
+    "SaveImageAdvanced": [
+      "fps"
+    ],
+    "TextEncodeJoyImageEdit": [
+      "image"
+    ],
+    "Kandinsky5ImageToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "Load3D": [
+      "height",
+      "image",
+      "width"
+    ],
+    "Preview3DAdvanced": [
+      "height",
+      "width"
+    ],
+    "PreviewGaussianSplat": [
+      "height",
+      "width"
+    ],
+    "PreviewPointCloud": [
+      "height",
+      "width"
+    ],
+    "Load3DAdvanced": [
+      "height",
+      "width"
+    ],
+    "DCTestNode": [
+      "image"
+    ],
+    "LoraLoaderBypass": [
+      "lora_name"
+    ],
+    "LoraLoaderBypassModelOnly": [
+      "lora_name"
+    ],
+    "EmptyLTXVLatentVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "LTXVImgToVideo": [
+      "height",
+      "image",
+      "length",
+      "width"
+    ],
+    "LTXVImgToVideoInplace": [
+      "image"
+    ],
+    "LTXVAddGuide": [
+      "image"
+    ],
+    "LTXVConditioning": [
+      "frame_rate"
+    ],
+    "LTXVScheduler": [
+      "steps"
+    ],
+    "LTXVPreprocess": [
+      "image"
+    ],
+    "LTXVDurationPredictor": [
+      "frame_rate"
+    ],
+    "LTXVEmptyLatentAudio": [
+      "frame_rate"
+    ],
+    "TextEncodeMageFlowEdit": [
+      "height",
+      "image",
+      "width"
+    ],
+    "MarigoldV2PostProcess": [
+      "image"
+    ],
+    "ImageToMask": [
+      "image"
+    ],
+    "ImageColorToMask": [
+      "image"
+    ],
+    "SolidMask": [
+      "height",
+      "width"
+    ],
+    "CropMask": [
+      "height",
+      "width"
+    ],
+    "MediaPipeFaceLandmarker": [
+      "image"
+    ],
+    "MediaPipeFaceMeshVisualize": [
+      "image"
+    ],
+    "RenderMesh": [
+      "height",
+      "width"
+    ],
+    "TextEncodeMingImageEdit": [
+      "image"
+    ],
+    "EmptyMiniMaxH3LatentAV": [
+      "height",
+      "length",
+      "width"
+    ],
+    "MiniMaxH3ImageToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "MiniMaxH3AddGuide": [
+      "image"
+    ],
+    "MiniMaxH3ReferenceToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "MiniMaxMusic3TextEncode": [
+      "seed"
+    ],
+    "EmptyMochiLatentVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "ModelSamplingFlux": [
+      "height",
+      "width"
+    ],
+    "AnimaLLLiteApply": [
+      "image"
+    ],
+    "QwenImageDiffsynthControlnet": [
+      "image"
+    ],
+    "ZImageFunControlnet": [
+      "image"
+    ],
+    "SUPIRApply": [
+      "image"
+    ],
+    "MoGePanoramaInference": [
+      "image"
+    ],
+    "MoGeInference": [
+      "image"
+    ],
+    "Morphology": [
+      "image"
+    ],
+    "ImageRGBToYUV": [
+      "image"
+    ],
+    "OptimalStepsScheduler": [
+      "denoise",
+      "steps"
+    ],
+    "PainterNode": [
+      "height",
+      "image",
+      "width"
+    ],
+    "PerpNegGuider": [
+      "cfg"
+    ],
+    "PhotoMakerEncode": [
+      "image",
+      "text"
+    ],
+    "CLIPTextEncodePixArtAlpha": [
+      "height",
+      "text",
+      "width"
+    ],
+    "Blur": [
+      "image"
+    ],
+    "Quantize": [
+      "image"
+    ],
+    "Sharpen": [
+      "image"
+    ],
+    "ImageScaleToTotalPixels": [
+      "image"
+    ],
+    "ResizeImageMaskNode": [
+      "height",
+      "width"
+    ],
+    "BatchImagesNode": [
+      "image"
+    ],
+    "TextEncodeQwenImageEdit": [
+      "image"
+    ],
+    "TextEncodeQwenImage21": [
+      "image"
+    ],
+    "EmptyQwenImageLayeredLatentImage": [
+      "height",
+      "width"
+    ],
+    "RTDETR_detect": [
+      "image"
+    ],
+    "DrawBBoxes": [
+      "image"
+    ],
+    "SAM3_Detect": [
+      "image"
+    ],
+    "SAM3_TrackPreview": [
+      "fps"
+    ],
+    "SAM3DBody_Predict": [
+      "image"
+    ],
+    "SAM3DBody_FaceExpression": [
+      "image"
+    ],
+    "SAM3DBody_Render": [
+      "height",
+      "width"
+    ],
+    "BuildPoseFile": [
+      "fps"
+    ],
+    "Save3DAdvanced": [
+      "height",
+      "width"
+    ],
+    "SaveGaussianSplat": [
+      "height",
+      "width"
+    ],
+    "SavePointCloud": [
+      "height",
+      "width"
+    ],
+    "WanSCAILToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "EmptySD3LatentImage": [
+      "height",
+      "width"
+    ],
+    "ControlNetApplySD3": [
+      "image"
+    ],
+    "SDPoseKeypointExtractor": [
+      "image"
+    ],
+    "CropByBBoxes": [
+      "image"
+    ],
+    "SeedNode": [
+      "seed"
+    ],
+    "StableZero123_Conditioning": [
+      "height",
+      "width"
+    ],
+    "StableZero123_Conditioning_Batched": [
+      "height",
+      "width"
+    ],
+    "SV3D_Conditioning": [
+      "height",
+      "width"
+    ],
+    "StableCascade_EmptyLatentImage": [
+      "height",
+      "width"
+    ],
+    "StableCascade_StageC_VAEEncode": [
+      "image"
+    ],
+    "StableCascade_SuperResolutionControlnet": [
+      "image"
+    ],
+    "SaveTextNode": [
+      "text"
+    ],
+    "TextOverlay": [
+      "text"
+    ],
+    "TextGenerate": [
+      "image",
+      "seed"
+    ],
+    "TrainLoraNode": [
+      "seed",
+      "steps"
+    ],
+    "SaveLoRA": [
+      "steps"
+    ],
+    "Trellis2Conditioning": [
+      "image"
+    ],
+    "Pixal3DConditioning": [
+      "image"
+    ],
+    "TripoSplatPreprocessImage": [
+      "image"
+    ],
+    "TripoSplatConditioning": [
+      "image"
+    ],
+    "VAEDecodeTripoSplat": [
+      "seed"
+    ],
+    "ImageUpscaleWithModel": [
+      "image"
+    ],
+    "SaveWEBM": [
+      "fps"
+    ],
+    "CreateVideo": [
+      "fps"
+    ],
+    "SVD_img2vid_Conditioning": [
+      "fps",
+      "height",
+      "width"
+    ],
+    "ConditioningSetAreaPercentageVideo": [
+      "height",
+      "width"
+    ],
+    "VOIDInpaintConditioning": [
+      "height",
+      "length",
+      "width"
+    ],
+    "VOIDWarpedNoise": [
+      "height",
+      "length",
+      "width"
+    ],
+    "WanImageToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "WanFunControlToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "Wan22FunControlToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "WanFirstLastFrameToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "WanFunInpaintToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "WanVaceToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "WanCameraImageToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "WanPhantomSubjectToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "WanTrackToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "WanSoundImageToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "WanSoundImageToVideoExtend": [
+      "length"
+    ],
+    "WanHuMoImageToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "WanAnimateToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "WanAnimate2ToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "Wan22ImageToVideoLatent": [
+      "height",
+      "length",
+      "width"
+    ],
+    "WanInfiniteTalkToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "WanDancerVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "GenerateTracks": [
+      "height",
+      "num_frames",
+      "width"
+    ],
+    "WanMoveTrackToVideo": [
+      "height",
+      "length",
+      "width"
+    ],
+    "WebcamCapture": [
+      "height",
+      "image",
+      "width"
+    ],
+    "YuE2GenerateABC": [
+      "seed"
+    ],
+    "YuE2GenerateMusic": [
+      "seed"
+    ]
+  },
+  "modelLoaders": {
+    "CheckpointLoader": [
+      "ckpt_name"
+    ],
+    "CheckpointLoaderSimple": [
+      "ckpt_name"
+    ],
+    "unCLIPCheckpointLoader": [
+      "ckpt_name"
+    ],
+    "LoraLoader": [
+      "lora_name"
+    ],
+    "LoraLoaderModelOnly": [
+      "lora_name"
+    ],
+    "VAELoader": [
+      "vae_name"
+    ],
+    "ControlNetLoader": [
+      "control_net_name"
+    ],
+    "DiffControlNetLoader": [
+      "control_net_name"
+    ],
+    "UNETLoader": [
+      "unet_name"
+    ],
+    "CLIPLoader": [
+      "clip_name"
+    ],
+    "DualCLIPLoader": [
+      "clip_name1",
+      "clip_name2"
+    ],
+    "CLIPVisionLoader": [
+      "clip_name"
+    ],
+    "LoadDA3Model": [
+      "model_name"
+    ],
+    "FrameInterpolationModelLoader": [
+      "model_name"
+    ],
+    "QuadrupleCLIPLoader": [
+      "clip_name1",
+      "clip_name2"
+    ],
+    "CreateHookLora": [
+      "lora_name"
+    ],
+    "CreateHookLoraModelOnly": [
+      "lora_name"
+    ],
+    "CreateHookModelAsLora": [
+      "ckpt_name"
+    ],
+    "CreateHookModelAsLoraModelOnly": [
+      "ckpt_name"
+    ],
+    "LatentUpscaleModelLoader": [
+      "model_name"
+    ],
+    "LoraLoaderBypass": [
+      "lora_name"
+    ],
+    "LoraLoaderBypassModelOnly": [
+      "lora_name"
+    ],
+    "LTXVAudioVAELoader": [
+      "ckpt_name"
+    ],
+    "LTXAVTextEncoderLoader": [
+      "ckpt_name"
+    ],
+    "LoadMediaPipeFaceLandmarker": [
+      "model_name"
+    ],
+    "LoadMoGeModel": [
+      "model_name"
+    ],
+    "TripleCLIPLoader": [
+      "clip_name1",
+      "clip_name2"
+    ],
+    "UpscaleModelLoader": [
+      "model_name"
+    ],
+    "ImageOnlyCheckpointLoader": [
+      "ckpt_name"
+    ],
+    "OpticalFlowLoader": [
+      "model_name"
+    ]
+  }
+}

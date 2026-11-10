@@ -60,6 +60,12 @@ const SUITES = [
   // ★ 生成进度：队列位置 + 家自实测 ETA（不编数字）
   { file: 'test-progress.mjs', note: '生成进度与 ETA（队列/EWMA/百分比封顶）' },
   { file: 'test-style-library.mjs', note: '素材库（风格/指令/skill）+ 视频加速档面板项' },
+  // ★ 报告 v3 §13/§14：Go L3 调度器原型 + AST A/B/C 三线 + 混合模式
+  { file: 'test-workflow-ast.mjs', note: 'B 线 WorkflowAST / 5 passes / 提交前校验与回滚 / comfy-catalog 接线' },
+  { file: 'test-hybrid-runner.mjs', note: '混合模式三段编排（20/10/70 权重 / 分段 / 卸载 / 取消）' },
+  { file: 'test-tts-workflow.mjs', note: 'TTS 兜底链 / 缺件报告 / 可插拔探测' },
+  { file: 'test-pipeline-modes.mjs', note: '面板 /modes 动态可用性（vm 真跑 mount）' },
+  { file: 'test-ast-split.mjs', note: 'A 线 derive-slots + C 线零依赖源码 AST 零漂移验证器' },
   // —— 契约 / 面板 / 步骤 ——
   { file: '_tool_contract_test.mjs', note: '工具契约' },
   { file: '_step4_dry_test.mjs', note: '4 步干跑' },

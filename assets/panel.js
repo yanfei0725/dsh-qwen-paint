@@ -7,9 +7,10 @@
  *   控制项存到 `GET/POST /api/comfy-pipeline/controls`。
  *
  * ## 这个面板**不装**什么
- *   视频模式（wan22 / ltxv / framepack）与混合模式的后端工作流在本插件里**还不存在**，
- *   所以那两个 tab 是 `disabled` 的，并如实标注原因 —— 摆一个拨了没反应的滑块，
- *   比不给更坏（本项目历史上被"假报告"坑过）。
+ *   视频链（wan22 / XT-5B）已接进 lib/video-workflow.js ⇒ 可选。
+ *   混合模式（image → tts → video）是否可选由 `GET /api/comfy-pipeline/modes` 探测决定：
+ *   探到 TTS 节点+权重就自动放行，缺件时 tab 禁用并把**缺什么、放哪**放进 title（如实，
+ *   不假装能出 wav）—— 摆一个拨了没反应的滑块，比不给更坏（本项目历史上被"假报告"坑过）。
  *   同理：`fps` / `denoise` / `tileSize` / `chunkOverlap` 四项当前**没有消费方**，一律禁用并注明。
  *
  * ## 速度%的真实语义
@@ -26,7 +27,13 @@
   var CONTROLS_PATH = 'api/comfy-pipeline/controls'
   var PROGRESS_PATH = 'api/comfy-pipeline/progress'
   var LIBRARY_PATH = 'api/comfy-pipeline/library'
+  var MODES_PATH = 'api/comfy-pipeline/modes'
   var FALLBACK_TIERS = [25, 50, 75, 100]
+
+  // 默认与「本地没探到 modes 端点」一致：图/视频可用、混合禁用。
+  // 端点回来后按 modes[].available 覆写 —— 探测失败绝不把已可用模式误关。
+  var modeAvailability = { image: true, video: true, hybrid: false }
+  var modeReason = { hybrid: '' }
 
   var schema = null
   var state = null
@@ -169,6 +176,23 @@
         return sanitizeLocal({})
       })
       .catch(function () { return sanitizeLocal({}) })
+  }
+
+  /** 模式可用性探测：只在端点明确回 available=true 时放行，拿不到就保持默认。 */
+  function loadModes() {
+    return fetch(MODES_PATH, { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null })
+      .then(function (j) {
+        if (j && j.ok && Array.isArray(j.modes)) {
+          for (var i = 0; i < j.modes.length; i += 1) {
+            var m = j.modes[i]
+            if (m && typeof m.id === 'string') modeAvailability[m.id] = m.available === true
+          }
+          if (j.hybrid && typeof j.hybrid.reason === 'string') modeReason.hybrid = j.hybrid.reason
+        }
+        return modeAvailability
+      })
+      .catch(function () { return modeAvailability })
   }
 
   function sanitizeLocal(raw) {
@@ -468,12 +492,14 @@
     var tabs = el('nav', 'cp-tabs')
     var tabEls = {}
     modes.forEach(function (m) {
-      // ★ 2026-11-10：视频链（Wan 2.2 / XT-5B）已接进 lib/video-workflow.js ⇒ 可选；
-      //   混合模式的链里还有 **tts** 一段（本插件无 TTS 后端）⇒ 仍禁用。
-      var available = m.id === 'image' || m.id === 'video'
+      // ★ 2026-11-10：可用性由 /api/comfy-pipeline/modes 探测决定（TTS 装好就自动放行）。
+      //   缺件时把 ttsMissingReport 的完整清单放进 title，不在 note 里塞一大段。
+      var available = modeAvailability[m.id] !== false
       var b = el('button', 'cp-tab' + (m.id === state.mode ? ' is-on' : ''), m.label || m.id)
       b.type = 'button'
-      b.title = available ? ('交付 ' + (m.deliver || '')) : '后端工作流未接入，暂不可选'
+      b.title = available
+        ? ('交付 ' + (m.deliver || ''))
+        : (modeReason[m.id] || '后端工作流未接入，暂不可选')
       if (!available) b.disabled = true
       b.addEventListener('click', function () {
         if (!available) return
@@ -596,11 +622,12 @@
   function refreshNote() {
     if (!nodes || !nodes.note) return
     var modes = (schema && schema.modes) || []
-    var off = modes.filter(function (m) { return m.id !== 'image' && m.id !== 'video' })
+    var off = modes.filter(function (m) { return modeAvailability[m.id] === false })
     nodes.note.textContent = off.length === 0
       ? ''
       : off.map(function (m) { return (m.label || m.id) + '（' + (m.backends || m.chain || []).join(' / ') + '）'; }).join('、')
         + '：链里还有本插件没有的后端段，暂不可选。'
+        + (modeReason.hybrid !== '' ? '（混合模式缺件清单见 tab 标题悬浮）' : '')
   }
 
   /** 重建面板 DOM（保留 state）。模式切换后视频组的 disabled 要变。 */
@@ -643,9 +670,9 @@
   function mount() {
     if (nodes) return Promise.resolve(nodes)
     return loadSchema()
-      .then(loadControls)
-      .then(function (controls) {
-        state = controls
+      .then(function () { return Promise.all([loadControls(), loadModes()]) })
+      .then(function (pair) {
+        state = pair[0]
         render()
         wire()
         refreshNote()
@@ -662,6 +689,7 @@
     open: open,
     close: close,
     getState: function () { return state ? JSON.parse(JSON.stringify(state)) : null },
+    getModes: function () { return JSON.parse(JSON.stringify(modeAvailability)) },
     api: {
       clampByDef: clampByDef,
       quantize: quantize,
