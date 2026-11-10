@@ -160,7 +160,12 @@ const fetch = (url, init) => {
         ok: true,
         saved: true,
         reason: '',
-        controls: { mode: 'image', aspect: 0, speedPercent: 100, seed: -1, steps: 8, count: 1, fps: 24, denoise: 0.85, tileSize: 512, chunkOverlap: 8 },
+        // 假服务端得**回显你提交的值**（真服务端也是这么做的：返回合并后的完整控制项），
+        //   否则"切模式后 state 被回包覆盖成 image"会被误判成面板丢状态。
+        controls: Object.assign({
+          mode: 'image', aspect: 0, speedPercent: 100, seed: -1, steps: 8,
+          count: 1, fps: 24, denoise: 0.85, tileSize: 512, chunkOverlap: 8,
+        }, bodyJson || {}),
         summary: '生图模式 · 1:1 · 速度 100%',
       }),
     })
@@ -209,38 +214,59 @@ ok('速度档的边长/参考图上限取自契约 SPEED_MAP',
 ok('describe 标「吸附」而非谎称精确档位', /吸附 \d+ 档/.test(api.describe({ aspect: 5, speedPercent: 100 })))
 
 const fab = body.querySelector('.cp-fab')
-const panelEl = body.querySelector('.cp-panel')
+let panelEl = body.querySelector('.cp-panel')
 ok('浮标与面板都已挂到 body', Boolean(fab) && Boolean(panelEl), `body 子节点 ${body.children.length - before}`)
 ok('面板初始是收起的（hidden）', panelEl && panelEl.hidden === true)
 panel.open()
 ok('open() 后 hidden=false', panelEl && panelEl.hidden === false)
 const tabs = panelEl.querySelectorAll('.cp-tab')
 ok('三个模式 tab 都在', tabs.length === 3, String(tabs.length))
-ok('★ 视频/混合 tab 是 disabled（后端未接入，不装能拨的假滑块）',
-  tabs.filter((t) => t.disabled === true).length === 2, tabs.map((t) => `${t.textContent}:${t.disabled}`).join(','))
-ok('未接入原因写进了 note（不是静默禁用）',
-  String(panelEl.querySelector('.cp-note').textContent).includes('后端工作流尚未接入'))
+ok('★ 生图/视频 tab 可选；**只有混合**仍 disabled（链里缺 tts 段，本插件无 TTS 后端）',
+  tabs.filter((t) => t.disabled === true).length === 1
+  && tabs.find((t) => t.disabled === true).textContent.includes('混合'),
+  tabs.map((t) => `${t.textContent}:${t.disabled}`).join(','))
+ok('禁用原因写进了 note（不是静默禁用）',
+  String(panelEl.querySelector('.cp-note').textContent).includes('本插件没有的后端段'))
 const fields = panelEl.querySelectorAll('.cp-field')
-ok('常用 2 项 + 高级 7 项都渲染出来了', fields.length === 9, String(fields.length))
+ok('常用 2 + 视频 3 + 高级 6 = 11 项', fields.length === 11, String(fields.length))
 const disabledInputs = panelEl.querySelectorAll('input').filter((i) => i.disabled === true)
-ok('★ fps/denoise/tileSize/chunkOverlap 四项输入确实 disabled',
-  disabledInputs.length === 4, String(disabledInputs.length))
+ok('★ 未切视频模式时：帧数/帧率禁用 + 运动幅度始终禁用 + denoise/tile/chunk 禁用 = 6',
+  disabledInputs.length === 6, String(disabledInputs.length))
+// 假 DOM 不会把子节点文本汇总到父节点 textContent，所以按 `.cp-label` / `.cp-hint` 直接查
+ok('★ 运动幅度确实渲染了', panelEl.querySelectorAll('.cp-label').some((l) => String(l.textContent).includes('运动幅度')))
+ok('★ 运动幅度写明了“XT-5B 链没有这个参数”（不装假滑块）',
+  panelEl.querySelectorAll('.cp-hint').some((h) => String(h.textContent).includes('XT-5B')))
+
+// ★ 切到视频模式：DOM 重建、帧数/帧率变可用、浮标不重复
+tabs.find((t) => t.textContent.includes('视频')).listeners.click.forEach((fn) => fn({ target: null }))
+const panelEl2 = body.querySelector('.cp-panel')
+const dis2 = panelEl2.querySelectorAll('input').filter((i) => i.disabled === true)
+ok('★★ 切视频模式后帧数/帧率变可用（禁用项 6 → 4）', dis2.length === 4, String(dis2.length))
+ok('★ 重建后浮标不会变成两个', body.querySelectorAll('.cp-fab').length === 1, String(body.querySelectorAll('.cp-fab').length))
+ok('★ 重建后参数面板只有一个', body.querySelectorAll('.cp-panel').length === 1, String(body.querySelectorAll('.cp-panel').length))
+await new Promise((r) => setTimeout(r, 460)) // scheduleSave 是 300ms 防抖
+ok('切模式会发一次保存（mode 落盘）', posted.length >= 1 && posted[posted.length - 1].body.mode === 'video',
+  posted.length > 1 ? String(posted[posted.length - 1].body.mode) : '没发出')
+panelEl = panelEl2
 const ranges = panelEl.querySelectorAll('input').filter((i) => i.type === 'range')
 ok('滑块走 input[type=range]（速度%、steps、画幅等）', ranges.length >= 3, String(ranges.length))
 
 // ---- ④ 保存请求 ----
 const speedInput = panelEl.querySelectorAll('input').find((i) => i.type === 'range' && i.min === '25' && i.max === '100')
 ok('速度滑块 min/max 来自契约（25..100）', Boolean(speedInput), speedInput ? `${speedInput.min}..${speedInput.max}` : '缺')
+const beforeSpeed = posted.length
 speedInput.value = '63'
 speedInput.listeners.input.forEach((fn) => fn({ target: speedInput }))
-await new Promise((r) => setTimeout(r, 420))
-ok('拨滑块后发出了一次 POST', posted.length === 1, String(posted.length))
+await new Promise((r) => setTimeout(r, 460))
+const last = posted[posted.length - 1]
+ok('拨滑块后发出了一次 POST', posted.length === beforeSpeed + 1, `${beforeSpeed} → ${posted.length}`)
 ok('★ POST 走相对路径 api/comfy-pipeline/controls（同源，非绝对外部地址）',
-  posted[0] && posted[0].url === 'api/comfy-pipeline/controls', posted[0] ? posted[0].url : '无')
-ok('POST 带 content-type: application/json', posted[0] && posted[0].init.headers['content-type'] === 'application/json')
+  last && last.url === 'api/comfy-pipeline/controls', last ? last.url : '无')
+ok('POST 带 content-type: application/json', last && last.init.headers['content-type'] === 'application/json')
 ok('★ POST body 是洗过的载荷（63 → 65 已对齐）',
-  posted[0] && posted[0].body.speedPercent === 65, posted[0] ? String(posted[0].body.speedPercent) : '无')
-ok('POST body 不含未声明的键', posted[0] && !('evil' in posted[0].body))
+  last && last.body.speedPercent === 65, last ? String(last.body.speedPercent) : '无')
+ok('POST body 不含未声明的键', last && !('evil' in last.body))
+ok('★ 切模式后再拨滑块，mode 仍是 video（state 不丢）', last && last.body.mode === 'video')
 
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项）`)
 process.exit(fail === 0 ? 0 : 1)

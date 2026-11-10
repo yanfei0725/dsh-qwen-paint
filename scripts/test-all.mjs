@@ -55,6 +55,8 @@ const SUITES = [
   { file: 'test-pipeline-panel.mjs', note: '控制面板行为回归（渲染 / 请求 / 禁用项）' },
   // ★ v3 §13.4 / §14.3 代码级修正四件：两层缓存 / pick(installed) / 结构化水位 / runPasses 深拷
   { file: 'test-pipeline-core.mjs', note: '控制层内核四件（缓存/加速档/水位/pass 管线）' },
+  // ★ 视频链：Wan 2.2 / XT-5B 工作流图 + generate_video 接线
+  { file: 'test-video-workflow.mjs', note: '视频链工作流契约（节点/参数/对齐/接线）' },
   // —— 契约 / 面板 / 步骤 ——
   { file: '_tool_contract_test.mjs', note: '工具契约' },
   { file: '_step4_dry_test.mjs', note: '4 步干跑' },

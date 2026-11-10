@@ -171,9 +171,10 @@ const idxSrc = read('lib/index.js')
 const cfgSrc = read('lib/config.js')
 ok('★ index.js 出图链路真的调用了本地去重（createLocalDedup + semanticFingerprint）',
   idxSrc.includes('createLocalDedup(cfg.outputDir)') && idxSrc.includes('semanticFingerprint(workflow)'))
+const dedupAt = idxSrc.indexOf('iterDedup.lookup')
+const submitAfterDedup = idxSrc.indexOf('promptId = await submitPrompt(cfg, workflow, signal)', dedupAt)
 ok('★ 去重查找发生在 submitPrompt **之前**（命中就不提交）',
-  idxSrc.indexOf('iterDedup.lookup') > 0
-  && idxSrc.indexOf('iterDedup.lookup') < idxSrc.indexOf('promptId = await submitPrompt(cfg, workflow, signal)'))
+  dedupAt > 0 && submitAfterDedup > dedupAt, `${dedupAt} / ${submitAfterDedup}`)
 ok('★ 落盘后记进去重表', idxSrc.includes('iterDedup.remember(semanticFingerprint(workflow), iterFiles)'))
 ok('★ config.js 用了结构化水位（tierForVram），建议档写进 caps',
   cfgSrc.includes("from './model-map.js'") && cfgSrc.includes('caps.suggestedPrecisionTier = tierForVram('))

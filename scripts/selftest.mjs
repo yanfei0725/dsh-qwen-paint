@@ -118,7 +118,8 @@ mod.apply(ctx, {
 const tool = registered.find((t) => t.name === 'draw_image') ?? {}
 check('注册了 draw_image（apply 直接注册，不经 root.inject）', tool.name === 'draw_image',
   registered.map((t) => t.name))
-check('注册了 7 个工具（draw + 2 诊断 + upscale + inpaint/remove/outpaint）', registered.length === 7,
+// 2026-11-10：+ generate_video（Wan 2.2 / XT-5B 视频链），7 → 8
+check('注册了 8 个工具（draw + video + 2 诊断 + upscale + inpaint/remove/outpaint）', registered.length === 8,
   registered.map((t) => t.name))
 check('两个诊断工具都在（list_available_models / check_acceleration）',
   registered.some((t) => t.name === 'list_available_models')

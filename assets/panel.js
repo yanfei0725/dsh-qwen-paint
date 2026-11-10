@@ -79,20 +79,21 @@
     }, tiers[0])
   }
 
-  /** 该档的 SPEEED_MAP.image 描述（尺寸/参考图张数）。契约里没有就返回 null，绝不编。 */
-  function speedSlot(speed) {
+  /** 该档的描述（生图看 size/refs，视频看 frames/fps/height）。契约里没有就返回 null，绝不编。 */
+  function speedSlot(speed, mode) {
     var map = schema && schema.speedMap
-    var slot = map && map.image ? map.image[quantize(speed)] : null
+    var key = mode === 'video' ? 'video' : 'image'
+    var slot = map && map[key] ? map[key][quantize(speed)] : null
     return slot && typeof slot === 'object' ? slot : null
   }
 
-  function speedEdge(speed) {
-    var slot = speedSlot(speed)
+  function speedEdge(speed, mode) {
+    var slot = speedSlot(speed, mode)
     return slot && Number.isFinite(slot.size) ? slot.size : null
   }
 
-  function speedRefs(speed) {
-    var slot = speedSlot(speed)
+  function speedRefs(speed, mode) {
+    var slot = speedSlot(speed, mode)
     return slot && Number.isFinite(slot.refs) ? slot.refs : null
   }
 
@@ -125,11 +126,15 @@
     var c = buildPayload(input)
     var ticks = aspectTicks()
     var idx = Math.min(ticks.length - 1, Math.max(0, Math.trunc(c.aspect || 0)))
-    var edge = speedEdge(c.speedPercent)
-    var refs = speedRefs(c.speedPercent)
+    var slot = speedSlot(c.speedPercent, c.mode)
     var parts = [ticks[idx], '速度 ' + c.speedPercent + '%（吸附 ' + quantize(c.speedPercent) + ' 档）']
-    if (edge !== null) parts.push('长边 ' + edge)
-    if (refs !== null) parts.push('该档参考图预算 ' + refs)
+    if (slot) {
+      if (Number.isFinite(slot.size)) parts.push('长边 ' + slot.size)
+      if (Number.isFinite(slot.refs)) parts.push('该档参考图预算 ' + slot.refs)
+      if (Number.isFinite(slot.frames)) parts.push(slot.frames + ' 帧')
+      if (Number.isFinite(slot.fps)) parts.push(slot.fps + ' fps')
+      if (Number.isFinite(slot.height)) parts.push('高 ' + slot.height)
+    }
     return parts.join(' · ')
   }
 
@@ -299,11 +304,17 @@
     var modes = (schema && schema.modes) || []
     var ticks = aspectTicks()
 
-    var fab = el('button', 'cp-fab')
-    fab.type = 'button'
-    fab.appendChild(el('span', 'cp-fab-dot'))
-    fab.appendChild(el('span', null, 'Comfy 控制'))
-    document.body.appendChild(fab)
+    // 重建时复用已有浮标（否则每切一次模式就多一个按钮）
+    // ⚠ 必须写 document.body，不能写 `body`——本函数后面有个 `var body` 是高级区容器，
+    //   `var` 提升会让这里读到 undefined（这类错本套回归专门抓，它确实当场抓到了）。
+    var fab = (nodes && nodes.fab) || document.body.querySelector('.cp-fab')
+    if (!fab) {
+      fab = el('button', 'cp-fab')
+      fab.type = 'button'
+      fab.appendChild(el('span', 'cp-fab-dot'))
+      fab.appendChild(el('span', null, 'Comfy 控制'))
+      document.body.appendChild(fab)
+    }
 
     var panel = el('div', 'cp-panel')
     panel.hidden = true
@@ -318,7 +329,9 @@
     var tabs = el('nav', 'cp-tabs')
     var tabEls = {}
     modes.forEach(function (m) {
-      var available = m.id === 'image'
+      // ★ 2026-11-10：视频链（Wan 2.2 / XT-5B）已接进 lib/video-workflow.js ⇒ 可选；
+      //   混合模式的链里还有 **tts** 一段（本插件无 TTS 后端）⇒ 仍禁用。
+      var available = m.id === 'image' || m.id === 'video'
       var b = el('button', 'cp-tab' + (m.id === state.mode ? ' is-on' : ''), m.label || m.id)
       b.type = 'button'
       b.title = available ? ('交付 ' + (m.deliver || '')) : '后端工作流未接入，暂不可选'
@@ -328,6 +341,8 @@
         state.mode = m.id
         Object.keys(tabEls).forEach(function (id) { tabEls[id].className = 'cp-tab' + (id === state.mode ? ' is-on' : '') })
         scheduleSave()
+        // 切模式要重建 DOM：视频组的可用态依赖它（重建不动 state，不丢已拨的值）
+        rebuild()
       })
       tabEls[m.id] = b
       tabs.appendChild(b)
@@ -349,6 +364,27 @@
     }))
     panel.appendChild(common)
 
+    // ★ 视频参数组：帧数与帧率**真接** generate_video（见 lib/video-workflow.js）。
+    //   没切到视频模式时禁用，但仍展示——先看得见能拨什么，再决定切不切。
+    var videoOn = state.mode === 'video'
+    var vgroup = el('div', 'cp-video-group')
+    vgroup.appendChild(field('帧数', 'frames', {
+      disabled: !videoOn,
+      hint: videoOn ? '' : '先切到视频模式。',
+      onPaint: function (v, hint) {
+        if (!hint) return
+        var f = Number(state.frames)
+        var fps = Number(state.fps) || 24
+        hint.textContent = f + ' 帧 @' + fps + 'fps ≈ ' + (f / fps).toFixed(2) + 's 成片（帧数自动对齐 4n+1）'
+      },
+    }))
+    vgroup.appendChild(field('帧率 fps', 'fps', { disabled: !videoOn, hint: videoOn ? '' : '先切到视频模式。' }))
+    vgroup.appendChild(field('运动幅度', 'motion', {
+      disabled: true,
+      hint: 'XT-5B 链没有运动幅度参数（只有提示词里写运镜）—— 不装能拨的假滑块。',
+    }))
+    panel.appendChild(vgroup)
+
     var adv = el('details', 'cp-adv')
     adv.appendChild(el('summary', null, '高级设置'))
     var body = el('div', 'cp-adv-body')
@@ -358,7 +394,6 @@
       warn: true,
     }))
     body.appendChild(field('每轮张数', 'count', { hint: '同一次调用出多张只加载一次模型。' }))
-    body.appendChild(field('帧率 fps', 'fps', { disabled: true, hint: '视频后端工作流未接入，本项暂不生效。' }))
     body.appendChild(field('降噪 denoise', 'denoise', { disabled: true, hint: '编辑链的降噪由任务链内部按 LoRA 工作点定，暂不由面板接管。' }))
     body.appendChild(field('VAE 分块 tileSize', 'tileSize', { disabled: true, hint: 'VAE 分块由优化开关接管，暂不走面板。' }))
     body.appendChild(field('分块重叠 chunkOverlap', 'chunkOverlap', { disabled: true, hint: '同上：VAE 分块相关参数暂不走面板。' }))
@@ -404,11 +439,21 @@
   function refreshNote() {
     if (!nodes || !nodes.note) return
     var modes = (schema && schema.modes) || []
-    var off = modes.filter(function (m) { return m.id !== 'image' })
+    var off = modes.filter(function (m) { return m.id !== 'image' && m.id !== 'video' })
     nodes.note.textContent = off.length === 0
       ? ''
-      : off.map(function (m) { return (m.label || m.id) + '（' + (m.backends || m.chain || []).join('/') + '）'; }).join('、')
-        + '：后端工作流尚未接入本插件，暂不可选。'
+      : off.map(function (m) { return (m.label || m.id) + '（' + (m.backends || m.chain || []).join(' / ') + '）'; }).join('、')
+        + '：链里还有本插件没有的后端段，暂不可选。'
+  }
+
+  /** 重建面板 DOM（保留 state）。模式切换后视频组的 disabled 要变。 */
+  function rebuild() {
+    if (!nodes) return
+    var wasOpen = nodes.panel.hidden === false
+    try { nodes.panel.parentNode.removeChild(nodes.panel) } catch (err) { /* 已离体 */ }
+    nodes = { fab: nodes.fab, panel: null, status: null, note: null }
+    render()
+    if (wasOpen) open()
   }
 
   function open() { if (nodes) { nodes.panel.hidden = false; refreshNote() } }
