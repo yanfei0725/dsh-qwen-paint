@@ -25,6 +25,7 @@
   var SCHEMA_PATH = 'api/comfy-pipeline/schema'
   var CONTROLS_PATH = 'api/comfy-pipeline/controls'
   var PROGRESS_PATH = 'api/comfy-pipeline/progress'
+  var LIBRARY_PATH = 'api/comfy-pipeline/library'
   var FALLBACK_TIERS = [25, 50, 75, 100]
 
   var schema = null
@@ -241,6 +242,87 @@
     progressTimer = null
   }
 
+  /* ---------- 素材库：设计风格 / 用户指令 / 装载 skill ---------- */
+
+  var libState = { styles: [], skillsAvailable: [], selected: 'none', instruction: '', skills: [] }
+
+  function loadLibrary() {
+    return fetch(LIBRARY_PATH, { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null })
+      .then(function (j) {
+        if (j && j.ok) {
+          libState = {
+            styles: Array.isArray(j.styles) ? j.styles : [],
+            skillsAvailable: Array.isArray(j.skillsAvailable) ? j.skillsAvailable : [],
+            selected: j.selected || 'none',
+            instruction: j.instruction || '',
+            skills: Array.isArray(j.skills) ? j.skills : [],
+          }
+        }
+        paintLibrary()
+      })
+      .catch(function () { /* 素材库拿不到就不显示，不影响出图 */ })
+  }
+
+  function saveLibrary(patch) {
+    Object.assign(libState, patch)
+    return fetch(LIBRARY_PATH, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ selected: libState.selected, instruction: libState.instruction, skills: libState.skills }),
+    })
+      .then(function (r) { return r.json() })
+      .then(function (j) {
+        if (!j || j.ok !== true) { setStatus('素材库保存失败：' + ((j && j.reason) || '未知原因'), 'err'); return }
+        setStatus(j.saved === false ? '素材库已生效（写盘失败：' + (j.reason || '目录只读') + '）' : '素材库已保存', j.saved === false ? 'err' : 'ok')
+      })
+      .catch(function (err) { setStatus('素材库保存失败：' + (err && err.message ? err.message : err), 'err') })
+  }
+
+  function paintLibrary() {
+    if (!nodes || !nodes.library) return
+    var box = nodes.library
+    var sel = box.querySelector('.cp-select')
+    var ta = box.querySelector('.cp-textarea')
+    var list = box.querySelector('.cp-skills')
+    if (!sel || !ta || !list) return
+    // 风格下拉
+    while (sel.children.length > 0) sel.removeChild(sel.children[0])
+    for (var i = 0; i < libState.styles.length; i += 1) {
+      var o = el('option', null, libState.styles[i].name)
+      o.value = libState.styles[i].id
+      sel.appendChild(o)
+    }
+    sel.value = libState.selected
+    ta.value = libState.instruction
+    // 技能勾选（只列已装的，不猜）
+    while (list.children.length > 0) list.removeChild(list.children[0])
+    for (var k = 0; k < libState.skillsAvailable.length; k += 1) {
+      var sk = libState.skillsAvailable[k]
+      var row = el('label', 'cp-skill')
+      var cb = el('input')
+      cb.type = 'checkbox'
+      cb.value = sk.id
+      cb.checked = libState.skills.indexOf(sk.id) >= 0
+      cb.addEventListener('change', function () {
+        var picked = []
+        var all = list.querySelectorAll('input')
+        for (var n = 0; n < all.length; n += 1) if (all[n].checked === true) picked.push(all[n].value)
+        saveLibrary({ skills: picked })
+      })
+      row.appendChild(cb)
+      row.appendChild(el('span', 'cp-skill-name', sk.name || sk.id))
+      if (sk.desc) row.appendChild(el('span', 'cp-skill-desc', sk.desc))
+      list.appendChild(row)
+    }
+    var hint = box.querySelector('.cp-library-hint')
+    if (hint) {
+      hint.textContent = libState.skillsAvailable.length === 0
+        ? '没找到本机已装的 skill（~/.dsh/skills）。'
+        : '共 ' + libState.skillsAvailable.length + ' 个可装加；勾上后会把它的名字与摘要拼进提示词。'
+    }
+  }
+
   function scheduleSave() {
     if (saveTimer !== null) clearTimeout(saveTimer)
     saveTimer = setTimeout(save, 300)
@@ -442,6 +524,24 @@
     }))
     panel.appendChild(vgroup)
 
+    // ★ 素材库（用户定义：设计风格 + 用户指令 + 自行装载的 skill）
+    var library = el('div', 'cp-library')
+    library.appendChild(el('div', 'cp-section-title', '素材库'))
+    library.appendChild(el('div', 'cp-field-label', '设计风格'))
+    var styleSel = el('select', 'cp-select')
+    styleSel.addEventListener('change', function () { saveLibrary({ selected: styleSel.value }) })
+    library.appendChild(styleSel)
+    library.appendChild(el('div', 'cp-field-label', '用户指令（每次生成都带上）'))
+    var instr = el('textarea', 'cp-textarea')
+    instr.rows = 2
+    instr.placeholder = '例：不要卡通、要 35mm 胶片感'
+    instr.addEventListener('change', function () { saveLibrary({ instruction: instr.value }) })
+    library.appendChild(instr)
+    library.appendChild(el('div', 'cp-field-label', '可装载的技能'))
+    library.appendChild(el('div', 'cp-skills'))
+    library.appendChild(el('p', 'cp-hint cp-library-hint', ''))
+    panel.appendChild(library)
+
     var adv = el('details', 'cp-adv')
     adv.appendChild(el('summary', null, '高级设置'))
     var body = el('div', 'cp-adv-body')
@@ -476,7 +576,7 @@
     panel.appendChild(foot)
 
     document.body.appendChild(panel)
-    nodes = { fab: fab, panel: panel, status: status, note: note, progress: progress }
+    nodes = { fab: fab, panel: panel, status: status, note: note, progress: progress, library: library }
     return nodes
   }
 
@@ -508,7 +608,7 @@
     if (!nodes) return
     var wasOpen = nodes.panel.hidden === false
     try { nodes.panel.parentNode.removeChild(nodes.panel) } catch (err) { /* 已离体 */ }
-    nodes = { fab: nodes.fab, panel: null, status: null, note: null, progress: null }
+    nodes = { fab: nodes.fab, panel: null, status: null, note: null, progress: null, library: null }
     render()
     if (wasOpen) open()
   }
@@ -549,6 +649,7 @@
         render()
         wire()
         refreshNote()
+        loadLibrary()
         setStatus('就绪 · ' + describe(state))
         return nodes
       })

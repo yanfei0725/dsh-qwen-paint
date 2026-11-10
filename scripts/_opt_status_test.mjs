@@ -572,7 +572,14 @@ console.log('\n=== 12. 界面侧：徽标可点 + 菜单入口 + 四态渲染 �
       //     所以这里要同时认 `IDENT` 与 `()` 两种形态。
       ...[...host.matchAll(/\['([a-z0-9]+)', '[A-Za-z]+', '[^']*',\s*(?:[A-Z_]+|\(\))/gu)].map((m) => m[1].toLowerCase()),
     ])
-    const keys = [...host.matchAll(/key: '([A-Za-z0-9]+)'/gu)].map((m) => m[1])
+    // ⚠ 只数**可切换**的开关 key。信息项（canToggle:false，例如「视频加速档（pick）」
+    //   只是把 pick() 的结论显示出来、没有开关可拨）不该被算成「端点必须接受的控件」。
+    //   否则每次往面板加一条只读信息项，这条断言都会假失败。
+    const keys = [...host.matchAll(/key: '([A-Za-z0-9]+)'/gu)]
+      .filter((m) => !/canToggle:\s*false/u.test(host.slice(m.index, m.index + 300)))
+      .map((m) => m[1])
+    assert('⑪ 视频加速档是只读信息项（canToggle:false，不假装有开关）',
+      /key: 'vidaccel'[\s\S]{0,300}?canToggle: false/u.test(host))
     assert(`⑪ 每个开关的 key 都能被端点接受（共 ${keys.length} 个）`,
       keys.length >= 4 && keys.every((k) => accepted.has(String(k).toLowerCase())),
       `keys=${keys.join(',')} / accepted=${[...accepted].join(',')}`)

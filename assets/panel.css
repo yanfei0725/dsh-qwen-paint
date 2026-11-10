@@ -149,3 +149,31 @@
   display: block; margin-top: 4px; font-size: 11px;
   color: var(--color-text-tertiary, #8b9096); word-break: break-all;
 }
+
+/* ---- 素材库（设计风格 / 指令 / 技能） ---- */
+.cp-library {
+  margin: 4px 0 10px; padding-top: 8px;
+  border-top: 1px solid var(--color-border-subtle, rgba(255, 255, 255, .1));
+}
+.cp-section-title { margin-bottom: 6px; font-size: 12px; font-weight: 600; color: var(--color-text-primary, #e8e8ea); }
+.cp-field-label { margin: 6px 0 3px; font-size: 11px; color: var(--color-text-secondary, #9aa0a6); }
+.cp-select, .cp-textarea {
+  width: 100%; box-sizing: border-box; padding: 4px 6px; font: inherit;
+  color: var(--color-text-primary, #e8e8ea);
+  background: var(--color-bg-sunken, rgba(255, 255, 255, .05));
+  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, .16));
+  border-radius: 6px;
+}
+.cp-textarea { resize: vertical; min-height: 40px; }
+.cp-select option { color: #1b1d21; background: #f3f4f6; }
+.cp-skills { max-height: 132px; overflow-y: auto; padding-right: 2px; }
+.cp-skill {
+  display: flex; align-items: baseline; gap: 6px;
+  padding: 2px 0; font-size: 11px; cursor: pointer;
+}
+.cp-skill input { margin: 0; flex: none; accent-color: var(--color-accent, #7aa7f0); }
+.cp-skill-name { flex: none; color: var(--color-text-primary, #e8e8ea); }
+.cp-skill-desc {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--color-text-tertiary, #8b9096);
+}
