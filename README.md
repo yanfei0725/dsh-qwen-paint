@@ -2,7 +2,49 @@
 
 面向 **DeepSeek Harness** 的本地图像生成与编辑插件。经由本机 **ComfyUI** 调用 **Qwen-Image 2.1 / 官方 Turbo** 模型，在对话中完成文生图、1–3 图编辑、局部重绘、元素移除与四向扩图；结果落盘并在会话界面内直接呈现。
 
-**网络边界（请以本节为准）**：插件的网络出口有**两类，边界不同**。
+## Features
+
+| 能力 | 工具 | 说明 |
+| --- | --- | --- |
+| 文生图 | `draw_image` | 按提示词出图，成品落盘并直接显示在会话里 |
+| 图生图 / 多参考图编辑 | `draw_image` | 1–16 张参考图（0.19.0 起），按序号接入 `images.image_N` |
+| 局部重绘 | `inpaint_image` | 蒙版内重绘，裁剪回贴 |
+| 元素移除 | `remove_image` | 移除蒙版内物体并补全背景 |
+| 四向扩图 | `outpaint_image` | 上 / 下 / 左 / 右按百分比外扩 |
+| 高清放大 | `upscale_image` | 与内置放大共用同一套节点图 |
+
+- **本地、免 API**：出图数据（提示词与图片）只发往本机 `127.0.0.1` / `localhost` / `::1` 的 ComfyUI，由 `lib/net-guard.js` 在代码层强制；**无需任何 API 密钥，不产生调用费用**。
+- **模型与运行**：经本机 **ComfyUI** 调用 **Qwen-Image 2.1 / 官方 Turbo**，无需云端模型服务。
+- **平台**：Windows / Linux，自动适配 NVIDIA / Intel Arc / AMD 显卡。
+- **DSH 兼容**：`>=0.2.0-rc.2`（见 `package.json` 的 `dsh.compatibility`）。
+
+## Installation
+
+> **不想碰命令行**：双击仓库根目录的 `一键安装.cmd` —— 它会先自报版本与 `setup.mjs` 指纹，检测后问一句再装。
+
+**命令行安装**（`dsh plugin add` 的本地目录形式）：
+
+```bash
+dsh plugin --profile desktop add link:<本插件目录的绝对路径>
+```
+
+> 使用 `desktop` profile 时须**先完全退出 DSH**。本包**未发布到 npm**，所以不能用 `dsh plugin add dsh-qwen-paint` 按包名安装，必须指向本地目录或本地包。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
+
+## Usage
+
+在对话里直接说需求即可，助手会调用对应工具：
+
+```text
+画一张雨夜的赛博城市，16:9
+把这张图左边扩出去 30%
+擦掉画面里的路人
+```
+
+也可显式调用：`draw_image`（`prompt` / `references`）、`inpaint_image`（`image` / `mask` / `prompt`）、`remove_image`、`outpaint_image`、`upscale_image`。完整参数与出图路径见下文「用法」「出图落在哪」。
+
+## 网络边界（请以本节为准）
+
+插件的网络出口有**两类，边界不同**。
 
 **① 出图数据流**（提示词、参考图）—— 只发往 `comfyUrl`（ComfyUI）与 `hipfireUrl`（hipfire serve）。
 **默认仅本机回环**（`127.0.0.1` / `localhost` / `::1`），且这一约束**由代码层强制**（`lib/net-guard.js`）：
