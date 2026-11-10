@@ -342,8 +342,8 @@
     var hint = box.querySelector('.cp-library-hint')
     if (hint) {
       hint.textContent = libState.skillsAvailable.length === 0
-        ? '没找到本机已装的 skill（~/.dsh/skills）。'
-        : '共 ' + libState.skillsAvailable.length + ' 个可装加；勾上后会把它的名字与摘要拼进提示词。'
+        ? '没找到本机已装的 skill（~/.dsh/skills）。请先装载美术、画风、配色相关的 skill。'
+        : '共 ' + libState.skillsAvailable.length + ' 个可装载；建议勾美术 / 画风 / 配色相关的，勾上后会把名字与摘要拼进提示词。'
     }
   }
 
@@ -563,7 +563,7 @@
     instr.placeholder = '例：不要卡通、要 35mm 胶片感'
     instr.addEventListener('change', function () { saveLibrary({ instruction: instr.value }) })
     library.appendChild(instr)
-    library.appendChild(el('div', 'cp-field-label', '可装载的技能'))
+    library.appendChild(el('div', 'cp-field-label', '可装载的技能（请装载美术、画风、配色相关的 skill）'))
     library.appendChild(el('div', 'cp-skills'))
     library.appendChild(el('p', 'cp-hint cp-library-hint', ''))
     panel.appendChild(library)

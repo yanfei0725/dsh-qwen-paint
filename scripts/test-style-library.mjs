@@ -103,6 +103,10 @@ ok('★ 文件名仍用原始 prompt（不被风格前缀污染）',
   indexSrc.includes('safeStem(prompt, 22)'))
 ok('★ 面板有素材库区块（风格/指令/skills）',
   panelSrc.includes('cp-library') && panelSrc.includes('api/comfy-pipeline/library'))
+ok('★ 可装载技能标题带中文引导（请装载美术 / 画风 / 配色相关的 skill）',
+  panelSrc.includes('可装载的技能（') && panelSrc.includes('请装载美术、画风、配色相关的 skill'))
+ok('★ 没装 skill 时仍给出「先装载美术/画风」引导',
+  panelSrc.includes('请先装载美术、画风、配色相关的 skill'))
 ok('★ describe.js 有视频加速档可见项', describeSrc.includes("key: 'vidaccel'"))
 ok('★ 状态端点把 pick() 结果喂给优化面板', indexSrc.includes('videoAccel: videoAccelOf(caps)'))
 
