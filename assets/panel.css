@@ -1,0 +1,122 @@
+/* assets/panel.css —— 通用 Comfy 控制层面板（与 assets/panel.js 配套）
+ *
+ * 与宿主界面的界限：
+ *   · 全部选择器都带 `.cp-` 前缀，不碰宿主任何既有类名；
+ *   · 颜色一律走宿主 CSS 变量并**自带回退值**（暗色/浅色由宿主切换，面板不自己判断主题）；
+ *   · 面板是 position:fixed 的独立浮层 —— 插进 React 管的树里会被下次渲染清空（本项目踩过三次）。
+ */
+
+.cp-fab {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 2147400000;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font: 12px/1.2 var(--font-sans, system-ui, -apple-system, "Segoe UI", sans-serif);
+  color: var(--color-text-primary, #e8e8ea);
+  background: var(--color-bg-elevated, rgba(28, 30, 34, .92));
+  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, .14));
+  border-radius: 999px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .28);
+  transition: transform .12s ease, border-color .12s ease;
+}
+.cp-fab:hover { transform: translateY(-1px); border-color: var(--color-border-strong, rgba(255, 255, 255, .32)); }
+.cp-fab-dot { width: 7px; height: 7px; border-radius: 50%; background: #6fcf97; flex: none; }
+.cp-fab.is-busy .cp-fab-dot { background: #f5b759; }
+
+.cp-panel {
+  position: fixed;
+  right: 18px;
+  bottom: 62px;
+  z-index: 2147400001;
+  width: min(360px, calc(100vw - 36px));
+  max-height: min(70vh, 620px);
+  overflow-y: auto;
+  padding: 14px 14px 12px;
+  font: 12px/1.5 var(--font-sans, system-ui, -apple-system, "Segoe UI", sans-serif);
+  color: var(--color-text-primary, #e8e8ea);
+  background: var(--color-bg-elevated, #1c1e22);
+  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, .14));
+  border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .42);
+}
+.cp-panel[hidden] { display: none; }
+
+.cp-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.cp-head h4 { margin: 0; font-size: 13px; font-weight: 600; }
+.cp-x {
+  flex: none; width: 22px; height: 22px; line-height: 20px; text-align: center;
+  color: var(--color-text-secondary, #9aa0a6); background: transparent;
+  border: 1px solid transparent; border-radius: 6px; cursor: pointer; font-size: 14px;
+}
+.cp-x:hover { color: var(--color-text-primary, #e8e8ea); border-color: var(--color-border-subtle, rgba(255, 255, 255, .18)); }
+
+.cp-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.cp-tab {
+  flex: 1; padding: 6px 0; font-size: 12px;
+  color: var(--color-text-secondary, #9aa0a6);
+  background: var(--color-bg-sunken, rgba(255, 255, 255, .04));
+  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, .1));
+  border-radius: 8px; cursor: pointer;
+}
+.cp-tab.is-on {
+  color: var(--color-text-primary, #e8e8ea);
+  border-color: var(--color-accent, #7aa7f0);
+  background: color-mix(in srgb, var(--color-accent, #7aa7f0) 16%, transparent);
+}
+.cp-tab:disabled { opacity: .42; cursor: not-allowed; }
+
+.cp-note {
+  margin: 0 0 10px; padding: 6px 8px; font-size: 11px; line-height: 1.45;
+  color: #f5b759; background: rgba(245, 183, 89, .1);
+  border-left: 2px solid #f5b759; border-radius: 4px;
+}
+.cp-note:empty { display: none; }
+
+.cp-field { margin: 0 0 12px; }
+.cp-field-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.cp-label { color: var(--color-text-secondary, #9aa0a6); }
+.cp-value { color: var(--color-text-primary, #e8e8ea); font-variant-numeric: tabular-nums; }
+.cp-hint { margin: 3px 0 0; font-size: 11px; color: var(--color-text-tertiary, #8b9096); }
+.cp-hint.is-warn { color: #f5b759; }
+
+.cp-field input[type="range"] { width: 100%; margin: 0; accent-color: var(--color-accent, #7aa7f0); }
+.cp-field input[type="number"] {
+  width: 100%; padding: 4px 6px; font: inherit; color: var(--color-text-primary, #e8e8ea);
+  background: var(--color-bg-sunken, rgba(255, 255, 255, .05));
+  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, .16));
+  border-radius: 6px; box-sizing: border-box;
+}
+.cp-ticks { display: flex; justify-content: space-between; margin-top: 2px; font-size: 10px; color: var(--color-text-tertiary, #8b9096); }
+.cp-ticks span { flex: 1; text-align: center; }
+.cp-ticks span.is-on { color: var(--color-text-primary, #e8e8ea); font-weight: 600; }
+
+.cp-adv { margin: 4px 0 10px; border-top: 1px solid var(--color-border-subtle, rgba(255, 255, 255, .1)); padding-top: 8px; }
+.cp-adv > summary { cursor: pointer; color: var(--color-text-secondary, #9aa0a6); font-size: 12px; list-style: none; }
+.cp-adv > summary::-webkit-details-marker { display: none; }
+.cp-adv > summary::before { content: "▸ "; }
+.cp-adv[open] > summary::before { content: "▾ "; }
+.cp-adv-body { padding-top: 8px; }
+
+.cp-off { opacity: .55; }
+.cp-off input { pointer-events: none; }
+.cp-badge {
+  margin-left: 6px; padding: 0 5px; font-size: 10px; border-radius: 4px;
+  color: #9aa0a6; background: rgba(255, 255, 255, .08);
+}
+
+.cp-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 8px; border-top: 1px solid var(--color-border-subtle, rgba(255, 255, 255, .1)); }
+.cp-status { flex: 1; font-size: 11px; color: var(--color-text-tertiary, #8b9096); word-break: break-all; }
+.cp-status.is-err { color: #f0918a; }
+.cp-status.is-ok { color: #6fcf97; }
+.cp-reset {
+  flex: none; padding: 3px 8px; font-size: 11px; cursor: pointer;
+  color: var(--color-text-secondary, #9aa0a6); background: transparent;
+  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, .16)); border-radius: 6px;
+}
+.cp-reset:hover { color: var(--color-text-primary, #e8e8ea); }

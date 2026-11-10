@@ -47,6 +47,12 @@ const SUITES = [
   { file: 'test-workflow-contract.mjs', note: 'ComfyUI 工作流节点契约' },
   // ★ 0.18：官方 Turbo 8/9 步、多图编辑、裁剪回贴、移除、扩图
   { file: 'test-turbo-edit.mjs', note: '官方 Turbo / Crop→Sample→Stitch 任务链' },
+  // ★ v3 §15.4 第 1/3 步：ETA 方向 + 16→4 档量化 + schema JSON 桥接
+  { file: 'test-mode-schema.mjs', note: 'mode-schema 契约 / ETA / schema 桥接' },
+  // ★ v3 §15.4 第 2 步：控制项落地层（clamp / 速度%语义 / 落盘往返 / 优先级）
+  { file: 'test-pipeline-controls.mjs', note: '控制项持久化与生效映射（pipeline-controls）' },
+  // ★ v3 §15.4 第 3 步前端竖切：面板真渲染一遍（vm + 假 DOM，专抓"静态绿、一渲染就炸"）
+  { file: 'test-pipeline-panel.mjs', note: '控制面板行为回归（渲染 / 请求 / 禁用项）' },
   // —— 契约 / 面板 / 步骤 ——
   { file: '_tool_contract_test.mjs', note: '工具契约' },
   { file: '_step4_dry_test.mjs', note: '4 步干跑' },
