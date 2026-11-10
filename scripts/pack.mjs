@@ -82,15 +82,14 @@ const DIRS = ['lib', 'assets', 'scripts']
  *   assets/loading.webp）才是要发布的东西。
  * ★ 2026-10-13 修正（再来一批）：把**所有 GitHub 推送助手** `_push_*.py*`
  *   一起扫进来 —— 它们是**一次性内部工具**，里面写死了本机的 git 路径、
- *   远端仓库名与**真实用户名**（`Administrator`），不带数字列举就会被漏掉
- *   （实测：`_push_0155.py` / `_push_0156.py` / `_push_all.py` / `_push_finish.py`
- *   四处同时被隐私检查拦下，**打包直接失败**）。
+ *   远端仓库名与**本机当前用户名**，不带数字列举就会被漏掉
+ *   （实测四个 `_push_*.py` 同时被隐私检查拦下，**打包直接失败**）。
  *   同批再加 `_re_test.mjs` —— 它是"盘符正则"的单元测试，fixture 里
- *   **故意**放着 `<本地路径>` 这类真实路径来验证规则会拒绝它。
+ *   **故意**放着真实用户目录路径来验证规则会拒绝它。
  *   规则本身已经由 `_portability_test.mjs`（在清单内、已脱敏）覆盖，故不进包。
  * ⚠ 这些文件**本地保留**（开发仍是资产），只是**不进包、不上 GitHub**。
  */
-const SKIP = /(^|[\\/])(node_modules|dist|\.git|_backup[^\\/]*|__pycache__)([\\/]|$)|\.(log|zip|tmp)$|\.bak[^\\/]*$|(^|[\\/])(_ref|_split_move|_dbg|_shrink_webp|_sync_publish|_re_test|_push_[a-z0-9_]+|_verify_remote)\./iu
+const SKIP = /(^|[\\/])(node_modules|dist|\.git|_backup[^\\/]*|__pycache__)([\\/]|$)|\.(log|zip|tmp)$|\.bak[^\\/]*$|(^|[\\/])(_ref|_split_move|_dbg|_shrink_webp|_sync_publish|_re_test|_startcomfy|_push_[a-z0-9_]+|_verify_remote)\./iu
 
 /* ------------------------------------------------------------------ ① 组装 ---- */
 
@@ -174,6 +173,10 @@ const FORBIDDEN = [
   { re: /AppData\\+Local\\+Temp/iu, why: '临时目录' },
   { re: /\.dsh[\\/]+sessions/iu, why: '会话记录路径' },
   { re: /sk-[A-Za-z0-9]{12,}/u, why: '疑似 API Key' },
+  // ★ 2026-11-10 补：本机 K: 盘（ComfyUI 源码 / 插件工作副本 / 临时目录）。
+  //   老规则只认 C:/D:，A 线产物 assets/slots.json 曾带 143 条 `<本地路径>` 全部漏过。
+  //   精确到 K: 一档，避免误伤代码里大量使用的 `X:\ComfyUI` 占位盘符（脱敏用）。
+  { re: /K:[\\/]+/iu, why: '本机 K: 盘绝对路径' },
 ].filter((rule) => rule !== null)
 let privacyHits = 0
 for (const file of collected) {

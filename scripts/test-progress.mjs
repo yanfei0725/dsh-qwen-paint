@@ -138,6 +138,18 @@ ok('★ host 注册了 GET /api/comfy-pipeline/progress',
   idx.includes("path: '/api/comfy-pipeline/progress'") && idx.includes('buildProgress('))
 ok('★ 生图链在提交后登记、落盘后摘除（两条都是真调用，不是注释）',
   idx.includes('inFlight.set(promptId, {') && idx.includes('inFlight.delete(promptId)'))
+// ★ 2026-11-10 审计：上面那条只查「字符串存在」，抓不到「set 写在 waitForResult 之后」
+//   这种静默时序 bug（那样 inFlight 在排队/采样全程为空，进度形同虚设）。这里补一条位置断言。
+ok('★ 生图链 inFlight.set 必须早于 waitForResult、delete 在 finally（进度在采样期可见）', (() => {
+  const from = idx.indexOf('for (let iter = 0')
+  const to = idx.indexOf('const seconds = Number(((Date.now() - t0)', from)
+  const loop = from >= 0 && to > from ? idx.slice(from, to) : ''
+  const setAt = loop.indexOf('inFlight.set(promptId, {')
+  const waitAt = loop.indexOf('waitForResult(cfg, promptId')
+  const finallyAt = loop.indexOf('} finally {')
+  const delAt = loop.indexOf('inFlight.delete(promptId)', finallyAt)
+  return setAt >= 0 && waitAt > setAt && finallyAt > waitAt && delAt > finallyAt
+})())
 ok('★ 生图/视频成功后都记实测耗时（ETA 的数据来源）',
   (idx.match(/recordTiming\(cfg\.outputDir, runKey\(/g) ?? []).length === 2,
   String((idx.match(/recordTiming\(cfg\.outputDir, runKey\(/g) ?? []).length))

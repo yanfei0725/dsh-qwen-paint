@@ -8,15 +8,18 @@
 
 用法：
   python scripts/derive-slots.py --self-test
-  python scripts/derive-slots.py <本地路径> --out assets/slots.json
+  COMFYUI_ROOT=<ComfyUI 源码目录> python scripts/derive-slots.py --out assets/slots.json
   python scripts/derive-slots.py <任意 .py 列表>            # 不落盘，打印 JSON
 
 零第三方依赖；离线可测（--self-test 用内嵌 fixture，不碰 ComfyUI）。
+⚠ 产物 `assets/slots.json` 会进发布物/公开仓库：`_files` 一律只写**相对 ComfyUI
+  源码根**的 POSIX 路径，绝不写本机盘符绝对路径（发布脱敏，见 scripts/pack.mjs 禁则）。
 """
 
 import argparse
 import ast
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -124,8 +127,20 @@ def derive_source(src, label):
     return {"classes": classes, "slots": slots, "modelLoaders": loaders}
 
 
-def derive_files(paths):
-    out = {"_source": "python-ast", "_files": [], "classes": 0,
+def display_path(path, root):
+    """产物里只留**相对 ComfyUI 源码根**的 POSIX 路径，绝不写本机绝对路径。
+    root 未给定时退化成文件名（basename），一样不含盘符。"""
+    p = Path(path)
+    if root is not None:
+        try:
+            return p.relative_to(root).as_posix()
+        except ValueError:
+            pass
+    return p.name
+
+
+def derive_files(paths, root=None):
+    out = {"_source": "python-ast", "_sourceRoot": "<COMFYUI>", "_files": [], "classes": 0,
            "slots": {}, "modelLoaders": {}}
     for p in paths:
         path = Path(p)
@@ -136,9 +151,9 @@ def derive_files(paths):
             src = path.read_text(encoding="utf-8-sig", errors="replace")
             d = derive_source(src, str(path))
         except (SyntaxError, UnicodeError) as e:
-            out.setdefault("_parseErrors", []).append(f"{path}: {e}")
+            out.setdefault("_parseErrors", []).append(f"{display_path(path, root)}: {e}")
             continue
-        out["_files"].append(str(path))
+        out["_files"].append(display_path(path, root))
         out["classes"] += d["classes"]
         out["slots"].update(d["slots"])
         out["modelLoaders"].update(d["modelLoaders"])
@@ -163,15 +178,20 @@ def main():
     ap.add_argument("paths", nargs="*")
     ap.add_argument("--out")
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--root", default=os.environ.get("COMFYUI_ROOT", ""),
+                    help="ComfyUI 源码根目录；产物 _files 相对它，避免本机绝对路径")
     args = ap.parse_args()
     if args.self_test:
         return self_test()
+    root = Path(args.root) if str(args.root).strip() else None
     paths = args.paths
     if not paths:
-        # 默认扫本机 ComfyUI 节点定义；不存在就明确报"没扫到"，不假装成功
-        root = Path("<本地路径>")
+        # 默认扫 COMFYUI_ROOT 下的节点定义；没设就明确报错，不写死任何本机路径
+        if root is None:
+            print("未指定 .py 路径：请显式传路径，或设 COMFYUI_ROOT 指向 ComfyUI 源码根目录", file=sys.stderr)
+            return 2
         paths = [str(root / "nodes.py")] + [str(p) for p in sorted((root / "comfy_extras").glob("nodes_*.py"))]
-    out = derive_files(paths)
+    out = derive_files(paths, root)
     if not out["_files"]:
         print("未扫到任何 .py —— 请显式传路径，或确认 ComfyUI 源码目录", file=sys.stderr)
         return 2

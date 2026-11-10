@@ -5,9 +5,10 @@ set -euo pipefail
 cd "$(dirname "$0")"
 GO_BIN="${GO_BIN:-go}"
 command -v "$GO_BIN" >/dev/null || { echo "go MISSING（可设 GO_BIN=/path/to/go）"; exit 127; }
-# ⚠ 本机 %LOCALAPPDATA%\go-build 被 ACL 拒绝（实测 `mkdir ... Access is denied`）。
-# 不给可写缓存目录，go vet/test/build 会在第一步就挂。允许外部覆盖。
-export GOCACHE="${GOCACHE:-<本地路径>}"
+# ⚠ 本机默认 go-build 缓存目录可能被 ACL 拒绝（实测 `mkdir ... Access is denied`）。
+# 缓存目录交给 Go 自带默认值（go env GOCACHE），脚本里**不写死任何本机路径**；
+# 若默认目录不可写，由调用方显式 `GOCACHE=<可写目录> ./build.sh` 覆盖。
+export GOCACHE="${GOCACHE:-$("$GO_BIN" env GOCACHE)}"
 mkdir -p "$GOCACHE" 2>/dev/null || true
 
 echo "== go vet =="

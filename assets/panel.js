@@ -11,7 +11,8 @@
  *   混合模式（image → tts → video）是否可选由 `GET /api/comfy-pipeline/modes` 探测决定：
  *   探到 TTS 节点+权重就自动放行，缺件时 tab 禁用并把**缺什么、放哪**放进 title（如实，
  *   不假装能出音频）—— 摆一个拨了没反应的滑块，比不给更坏（本项目历史上被"假报告"坑过）。
- *   同理：`fps` / `denoise` / `tileSize` / `chunkOverlap` 四项当前**没有消费方**，一律禁用并注明。
+ *   `denoise` / `tileSize` 两项暂无消费方，禁用并注明；`frames` / `fps` 已接视频链、
+ *   `chunkOverlap` 供混合链分段拼接消费（advanced 里仍禁用，值走 controls 默认，不谎称没消费方）。
  *
  * ## 速度%的真实语义
  *   只压**画幅像素预算**（长边 1024→896→768→640）与参考图张数上限。
@@ -611,7 +612,7 @@
     body.appendChild(field('每轮张数', 'count', { hint: '同一次调用出多张只加载一次模型。' }))
     body.appendChild(field('降噪 denoise', 'denoise', { disabled: true, hint: '编辑链的降噪由任务链内部按 LoRA 工作点定，暂不由面板接管。' }))
     body.appendChild(field('VAE 分块 tileSize', 'tileSize', { disabled: true, hint: 'VAE 分块由优化开关接管，暂不走面板。' }))
-    body.appendChild(field('分块重叠 chunkOverlap', 'chunkOverlap', { disabled: true, hint: '同上：VAE 分块相关参数暂不走面板。' }))
+    body.appendChild(field('分块重叠 chunkOverlap', 'chunkOverlap', { disabled: true, hint: '混合链分段拼接会读取本值（默认 8 帧重叠），面板暂不开放调节。' }))
     adv.appendChild(body)
     panel.appendChild(adv)
 
