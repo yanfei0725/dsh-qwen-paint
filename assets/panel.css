@@ -284,3 +284,40 @@
   flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   color: var(--color-text-tertiary, #6B7280);
 }
+
+/* ★★ 2026-11-10：统一色彩系统 + 8px 透明呼吸间距 + 技能 Tag 胶囊 */
+.cp-panel { --cp-text: #E5E7EB; --cp-muted: #9CA3AF; --cp-dim: #6B7280; color: var(--cp-text); }
+.cp-label, .cp-card-title { color: var(--cp-muted); }
+.cp-value { color: #FFFFFF; }
+.cp-ticks { color: var(--cp-dim); font-size: 9px; }
+.cp-card > * + * { margin-top: 8px; }
+.cp-field + .cp-field { margin-top: 8px; }
+.cp-select, .cp-textarea { border-radius: 8px; color: var(--cp-text); }
+.cp-hint, .cp-note { color: var(--cp-dim); }
+.cp-skills { display: flex; flex-wrap: wrap; gap: 8px; max-height: 148px; overflow-y: auto; margin-top: 8px; padding-right: 2px; }
+.cp-skill-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.13);
+  background: rgba(255,255,255,.035);
+  color: var(--cp-muted); font-size: 11px; line-height: 1.3;
+  cursor: pointer; max-width: 100%;
+  transition: background .14s ease, border-color .14s ease, color .14s ease, transform .14s ease;
+}
+.cp-skill-tag:hover { transform: translateY(-1px); background: rgba(255,255,255,.075); }
+.cp-skill-tag.is-on {
+  background: color-mix(in srgb, var(--cp-accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--cp-accent) 55%, transparent);
+  color: #FFFFFF;
+}
+.cp-skill-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex: none;
+  background: var(--cp-dim); transition: background .14s ease, box-shadow .14s ease;
+}
+.cp-skill-tag.is-on .cp-skill-dot {
+  background: var(--cp-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cp-accent) 22%, transparent);
+}
+.cp-skill-tag .cp-skill-name { flex: none; font-weight: 600; }
+.cp-skill-tag .cp-skill-desc { display: none; }
+/* 旧版 .cp-skill（原生 checkbox 行）不再生成，保留规则只为兼容旧缓存，不影响新 UI */

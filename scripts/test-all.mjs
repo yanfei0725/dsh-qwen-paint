@@ -49,6 +49,7 @@ const SUITES = [
   { file: 'test-turbo-edit.mjs', note: '官方 Turbo / Crop→Sample→Stitch 任务链' },
   // ★ v3 §15.4 第 1/3 步：ETA 方向 + 16→4 档量化 + schema JSON 桥接
   { file: 'test-mode-schema.mjs', note: 'mode-schema 契约 / ETA / schema 桥接' },
+  { file: 'test-model-label.mjs', note: '模型文件名预处理（host + 前端同口径）' },
   // ★ v3 §15.4 第 2 步：控制项落地层（clamp / 速度%语义 / 落盘往返 / 优先级）
   { file: 'test-pipeline-controls.mjs', note: '控制项持久化与生效映射（pipeline-controls）' },
   // ★ v3 §15.4 第 3 步前端竖切：面板真渲染一遍（vm + 假 DOM，专抓"静态绿、一渲染就炸"）

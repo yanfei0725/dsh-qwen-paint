@@ -101,6 +101,7 @@ function makeNode(tag) {
 const body = makeNode('body')
 const head = makeNode('head')
 const posted = []
+const libraryPosts = []
 const document = {
   readyState: 'loading', // 自挂载只登记监听，测试自己决定什么时候 mount
   body,
@@ -170,6 +171,23 @@ const fetch = (url, init) => {
       }),
     })
   }
+  if (String(url).includes('library')) {
+    const isPost = Boolean(init && init.method === 'POST')
+    const bodyJson = isPost && init.body ? JSON.parse(init.body) : null
+    if (isPost) libraryPosts.push(bodyJson)
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({
+        ok: true,
+        styles: [{ id: 'none', name: '不启用' }, { id: 'film', name: '胶片纪实' }],
+        skillsAvailable: [
+          { id: 'archify', name: 'archify', desc: '画架构图' },
+          { id: 'drawio', name: 'drawio', desc: '流程图' },
+        ],
+        selected: 'none', instruction: '', skills: ['archify'],
+      }),
+    })
+  }
   return Promise.resolve({ ok: false, json: () => Promise.resolve(null) })
 }
 
@@ -216,12 +234,34 @@ ok('速度档的边长/参考图上限取自契约 SPEED_MAP',
   api.speedEdge(25) === 640 && api.speedRefs(100) === 16, `${api.speedEdge(25)}/${api.speedRefs(100)}`)
 ok('describe 标「吸附」而非谎称精确档位', /吸附 \d+ 档/.test(api.describe({ aspect: 5, speedPercent: 100 })))
 
+// loadLibrary() 在 mount 里是 fire-and-forget，放行微任务队列让 paintLibrary() 真跑完
+await new Promise((r) => setTimeout(r, 0))
 const fab = body.querySelector('.cp-fab')
 let panelEl = body.querySelector('.cp-panel')
 ok('浮标与面板都已挂到 body', Boolean(fab) && Boolean(panelEl), `body 子节点 ${body.children.length - before}`)
 ok('面板初始是收起的（hidden）', panelEl && panelEl.hidden === true)
 panel.open()
 ok('open() 后 hidden=false', panelEl && panelEl.hidden === false)
+
+// ★★ UI 现代化第二轮：技能改成整块可点的 Tag 胶囊（带颜色圆点），不再有原生小方块
+const tags = panelEl.querySelectorAll('.cp-skill-tag')
+ok('★ 技能渲染成 Tag 胶囊而不是 checkbox（原生小方块清零）',
+  tags.length === 2 && panelEl.querySelectorAll('input[type=checkbox]').length === 0,
+  `tags=${tags.length}`)
+ok('★ 每个 Tag 都带颜色圆点', tags.every((x) => x.querySelector('.cp-skill-dot') !== null))
+ok('★ 已装载的那个默认是 is-on（整块变色，不是勾左边方块）',
+  tags.filter((x) => String(x.className).includes('is-on')).length === 1
+  && tags.find((x) => String(x.className).includes('is-on')).value === 'archify')
+const firstTag = tags[0]
+firstTag.listeners.click.forEach((fn) => fn({ target: firstTag }))
+ok('★ 点整块 Tag 会切状态（archify 取消 → 0 个 is-on）',
+  tags.filter((x) => String(x.className).includes('is-on')).length === 0)
+ok('★ 点整块 Tag 会落盘 skills', libraryPosts.length === 1
+  && Array.isArray(libraryPosts[0].skills) && libraryPosts[0].skills.length === 0,
+  JSON.stringify(libraryPosts))
+ok('★ 面板源码里零 checkbox（防止哪天又退回原生方块）',
+  SRC.indexOf("cb.type = 'checkbox'") < 0)
+
 const tabs = panelEl.querySelectorAll('.cp-tab')
 ok('三个模式 tab 都在', tabs.length === 3, String(tabs.length))
 ok('★ 生图/视频 tab 可选；**只有混合**仍 disabled（链里缺 tts 段，本插件无 TTS 后端）',

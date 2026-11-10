@@ -326,25 +326,42 @@
     }
     sel.value = libState.selected
     ta.value = libState.instruction
-    // 技能勾选（只列已装的，不猜）
+    // ★ 技能装载：带颜色圆点的 Tag 胶囊，整块可点、点整块变色（不再用原生小方块）
     while (list.children.length > 0) list.removeChild(list.children[0])
     for (var k = 0; k < libState.skillsAvailable.length; k += 1) {
       var sk = libState.skillsAvailable[k]
-      var row = el('label', 'cp-skill')
-      var cb = el('input')
-      cb.type = 'checkbox'
-      cb.value = sk.id
-      cb.checked = libState.skills.indexOf(sk.id) >= 0
-      cb.addEventListener('change', function () {
-        var picked = []
-        var all = list.querySelectorAll('input')
-        for (var n = 0; n < all.length; n += 1) if (all[n].checked === true) picked.push(all[n].value)
-        saveLibrary({ skills: picked })
-      })
-      row.appendChild(cb)
-      row.appendChild(el('span', 'cp-skill-name', sk.name || sk.id))
-      if (sk.desc) row.appendChild(el('span', 'cp-skill-desc', sk.desc))
-      list.appendChild(row)
+      var on = libState.skills.indexOf(sk.id) >= 0
+      var tag = el('button', 'cp-skill-tag' + (on ? ' is-on' : ''))
+      tag.type = 'button'
+      tag.value = sk.id
+      tag.title = sk.desc || ''
+      if (typeof tag.setAttribute === 'function') {
+        tag.setAttribute('role', 'checkbox')
+        tag.setAttribute('aria-checked', on ? 'true' : 'false')
+      }
+      tag.appendChild(el('span', 'cp-skill-dot'))
+      tag.appendChild(el('span', 'cp-skill-name', sk.name || sk.id))
+      if (sk.desc) tag.appendChild(el('span', 'cp-skill-desc', sk.desc))
+      tag.addEventListener('click', (function (id) {
+        return function () {
+          var tags = list.querySelectorAll('.cp-skill-tag')
+          var picked = []
+          for (var n = 0; n < tags.length; n += 1) {
+            if (String(tags[n].className).indexOf('is-on') >= 0) picked.push(tags[n].value)
+          }
+          var at = picked.indexOf(id)
+          if (at >= 0) picked.splice(at, 1); else picked.push(id)
+          for (var m = 0; m < tags.length; m += 1) {
+            var t = tags[m]
+            var isOn = picked.indexOf(t.value) >= 0
+            t.className = 'cp-skill-tag' + (isOn ? ' is-on' : '')
+            if (typeof t.setAttribute === 'function') t.setAttribute('aria-checked', isOn ? 'true' : 'false')
+          }
+          libState.skills = picked
+          saveLibrary({ skills: picked })
+        }
+      })(sk.id))
+      list.appendChild(tag)
     }
     var hint = box.querySelector('.cp-library-hint')
     if (hint) {
