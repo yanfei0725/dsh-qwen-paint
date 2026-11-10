@@ -24,6 +24,7 @@
 
   var SCHEMA_PATH = 'api/comfy-pipeline/schema'
   var CONTROLS_PATH = 'api/comfy-pipeline/controls'
+  var PROGRESS_PATH = 'api/comfy-pipeline/progress'
   var FALLBACK_TIERS = [25, 50, 75, 100]
 
   var schema = null
@@ -31,6 +32,7 @@
   var nodes = null
   var saveTimer = null
   var saveSeq = 0
+  var progressTimer = null
 
   /* ============================ 纯函数（可被回归直接测） ============================ */
 
@@ -195,6 +197,50 @@
     nodes.status.className = 'cp-status' + (kind ? ' is-' + kind : '')
   }
 
+  /**
+   * 生成进度（v3 需求第 3 条）。
+   * ⚠ 只渲染它自己拿到的东西：
+   *   · 队列位置与已等时长来自 host 的 `/queue` 反查（真数据）；
+   *   · 百分比**只在有自家实测基准时**才画，否则走不定长进度条——
+   *     拿"时间比例"冒充"采样百分比"就是假进度条，宁可不给。
+   */
+  function paintProgress(payload) {
+    if (!nodes || !nodes.progress) return
+    var wrap = nodes.progress
+    var items = payload && Array.isArray(payload.items) ? payload.items : []
+    if (items.length === 0) { wrap.hidden = true; return }
+    var it = items[0]
+    wrap.hidden = false
+    var fill = wrap.querySelector('.cp-progress-fill')
+    var note = wrap.querySelector('.cp-progress-note')
+    if (fill) {
+      fill.style.width = (it.percent === null || it.percent === undefined ? 100 : it.percent) + '%'
+      fill.className = 'cp-progress-fill' + (it.percent === null || it.percent === undefined ? ' is-indeterminate' : '')
+    }
+    if (note) note.textContent = String(it.note || '')
+  }
+
+  function pollProgress() {
+    try {
+      fetch(PROGRESS_PATH, { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null })
+        .then(function (j) { if (j && j.ok) paintProgress(j) })
+        .catch(function () { /* 进度拿不到就不显示，不报错弹窗 */ })
+    } catch (err) { /* 同上 */ }
+  }
+
+  function startPolling() {
+    if (progressTimer !== null) return
+    pollProgress()
+    progressTimer = setInterval(pollProgress, 1500)
+  }
+
+  function stopPolling() {
+    if (progressTimer === null) return
+    clearInterval(progressTimer)
+    progressTimer = null
+  }
+
   function scheduleSave() {
     if (saveTimer !== null) clearTimeout(saveTimer)
     saveTimer = setTimeout(save, 300)
@@ -326,6 +372,17 @@
     head.appendChild(x)
     panel.appendChild(head)
 
+    // 进度块（默认隐藏：没任务时不占地方）
+    var progress = el('div', 'cp-progress')
+    progress.hidden = true
+    var track = el('div', 'cp-progress-track')
+    var fill = el('i', 'cp-progress-fill')
+    fill.style.width = '0%'
+    track.appendChild(fill)
+    progress.appendChild(track)
+    progress.appendChild(el('span', 'cp-progress-note', ''))
+    panel.appendChild(progress)
+
     var tabs = el('nav', 'cp-tabs')
     var tabEls = {}
     modes.forEach(function (m) {
@@ -419,7 +476,7 @@
     panel.appendChild(foot)
 
     document.body.appendChild(panel)
-    nodes = { fab: fab, panel: panel, status: status, note: note }
+    nodes = { fab: fab, panel: panel, status: status, note: note, progress: progress }
     return nodes
   }
 
@@ -451,13 +508,23 @@
     if (!nodes) return
     var wasOpen = nodes.panel.hidden === false
     try { nodes.panel.parentNode.removeChild(nodes.panel) } catch (err) { /* 已离体 */ }
-    nodes = { fab: nodes.fab, panel: null, status: null, note: null }
+    nodes = { fab: nodes.fab, panel: null, status: null, note: null, progress: null }
     render()
     if (wasOpen) open()
   }
 
-  function open() { if (nodes) { nodes.panel.hidden = false; refreshNote() } }
-  function close() { if (nodes) nodes.panel.hidden = true }
+  function open() {
+    if (!nodes) return
+    nodes.panel.hidden = false
+    refreshNote()
+    startPolling() // 面板开着才轮询进度（关了就停，不白刷接口）
+  }
+
+  function close() {
+    if (!nodes) return
+    nodes.panel.hidden = true
+    stopPolling()
+  }
 
   function wire() {
     var fab = nodes.fab

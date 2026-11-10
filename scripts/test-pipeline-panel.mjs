@@ -173,11 +173,14 @@ const fetch = (url, init) => {
   return Promise.resolve({ ok: false, json: () => Promise.resolve(null) })
 }
 
-const sandbox = { window: {}, document, fetch, console, setTimeout, clearTimeout, Number, Math, JSON, Object, Array, String }
+// 面板开着时会 setInterval 轮询进度 ⇒ 假环境里也要有
+const sandbox = { window: {}, document, fetch, console, setTimeout, clearTimeout, setInterval, clearInterval, Number, Math, JSON, Object, Array, String }
 sandbox.window.document = document
 sandbox.window.fetch = fetch
 sandbox.window.setTimeout = setTimeout
 sandbox.window.clearTimeout = clearTimeout
+sandbox.window.setInterval = setInterval
+sandbox.window.clearInterval = clearInterval
 vm.createContext(sandbox)
 vm.runInContext(SRC, sandbox, { filename: 'assets/panel.js' })
 

@@ -120,3 +120,32 @@
   border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, .16)); border-radius: 6px;
 }
 .cp-reset:hover { color: var(--color-text-primary, #e8e8ea); }
+
+/* ---- 生成进度（v3 需求第 3 条）---- */
+.cp-progress { margin: 0 0 10px; }
+.cp-progress[hidden] { display: none; }
+.cp-progress-track {
+  height: 4px; border-radius: 999px; overflow: hidden;
+  background: var(--color-bg-sunken, rgba(255, 255, 255, .08));
+}
+.cp-progress-fill {
+  display: block; height: 100%; width: 0;
+  background: var(--color-accent, #7aa7f0);
+  border-radius: 999px;
+  transition: width .3s ease;
+}
+.cp-progress-fill.is-indeterminate {
+  width: 100% !important;
+  background: linear-gradient(90deg, transparent, var(--color-accent, #7aa7f0), transparent);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: cp-indet 1.2s linear infinite;
+}
+@keyframes cp-indet {
+  from { background-position: -40% 0; }
+  to { background-position: 140% 0; }
+}
+.cp-progress-note {
+  display: block; margin-top: 4px; font-size: 11px;
+  color: var(--color-text-tertiary, #8b9096); word-break: break-all;
+}

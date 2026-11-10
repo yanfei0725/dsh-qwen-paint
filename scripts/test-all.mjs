@@ -57,6 +57,8 @@ const SUITES = [
   { file: 'test-pipeline-core.mjs', note: '控制层内核四件（缓存/加速档/水位/pass 管线）' },
   // ★ 视频链：Wan 2.2 / XT-5B 工作流图 + generate_video 接线
   { file: 'test-video-workflow.mjs', note: '视频链工作流契约（节点/参数/对齐/接线）' },
+  // ★ 生成进度：队列位置 + 家自实测 ETA（不编数字）
+  { file: 'test-progress.mjs', note: '生成进度与 ETA（队列/EWMA/百分比封顶）' },
   // —— 契约 / 面板 / 步骤 ——
   { file: '_tool_contract_test.mjs', note: '工具契约' },
   { file: '_step4_dry_test.mjs', note: '4 步干跑' },
