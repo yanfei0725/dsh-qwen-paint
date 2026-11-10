@@ -10,7 +10,7 @@
  *   视频链（wan22 / XT-5B）已接进 lib/video-workflow.js ⇒ 可选。
  *   混合模式（image → tts → video）是否可选由 `GET /api/comfy-pipeline/modes` 探测决定：
  *   探到 TTS 节点+权重就自动放行，缺件时 tab 禁用并把**缺什么、放哪**放进 title（如实，
- *   不假装能出 wav）—— 摆一个拨了没反应的滑块，比不给更坏（本项目历史上被"假报告"坑过）。
+ *   不假装能出音频）—— 摆一个拨了没反应的滑块，比不给更坏（本项目历史上被"假报告"坑过）。
  *   同理：`fps` / `denoise` / `tileSize` / `chunkOverlap` 四项当前**没有消费方**，一律禁用并注明。
  *
  * ## 速度%的真实语义
