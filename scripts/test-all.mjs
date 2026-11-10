@@ -53,6 +53,8 @@ const SUITES = [
   { file: 'test-pipeline-controls.mjs', note: '控制项持久化与生效映射（pipeline-controls）' },
   // ★ v3 §15.4 第 3 步前端竖切：面板真渲染一遍（vm + 假 DOM，专抓"静态绿、一渲染就炸"）
   { file: 'test-pipeline-panel.mjs', note: '控制面板行为回归（渲染 / 请求 / 禁用项）' },
+  // ★ v3 §13.4 / §14.3 代码级修正四件：两层缓存 / pick(installed) / 结构化水位 / runPasses 深拷
+  { file: 'test-pipeline-core.mjs', note: '控制层内核四件（缓存/加速档/水位/pass 管线）' },
   // —— 契约 / 面板 / 步骤 ——
   { file: '_tool_contract_test.mjs', note: '工具契约' },
   { file: '_step4_dry_test.mjs', note: '4 步干跑' },
