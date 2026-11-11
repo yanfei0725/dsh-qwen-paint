@@ -1,0 +1,24 @@
+# dsh-qwen-paint documentation site (GitHub Pages, static only).
+# All content is public documentation. There is no private area, no form,
+# no rate-limit concern: crawlers, including AI / LLM crawlers, are welcome.
+
+User-agent: *
+Allow: /
+
+# Explicit statements for common AI / LLM crawlers (same policy as above).
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+Sitemap: http<本地路径>
