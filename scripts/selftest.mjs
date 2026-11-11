@@ -7,7 +7,7 @@
  *   ② 工具定义形状合法：register 只强校验 output.schema 是 JSON Schema
  *   ③ 参数/结果 schema 的结构（object 根、required、只用支持的关键字）
  *   ④ 纯函数：尺寸换算（32 对齐）、文件名清洗
- *   ⑤ workflow 结构与用户正在用的那份逐节点对齐
+ *   ⑤ workflow 结构与正在用的那份逐节点对齐
  *   ⑥ 端到端：探活 → 提交 → 轮询 → 取图 → 落盘 → 返回值
  *   ⑦ 交付事件 `deliverables/presented` 的载荷与官方 present 一致
  *   ⑧ ComfyUI 没启动时给出可照做的报错（而不是含糊失败）
@@ -170,7 +170,7 @@ check('英文按词截断（≤34）且不留尾空格', enStem.length <= 34 && 
 check('剥掉 Windows 非法字符', !/[\\/:*?"<>|]/.test(safeStem('a/b\\c:d*e?f"g<h>i|j', 40)), safeStem('a/b\\c:d*e?f"g<h>i|j', 40))
 check('空提示词给「无题」', safeStem('', 22) === '无题')
 
-section('⑥ workflow 与用户正在用的那份对齐')
+section('⑥ workflow 与正在用的那份对齐')
 const wf = buildWorkflow({ ...DEFAULTS }, { prompt: '测试', negative: '', width: 992, height: 992, steps: 25, seed: 42 })
 check('节点 1 UNETLoader 用千问 2.1 int8', wf['1']?.class_type === 'UNETLoader' && wf['1'].inputs.unet_name === 'qwen_image_2.1_int8_convrot.safetensors')
 check('节点 2 CLIPLoader type=qwen_image', wf['2']?.inputs.type === 'qwen_image' && wf['2'].inputs.clip_name === 'qwen3vl_8b_w4a8.safetensors')

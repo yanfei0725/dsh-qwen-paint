@@ -1,5 +1,5 @@
 // 实测候选加速节点：BlockCache / SageAttention / Spectrum
-// 全部走**图生图**（editing）场景，这是用户关心的场景。
+// 全部走**图生图**（editing）场景，这是关注的场景。
 //
 // 用法：node _alts_e2e.mjs <变体> [tag]
 //   变体: base | blockcache | sage | spectrum

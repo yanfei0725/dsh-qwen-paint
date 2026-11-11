@@ -105,7 +105,7 @@ func TestProgressWeights(t *testing.T) {
 }
 
 // BenchmarkQueueDecision —— 给报告 §13.1「L3 占比 < 1%」一个可复测的数字。
-// pct-of-L1 以本机实测 L1 采样 18.12 s/段（ACTIVE.md，832x480 / 25 帧 / 4 步）为分母。
+// pct-of-L1 以本机实测 L1 采样 18.12 s/段（832x480 / 25 帧 / 4 步）为分母。
 func BenchmarkQueueDecision(b *testing.B) {
 	q := NewQueue()
 	b.ResetTimer()

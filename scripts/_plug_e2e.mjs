@@ -65,7 +65,7 @@ async function run(img, seed, cfg) {
 
 const main = async () => {
   // ⚠ 必须给真实的 comfyUrl —— 空 cfg 会让探测去请求 "undefined/object_info/..."
-  //   全部返回 error，看起来像"节点都没装"（我第一次就栽在这）。
+  //   全部返回 error，看起来像"节点都没装"（首次调试就栽在这）。
   const cfg = {
     comfyUrl: 'http://127.0.0.1:8188',
     unet: 'qwen_image_2.1_int8_convrot.safetensors',

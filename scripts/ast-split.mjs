@@ -5,7 +5,7 @@
  * 本机 `acorn` / `recast` / `@babel/parser` 全部 MISSING（报告 §14.4 实测），
  * 且 `lib/client.js` 是非 ESM + `window.__ModuleLoader__` 单入口，AST 工具按 ESM 解析会失败。
  * 所以 C 线按报告结论落地为：**只拆 config.js、不碰 client.js、文本脚本 + 差分验证**。
- * 切分按「整行」不按 token —— ACTIVE.md 上下文策略实测：整行删与不压持平，按 token 删会掉 7.3pp。
+ * 切分按「整行」不按 token —— 上下文策略实测：整行删与不压持平，按 token 删会掉 7.3pp。
  *
  * 本脚本**不改源码**，只产出「可安全外移的顶层块清单」并验证零漂移。
  * 真正外移沿用仓库既有范式（workflow-meta.js / model-chain.js / schema-defaults.js）。
@@ -84,7 +84,7 @@ export function topLevelBlocks(src) {
  * ⚠ 不是拿 lines 副本跟自己比（那是恒真的空操作）—— 真按块边界重组：
  *   · 块重叠（start < 上一块 end）⇒ 立刻判 false（stripLine 括号误计就会造成这种漂移）；
  *   · 块间行 / 末尾行照抄，不吞空行、不重排；
- *   · 整行抽取（不按 token）是"零漂移"的前提 —— ACTIVE.md 实测按 token 删会掉 7.3pp。
+ *   · 整行抽取（不按 token）是"零漂移"的前提 —— 实测按 token 删会掉 7.3pp。
  */
 export function verifyZeroDrift(src) {
   const lines = String(src).split('\n')

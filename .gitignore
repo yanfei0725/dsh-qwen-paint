@@ -29,7 +29,7 @@ _tome_probe/
 .env
 .env.*
 
-# ★★★ 私人 / 开发文档 —— 绝不进公开仓库（2026-10-17 用户明确要求）
+# ★★★ 私人 / 开发文档 —— 绝不进公开仓库（2026-10-17 需求方明确要求）
 #   能推上去的只有三类：README / 包里相关的文件 / 给 DSH 的安装说明。
 #   这里再加一道文件名兜底：就算有人手工拷进来，也不会被 `git add .` 顺手带上。
 #   （同名的 fail-closed 检查见 scripts/_sync_publish.py 与 scripts/_no_private_docs_test.mjs）

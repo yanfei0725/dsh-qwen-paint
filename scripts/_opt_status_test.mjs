@@ -163,7 +163,7 @@ console.log('\n=== 7. ComfyUI 没运行（caps=null）→ 必须报 idle，不�
   console.log(`  level=${r.level} → ${r.summary}`)
   r.reasons.forEach((x) => console.log(`    · ${x.slice(0, 74)}`))
   assert('level = idle（**不是** unknown）', r.level === 'idle')
-  assert('summary 里不出现"未知"（用户明确反对这个词）', !r.summary.includes('未知'))
+  assert('summary 里不出现"未知"（需求方明确反对这个词）', !r.summary.includes('未知'))
   assert('summary 点明"未启动"这个前提', r.summary.includes('未启动'))
   assert('summary 说清"无法检测优化状态"这个因果', r.summary.includes('无法检测'))
   assert('说明这是正常状态/不是故障',
@@ -190,7 +190,7 @@ console.log('\n=== 8. 健壮性：脏输入不抛错（UI 不能因此空白）=
 
 console.log('\n=== 9. 启动失败 vs 启动超时（两个不同状态，不能混）★ ===')
 {
-  // 这两个的语义完全不同，也是用户明确要求分开的：
+  // 这两个的语义完全不同，也是需求方明确要求分开的：
   //   · 进程报错退出   → 「启动失败」+ 原因，用户要去看错误；
   //   · 纯超时（进程活着、无任何报错）→ 「启动超时」，它只是慢，不该让用户以为坏了。
   const src = readFileSync(fileURLToPath(new URL('../lib/client.js', import.meta.url)), 'utf8')
@@ -225,7 +225,7 @@ console.log('\n=== 9. 启动失败 vs 启动超时（两个不同状态，不能
 
 console.log('\n=== 10. 立即报错：致命日志识别（不等 45 秒）★ ===')
 {
-  // 用户要求：「如果直接启动失败你就直接报错，不要等 45 秒」。
+  // 需求方要求：「如果直接启动失败你就直接报错，不要等 45 秒」。
   // 实现方式：轮询每 1 秒读一次启动日志，一看到"注定失败"的行就当场判定。
   // 关键风险是**误判**：把普通 INFO 当成错误，会让正常启动被误报为失败。
   const f = I.fatalLineInLog
@@ -312,7 +312,7 @@ console.log('\n=== 10. 立即报错：致命日志识别（不等 45 秒）★ =
 
 console.log('\n=== 11. 四态（on/available/off/blocked）语义 ★★★ 2026-10-09 新增 ===')
 {
-  // 用户要求：「你点进去就应该是告诉你启用了哪些优化，
+  // 需求方要求：「你点进去就应该是告诉你启用了哪些优化，
   //   哪些可以启用哪些没启用，哪些不能启用」。
   // 这一节就是守住那条需求 —— 三种"没启用"必须被分开，不能糊成一句"未启用"。
 
@@ -488,7 +488,7 @@ console.log('\n=== 12. 界面侧：徽标可点 + 菜单入口 + 四态渲染 �
   //   剩下 2 项（按尺寸让位）被无声吞掉，用户会以为坏了 2 项。
   assert('⑤ ★ 总账行含 superseded（按尺寸让位）', client.includes('项按尺寸让位'))
 
-  // ⑥ 菜单入口 —— 用户明确要求"从这里也进得去"
+  // ⑥ 菜单入口 —— 需求方明确要求"从这里也进得去"
   assert('⑥ ★ 设置菜单里有「优化」分组', client.includes("addGroup('优化',"))
   assert('⑥ ★ 菜单项 kind 为 opt', client.includes("kind: 'opt'"))
   assert('⑥ ★ 点击 opt 走 openOptDetail', client.includes("entry.kind === 'opt') openOptDetail()"))
@@ -531,7 +531,7 @@ console.log('\n=== 12. 界面侧：徽标可点 + 菜单入口 + 四态渲染 �
   assert('⑩ host 产出 action 字段', /action: action \?\? ''/u.test(host))
   assert('⑩ host 产出 stats', host.includes('const stats = {'))
 
-  // ⑪ ★★★ 2026-10-09 新增（用户要求）：BlockCache T8 必须**可开关**，不能只显示参数。
+  // ⑪ ★★★ 2026-10-09 新增（需求方要求）：BlockCache T8 必须**可开关**，不能只显示参数。
   //   这里断言三件事，缺一个就说明开关链路断了：
   //     · host 给 BlockCache 项挂了 `toggle` 字段（否则前端没东西可点）；
   //     · host 有 `?blockcache=on|off` 的处理分支（否则点了没反应）；

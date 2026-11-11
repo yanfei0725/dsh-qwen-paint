@@ -165,7 +165,7 @@ else bad('发现裸读未声明服务属性 ⇒ 会抛 "cannot get property ... 
 /* --------------------------------------------------------------------------
  * ★ 断言 8（真事故防回归）：锁尺寸档下，**生效尺寸必须能被调用方拿到**
  *
- * 事故现象：用户说「出的图尺寸不对」。
+ * 事故现象：用户反馈「出的图尺寸不对」。
  * 根因：`forceOptimizedSize=true` 会把请求的 864x1152 **归一成 1024x1024**，
  *       但调用方仍拿"请求值"去比对实际出图尺寸 → 必然对不上 → 报错；
  *       文件名与返回值也都用了请求值 → 前后不一致。
@@ -236,7 +236,7 @@ if (typeof buildWorkflow !== 'function') {
   if (/const value = \{[\s\S]{0,120}?width: outWidth/.test(src2)) ok('返回值用生效尺寸')
   else bad('返回值仍用请求值')
 
-  // 8-7 ★★★ 默认配置必须是"完全听调用方"（2026-10-09 用户决定）
+  // 8-7 ★★★ 默认配置必须是"完全听调用方"（2026-10-09 需求方决定）
   //     锁尺寸会把 7 个比例全部吃掉 → 功能静默阉割。默认必须放开。
   const { DEFAULTS } = mod.__internal
 
@@ -246,7 +246,7 @@ if (typeof buildWorkflow !== 'function') {
     bad('DEFAULTS.forceOptimizedSize 被改回 true ⇒ 7 个比例会被吞掉', String(DEFAULTS.forceOptimizedSize))
   }
 
-  // 8-8 ★ 七个比例必须都能原样出图（逐个验，这是用户最关心的行为）
+  // 8-8 ★ 七个比例必须都能原样出图（逐个验，这是最关注的行为）
   const { calcSize, ASPECTS } = mod.__internal
   const spoiled = []
   for (const key of Object.keys(ASPECTS)) {

@@ -24,7 +24,7 @@ if not os.path.exists(LOG):
 raw = io.open(LOG, "r", encoding="utf-8", errors="replace").read()
 
 # ★ 日志里有 ANSI 颜色码（\x1b[32m[INFO]\x1b[0m），不剥掉的话
-#   "\[INFO\] got prompt" 这类正则全部落空（我第一次就栽在这，报"没找到"）。
+#   "\[INFO\] got prompt" 这类正则全部落空（首次调试就栽在这，报"没找到"）。
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 raw = ANSI.sub("", raw)
 

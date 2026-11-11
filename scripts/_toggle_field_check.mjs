@@ -1,5 +1,5 @@
 // 验证：BlockCache T8 那一项确实带上了 `toggle` 字段 —— 前端就是靠它渲染开关的。
-// 用户要求：「BlockCache T8 只显示怎么调，但没提供开关……请改成可以自行开启或关闭的选项」。
+// 需求方要求：「BlockCache T8 只显示怎么调，但没提供开关……请改成可以自行开启或关闭的选项」。
 // ⚠ 路径相对本文件解析，不写死用户目录（打包有隐私检查）。
 const mod = await import(new URL('../lib/index.js', import.meta.url).href)
 const I = mod.__internal
