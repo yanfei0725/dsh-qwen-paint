@@ -8,6 +8,7 @@
  *      而 UI 重绘结果没走 tools/result 钩子登记 ⇒ 大概率裂图
  *   4. 连点「再改一次」→ 每次成功都 append 一个新 <img>，结果图越叠越长
  *   5. 重复点图片 → 圈选浮层层层叠加（底层监听器泄漏）
+ *   6. /api/qwen-paint/inpaint 漏用来源/授权围栏 → 跨站可绕过宿主工具入口触发本地出图
  *
  * 断言方式：行为级（调 __internal.uiMaskPath）+ 源码级锁（读 lib 源码）。
  * ⚠ 源码级"必须不存在"的断言**必须先剥注释** —— 修复注释里原样引用了坏代码。
@@ -70,6 +71,27 @@ console.log('\n=== 4. 弹窗三处修复（client.js 源码级） ===')
     CLI.includes('api/qwen-paint/file?path='))
   ok('★ 剥注释后不再把结果图直接 appendChild 到 card',
     !CLI.includes('card.appendChild(next)'))
+}
+
+console.log('\n=== 5. /api/qwen-paint/inpaint 顶层可信请求围栏（AUTH002 收录复核整改，源码级） ===')
+{
+  // ⚠ 只截 inpaintHandler 的函数体（到该路由 register 为止），否则会误命中别的端点的围栏。
+  //   并且必须剥注释 —— 修复说明里原样引用了 isLocalRequest(req)，不剥就是假通过。
+  const IDX = strip(INDEX)
+  const start = IDX.indexOf('const inpaintHandler =')
+  const end = IDX.indexOf("path: '/api/qwen-paint/inpaint'", start)
+  const H = start >= 0 && end > start ? IDX.slice(start, end) : ''
+  const atFence = H.indexOf('isLocalRequest(req)')
+  const atGuard = H.indexOf('guardWriteRequest(req, res)')
+  const atExec = H.indexOf('editToolRef.execute(')
+  ok('能定位到 inpaintHandler 函数体', H.length > 0)
+  ok('★ handler 内有 isLocalRequest(req) 顶层围栏', atFence >= 0)
+  ok('★ 围栏在 guardWriteRequest 之前（POST/JSON 守卫只查方法与媒体类型，不能替代来源检查）',
+    atFence >= 0 && atGuard > atFence)
+  ok('★ 围栏在 editToolRef.execute 之前（跨站请求不得触发本地出图/写盘）',
+    atFence >= 0 && atExec > atFence)
+  ok('围栏拒绝时返回 403 + local requests only',
+    H.includes("reason: 'local requests only'") && /isLocalRequest\(req\)[\s\S]{0,160}403/u.test(H))
 }
 
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}`)

@@ -81,14 +81,14 @@ const SUITES = [
   { file: '_manifest_test.mjs', note: 'manifest 一致性' },
   // ★ 2026-10-20 新增（0.17.13）：面板圈选重绘三项修复的回归锁
   //   （蒙版泄漏 / 同毫秒覆盖 / 结果图裂图 / 结果图堆叠 / 浮层双开）
-  { file: '_inpaint_ui_test.mjs', note: '圈选重绘 UI 修复回归' },
+  { file: '_inpaint_ui_test.mjs', note: '圈选重绘 UI 修复 + inpaint 授权围栏回归' },
   // ★ 2026-10-19 补进回归：它一直没被 `npm test` 跑过，漂移了 16 项都没人发现
   //   （全是"源码字符串搬家了/写操作改 POST 了"导致的过期断言）。
   { file: '_review_fixes_test.mjs', note: '0.17.6 那批修复的源码级回归' },
   { file: '_no_private_docs_test.mjs', note: '私人/开发文档不进公开仓库（源码目录 SKIP）' },
   { file: 'test-dsh-compat.mjs', note: 'COMPAT001 实测（无 dsh 环境时明确 SKIP）' },
   // —— 最重的一套放最后 ——
-  { file: 'selftest.mjs', note: '全量自测（387 项）', heavy: true },
+  { file: 'selftest.mjs', note: '全量自测（392 项）', heavy: true },
 ]
 
 const argv = process.argv.slice(2)

@@ -678,6 +678,59 @@ check('状态体带 idleShutdownInMs 字段', 'idleShutdownInMs' in statusJson, 
 const forbiddenText = await callStatus({ host: 'evil.example.com' }, '8.8.8.8')
 check('外网请求拿到 ok=false（403 体）', JSON.parse(forbiddenText).ok === false, forbiddenText)
 
+/* ★★★ 2026-11-11（AUTH002 收录复核整改）：/api/qwen-paint/inpaint 的**行为级**围栏回归。
+   上面 ⑭ 节只打到了 status 路由；这里从 hostRoutes 里找出真正的 inpaint handler，
+   用与 postStatus 同款的假 POST 请求直接打进去，断言它和其它端点用同一道来源/授权围栏。
+   ⚠ 假 body 故意缺 maskPng：本机请求会在参数校验处 400 返回，
+     跨站请求在围栏处 403 返回 —— 两边都**不会**写蒙版、不会真的调 editToolRef.execute()，
+     所以这套断言零副作用、纯 Node 可跑（不依赖任何外部可执行文件）。 */
+const inpaintRoute = hostRoutes.find((r) => r.path === '/api/qwen-paint/inpaint')
+check('注册了 /api/qwen-paint/inpaint 路由', !!inpaintRoute && typeof inpaintRoute.handler === 'function')
+
+const callInpaint = (headers, remoteAddress = '127.0.0.1', method = 'POST') =>
+  new Promise((resolve) => {
+    const payload = Buffer.from(JSON.stringify({ image: 'fake.png', prompt: 'inpaint this' }), 'utf8')
+    const req = {
+      method,
+      url: '/api/qwen-paint/inpaint',
+      headers: { host: '127.0.0.1:1', 'content-type': 'application/json', ...headers },
+      socket: { remoteAddress },
+      async *[Symbol.asyncIterator]() { yield payload },
+    }
+    let status = 0
+    const timer = setTimeout(() => resolve({ status: -1, body: { ok: false, reason: 'handler 未响应（超时）' } }), 2000)
+    const res = {
+      writeHead(code) { status = code },
+      end(text) {
+        clearTimeout(timer)
+        let parsed = {}
+        try { parsed = JSON.parse(String(text)) } catch { parsed = { raw: String(text) } }
+        resolve({ status, body: parsed })
+      },
+    }
+    inpaintRoute.handler(req, res)
+  })
+
+{
+  const cases = [
+    ['外网 Host（DNS rebinding）', { host: 'evil.example.com' }, '127.0.0.1'],
+    ['非回环 socket 来源', {}, '8.8.8.8'],
+    ['Sec-Fetch-Site: cross-site', { 'sec-fetch-site': 'cross-site' }, '127.0.0.1'],
+    ['跨站 Origin', { origin: 'https://evil.example.com' }, '127.0.0.1'],
+  ]
+  for (const [label, headers, remote] of cases) {
+    const r = await callInpaint(headers, remote)
+    check(`★ inpaint 拒绝${label}（403，未触发本地出图）`,
+      r.status === 403 && r.body.ok === false && r.body.reason === 'local requests only', r)
+  }
+  const local = await callInpaint({})
+  check('★ inpaint 本机请求未被围栏误挡（继续走到参数校验 400）',
+    local.status === 400 && local.body.ok === false, local)
+  const getFromEvil = await callInpaint({ host: 'evil.example.com' }, '127.0.0.1', 'GET')
+  check('★ 围栏在 method 判定之前（跨站 GET 也是 403 而非 405）',
+    getFromEvil.status === 403, getFromEvil)
+}
+
 section('⑮ 状态点菜单：当前档位高亮 + 点空白处消失（用户 2026-10-08 新增）')
 
 /* 这一节要**真的点一遍菜单**，所以给假 DOM 补上事件、属性读写和父子关系。
