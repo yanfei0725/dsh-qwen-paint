@@ -1,6 +1,6 @@
 # dsh-qwen-paint · (绘图)千问（优化版）
 
-面向 **DeepSeek Harness** 的本地图像生成与编辑插件。经由本机 **ComfyUI** 调用 **Qwen-Image 2.1 / 官方 Turbo** 模型，在对话中完成文生图、1–3 图编辑、局部重绘、元素移除与四向扩图；结果落盘并在会话界面内直接呈现。
+DSH 插件 / DeepSeek Harness：本地文生图、图生图、局部重绘、元素移除、四向扩图与高清放大。经本机 ComfyUI 调用 Qwen-Image 2.1 / 官方 Turbo，出图数据仅走 127.0.0.1 回环，无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD 显卡。
 
 ## Features
 
@@ -28,7 +28,7 @@
 dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 ```
 
-> 使用 `desktop` profile 时须**先完全退出 DSH**。本包**未发布到 npm**，所以不能用 `dsh plugin add dsh-qwen-paint` 按包名安装，必须指向本地目录或本地包。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
+> 使用 `desktop` profile 时须**先完全退出 DSH**。本包发布到 npm 后可用 `dsh plugin add dsh-qwen-paint` 按包名安装；在此之前须指向本地目录或本地包。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
 
 ## Usage
 
@@ -61,7 +61,7 @@ dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 > 这是**用户主动选择**的行为，不是默认状态。
 
 > **原作者**：@奇迹与你（<http<本地路径>>）  
-> **优化版作者**：@yanfei0725（<http<本地路径>>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.19.0`
+> **优化版作者**：@yanfei0725（<http<本地路径>>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.19.1`
 
 ---
 

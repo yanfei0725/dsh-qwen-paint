@@ -6,7 +6,7 @@
 
 ## 是什么
 
-- 面向 DeepSeek Harness (DSH) 的本地图像生成与编辑插件，版本 0.19.0，MIT 许可。
+- 面向 DeepSeek Harness (DSH) 的本地图像生成与编辑插件，版本 0.19.1，MIT 许可。
 - 经本机 ComfyUI 调用 Qwen-Image 2.1 / 官方 Turbo 模型；结果落盘并在会话界面内直接呈现。
 - 工具：`draw_image`（文生图 / 1–16 张参考图编辑）、`inpaint_image`（局部重绘）、`remove_image`（元素移除）、`outpaint_image`（四向扩图）、`upscale_image`（高清放大）。
 - 平台：Windows / Linux；NVIDIA / Intel Arc / AMD 显卡。

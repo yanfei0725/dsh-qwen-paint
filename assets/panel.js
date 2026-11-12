@@ -676,6 +676,7 @@
   function open() {
     if (!nodes) return
     nodes.panel.hidden = false
+    if (nodes.fab) syncPanelPos(nodes.fab, nodes.panel)
     refreshNote()
     startPolling() // 面板开着才轮询进度（关了就停，不白刷接口）
   }
@@ -686,18 +687,170 @@
     stopPolling()
   }
 
+  /* ---------- 浮标拖动 ----------
+   * 两个「点不动」根因一起修：
+   *   ① 原开关绑在 click 上，而 click 是「按下+抬起+无拖动+无取消」的复合事件：
+   *      指针轻移、文字被选中、或宿主在 pointerdown 上 preventDefault 都会让它不派发。
+   *      改为在 pointerup 自行判定点按 —— 只要按下并抬起就一定有 pointerup，
+   *      配合 setPointerCapture 把后续 move/up 锁到浮标，手势不再被吞。
+   *   ② rebuild()（切模式）会换掉 nodes.panel，但旧开关闭包缓存了第一个 panel，
+   *      之后它的 hidden 再不更新 ⇒ 判断永久卡在 close() 分支，面板再也打不开。
+   *      toggle / 外部点击判定一律改读当前 nodes.panel，不缓存旧引用。
+   * 位置存 localStorage；无 Pointer Events 的环境退化为「只点不拖」，按钮仍可用。
+   * 所有宿主 API（localStorage / getBoundingClientRect / PointerEvent / setPointerCapture）
+   * 都带 typeof 守卫，保证 node:vm 假 DOM 下 mount() 不抛错。
+   */
+  var FAB_POS_KEY = 'comfyPipelineFabPos'
+  var DRAG_THRESHOLD = 5 // px：位移小于它算点按，否则算拖动
+
+  function getStorage() {
+    try { return (typeof window !== 'undefined' && window.localStorage) ? window.localStorage : null }
+    catch (err) { return null }
+  }
+  function readFabPos() {
+    var s = getStorage()
+    if (!s) return null
+    try {
+      var p = JSON.parse(s.getItem(FAB_POS_KEY) || 'null')
+      return (p && Number.isFinite(p.left) && Number.isFinite(p.top)) ? p : null
+    } catch (err) { return null }
+  }
+  function writeFabPos(p) {
+    var s = getStorage()
+    if (!s) return
+    try { s.setItem(FAB_POS_KEY, JSON.stringify(p)) } catch (err) { /* 配额 / 隐私模式 */ }
+  }
+  function vpSize() {
+    var w = (typeof window !== 'undefined' && Number.isFinite(window.innerWidth)) ? window.innerWidth : 1280
+    var h = (typeof window !== 'undefined' && Number.isFinite(window.innerHeight)) ? window.innerHeight : 800
+    return { w: w, h: h }
+  }
+  function fabSize(fab) {
+    return {
+      w: Number.isFinite(fab.offsetWidth) && fab.offsetWidth > 0 ? fab.offsetWidth : 132,
+      h: Number.isFinite(fab.offsetHeight) && fab.offsetHeight > 0 ? fab.offsetHeight : 40,
+    }
+  }
+  /** 把 (left,top) 夹进视口并写到 style，返回夹后的坐标。 */
+  function setFabPos(fab, left, top) {
+    var vp = vpSize(), fs = fabSize(fab)
+    var l = Math.min(Math.max(8, left), Math.max(8, vp.w - fs.w - 8))
+    var t = Math.min(Math.max(8, top), Math.max(8, vp.h - fs.h - 8))
+    if (fab.style) {
+      fab.style.left = l + 'px'; fab.style.top = t + 'px'
+      fab.style.right = 'auto'; fab.style.bottom = 'auto'
+    }
+    return { left: l, top: t }
+  }
+  /** 面板贴浮标：优先在浮标上方、右缘对齐，越界则改下方；用当前 nodes.panel。 */
+  function syncPanelPos(fab, panel) {
+    if (!panel || !panel.style) return
+    var l = Number.parseFloat(fab.style && fab.style.left)
+    var t = Number.parseFloat(fab.style && fab.style.top)
+    if (!Number.isFinite(l) || !Number.isFinite(t)) return // 仍用 CSS 默认右下角
+    var vp = vpSize(), fs = fabSize(fab)
+    var pw = Math.min(392, vp.w - 16)
+    var ph = (Number.isFinite(panel.offsetHeight) && panel.offsetHeight > 0) ? panel.offsetHeight : 420
+    var px = Math.min(Math.max(8, l + fs.w - pw), Math.max(8, vp.w - pw - 8))
+    var above = t - ph - 12
+    var py = above >= 8 ? above : Math.min(t + fs.h + 12, Math.max(8, vp.h - ph - 8))
+    panel.style.left = px + 'px'; panel.style.right = 'auto'
+    panel.style.top = Math.max(8, py) + 'px'; panel.style.bottom = 'auto'
+  }
+
+  function toggle() {
+    if (!nodes || !nodes.panel) return
+    if (nodes.panel.hidden) open(); else close()
+  }
+
   function wire() {
     var fab = nodes.fab
-    var panel = nodes.panel
-    fab.addEventListener('click', function () { panel.hidden ? open() : close() })
-    var x = panel.querySelector('.cp-x')
+    var firstPanel = nodes.panel
+    var x = firstPanel.querySelector('.cp-x')
     if (x) x.addEventListener('click', close)
-    // 点面板外面收起（与既有优化面板同一套习惯）
+
+    // 恢复上次拖动位置
+    var saved = readFabPos()
+    if (saved) setFabPos(fab, saved.left, saved.top)
+
+    // 点面板外收起：读当前 nodes.panel（rebuild 换节点后仍成立），不缓存旧引用
     document.addEventListener('click', function (ev) {
-      if (panel.hidden) return
-      if (panel.contains(ev.target) || fab.contains(ev.target)) return
+      if (!nodes || !nodes.panel || nodes.panel.hidden) return
+      if (nodes.panel.contains(ev.target) || fab.contains(ev.target)) return
       close()
     }, true)
+
+    var hasPointer = (typeof window !== 'undefined' && typeof window.PointerEvent === 'function')
+
+    // 键盘兜底：Enter / Space 自己开关，并阻止默认 click 造成重复
+    fab.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Spacebar') {
+        if (typeof ev.preventDefault === 'function') ev.preventDefault()
+        toggle()
+      }
+    })
+
+    if (!hasPointer) {
+      fab.addEventListener('click', toggle) // 无 Pointer Events：不拖动，但按钮一定能点
+      return
+    }
+
+    var press = null
+
+    function originOf() {
+      var l = Number.parseFloat(fab.style && fab.style.left)
+      var t = Number.parseFloat(fab.style && fab.style.top)
+      if (Number.isFinite(l) && Number.isFinite(t)) return { left: l, top: t }
+      if (typeof fab.getBoundingClientRect === 'function') {
+        var r = fab.getBoundingClientRect()
+        if (r && Number.isFinite(r.left) && Number.isFinite(r.top)) return { left: r.left, top: r.top }
+      }
+      var vp = vpSize(), fs = fabSize(fab)
+      return { left: vp.w - fs.w - 16, top: vp.h - fs.h - 16 }
+    }
+
+    fab.addEventListener('pointerdown', function (ev) {
+      if (ev.button !== undefined && ev.button !== 0) return
+      var o = originOf()
+      press = { startX: ev.clientX, startY: ev.clientY, originLeft: o.left, originTop: o.top, dragging: false }
+      if (typeof fab.setPointerCapture === 'function' && ev.pointerId !== undefined) {
+        try { fab.setPointerCapture(ev.pointerId) } catch (err) { /* 忽略 */ }
+      }
+    })
+
+    fab.addEventListener('pointermove', function (ev) {
+      if (!press) return
+      var dx = ev.clientX - press.startX, dy = ev.clientY - press.startY
+      if (!press.dragging && Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) return
+      press.dragging = true
+      if (fab.classList && typeof fab.classList.add === 'function') fab.classList.add('is-dragging')
+      setFabPos(fab, press.originLeft + dx, press.originTop + dy)
+      syncPanelPos(fab, nodes.panel)
+      if (typeof ev.preventDefault === 'function') ev.preventDefault()
+    })
+
+    function finish(ev) {
+      if (!press) return
+      var dragged = press.dragging
+      var p = dragged ? setFabPos(fab,
+        press.originLeft + (ev.clientX - press.startX),
+        press.originTop + (ev.clientY - press.startY)) : null
+      press = null
+      if (fab.classList && typeof fab.classList.remove === 'function') fab.classList.remove('is-dragging')
+      if (typeof fab.releasePointerCapture === 'function' && ev.pointerId !== undefined) {
+        try { fab.releasePointerCapture(ev.pointerId) } catch (err) { /* 忽略 */ }
+      }
+      if (dragged) {
+        if (p) writeFabPos(p)
+      } else {
+        toggle() // 纯点按：由 pointerup 判定，不依赖会被吞掉的 click
+      }
+    }
+    fab.addEventListener('pointerup', finish)
+    fab.addEventListener('pointercancel', function () {
+      press = null
+      if (fab.classList && typeof fab.classList.remove === 'function') fab.classList.remove('is-dragging')
+    })
   }
 
   function mount() {

@@ -92,7 +92,11 @@ for (const rel of ['lib/index.js', 'lib/client.js', 'cordis.patch.yml']) {
 }
 
 // ---- 6. description 没被污染（事故的典型痕迹）----
-if (typeof pkg.description === 'string' && pkg.description.includes('千问')) {
+// 事故形态是 package.json 被覆盖成 {"name":"vendor","type":"module"}，根本没有
+// description 字段。判据因此是「存在、非空、不是 vendor 残留」，不绑定具体文案：
+// 项目简介会随版本更新，写死某个词只会让每次改简介都得回来改测试。
+if (typeof pkg.description === 'string' && pkg.description.trim().length > 20 &&
+    !/\bvendor\b/i.test(pkg.description)) {
   ok('description 正常（未被覆盖）')
 } else {
   bad('description 疑似被覆盖', JSON.stringify(pkg.description)?.slice(0, 80))

@@ -1,10 +1,10 @@
 {
   "name": "dsh-qwen-paint",
-  "version": "0.19.0",
-  "description": "(绘图)千问 · 优化版 —— 面向 DeepSeek Harness 的本地图像生成插件。经由本机 ComfyUI 调用 Qwen-Image 2.1 完成文生图与图生图，图像落盘保存并在会话中直接呈现；出图数据流默认仅本机回环 127.0.0.1（代码层强制，非本机地址拒绝启动），无需 API 密钥。可选加速包下载（accelAutoInstall，默认开启）会访问 pip 源与 GitHub 但不发送提示词或图片。本优化版在推理链路性能、显卡厂商适配（NVIDIA / Intel Arc / AMD RDNA2·3·4）与操作系统兼容（Windows / Linux）三方面进行了系统性增强。原作者 @奇迹与你，优化版 @yanfei0725。",
+  "version": "0.19.1",
+  "description": "DSH 插件 / DeepSeek Harness：本地文生图、图生图、局部重绘、元素移除、四向扩图与高清放大。经本机 ComfyUI 调用 Qwen-Image 2.1 / 官方 Turbo，出图数据仅走 127.0.0.1 回环，无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD 显卡。",
   "meta": {
     "title": "(绘图)千问",
-    "description": "本地调用 ComfyUI 以 Qwen-Image 2.1 生成图像，图像直接呈现在会话中。优化版：推理提速、N 卡/I 卡/A 卡三厂商适配、Windows/Linux 双平台。出图数据流默认仅本机回环（代码强制），无需 API 密钥。"
+    "description": "DSH 插件 / DeepSeek Harness：本地文生图、图生图、局部重绘、元素移除、四向扩图与高清放大。经本机 ComfyUI 调用 Qwen-Image 2.1 / 官方 Turbo，出图数据仅走 127.0.0.1 回环，无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD 显卡。"
   },
   "type": "module",
   "scripts": {
@@ -42,11 +42,11 @@
         "0.2.1-rc.2": "compatible",
         "0.2.1-rc.5": "compatible"
       },
-      "note": "0.2.1-rc.5 为 2026-11 实测：scripts/test-dsh-compat.mjs 用该版本自带的 cordis / dsh-tools 加载插件并跑通 apply()，注册出 7 个工具（draw_image / list_available_models / check_acceleration / upscale_image / inpaint_image / remove_image / outpaint_image）。同一台机器上的 DSH 桌面端版本为 0.2.1-rc.5（cordis 4.0.5 / node 24.22.1），插件完成真机官方 Turbo 文生图与裁剪回贴重绘冒烟。验证范围是「manifest + patch + 加载/注册 + 本机 ComfyUI 端到端」，不含所有显卡/平台的画质结论。0.2.1-alpha.3 / alpha.4 与更早版本未实测，保持 unknown。"
+      "note": "兼容性依据 manifest + patch + 加载/注册 + 本机 ComfyUI 端到端冒烟验证；未列出的版本保持 unknown。"
     },
     "build": {
       "strategy": "none",
-      "note": "lib/ 下的文件即为最终运行代码，无构建步骤、无 prepare 契约；发布副本由源码脱敏生成（本机盘符路径统一替换为占位盘符，其余字节一致）。"
+      "note": "lib/ 下的文件即为最终运行代码，无构建步骤、无 prepare 契约；npm 发布物由 files 白名单直接打包源码。"
     }
   },
   "files": [
@@ -65,6 +65,14 @@
     "qwen-image",
     "image-generation"
   ],
+  "homepage": "http<本地路径>#readme",
+  "bugs": {
+    "url": "http<本地路径>"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "author": "@奇迹与你",
   "contributors": [
     "@yanfei0725"

@@ -54,6 +54,7 @@ const SUITES = [
   { file: 'test-pipeline-controls.mjs', note: '控制项持久化与生效映射（pipeline-controls）' },
   // ★ v3 §15.4 第 3 步前端竖切：面板真渲染一遍（vm + 假 DOM，专抓"静态绿、一渲染就炸"）
   { file: 'test-pipeline-panel.mjs', note: '控制面板行为回归（渲染 / 请求 / 禁用项）' },
+  { file: 'test-fab-drag.mjs', note: '浮标拖动 / tap-drag 分离 / rebuild 后开关不卡死（vm + Pointer Events 假 DOM）' },
   // ★ v3 §13.4 / §14.3 代码级修正四件：两层缓存 / pick(installed) / 结构化水位 / runPasses 深拷
   { file: 'test-pipeline-core.mjs', note: '控制层内核四件（缓存/加速档/水位/pass 管线）' },
   // ★ 视频链：Wan 2.2 / XT-5B 工作流图 + generate_video 接线
