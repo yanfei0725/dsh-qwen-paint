@@ -23,9 +23,9 @@
         #   ⇒ 因此**绝大多数用户什么都不用填**。只有装在极冷门路径、且自动探测失败时，
         #     才需要放开下面三行改成自己的路径：
         #
-        # comfyPython: '本机 ComfyUI 便携目录\python_embeded\python.exe'
-        # comfyMainPy: '本机 ComfyUI 便携目录\ComfyUI\main.py'
-        # comfyWorkdir: '本机 ComfyUI 便携目录'
+        # comfyPython: '<本机 ComfyUI 的 python.exe>'
+        # comfyMainPy: '<本机 ComfyUI 的 main.py>'
+        # comfyWorkdir: '<本机 ComfyUI 目录>'
         #
         # comfyOutputDir 留空（默认）= 取图直接走 ComfyUI 的 /view 接口，
         #   不去猜本地 output 目录在哪（猜错会读到同名的旧文件，是个真实踩过的坑）。

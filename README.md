@@ -65,6 +65,12 @@ dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 
 ---
 
+## 0.19.1 更新说明
+
+- **Comfy 控制浮标可拖动**：Pointer Events 驱动，位移 >5px 才算拖动，位置存 localStorage 并恢复；面板跟随浮标，`grab/grabbing` 光标，键盘 Enter/Space 兜底。
+- **视觉精修**：浮标加双层描边 + 顶部锚点边；全局改用系统无衬线字体栈并整体放大字号；滑块轨道 2px → 6px、方钮 10px → 16px。
+- **修复开关失效**：切模式（`rebuild`）后旧节点引用导致面板再打不开；开关判定改为读当前节点 + `pointerup` 自行判定点按。
+
 ## 0.19.0 新增说明（多参考图批量输入：1–16 张）
 
 ### 1. `references` 上限从 3 张提到 16 张
@@ -1390,7 +1396,7 @@ node scripts/install.mjs --dry-run
 要求："不要让 comfyUI 一直跑着，只要五分钟不生图 comfyUI 后端自动关闭。"
 
 - **计时只在插件出过图之后才开始**（`lastActivityAt` 初始为 `null`）。  
-  → 所以**绝不会误关你自己打开的、正在「本机 ComfyUI 实例」里用的 ComfyUI**。
+  → 所以**绝不会误关你自己打开的、正在本机 ComfyUI 里用的 ComfyUI**。
 - 到点后还要过两关才动手：**ComfyUI 仍在线**，且 **`/queue` 为空**（有任务在跑就续期，绝不打断）。
 - **只杀"监听该端口 且 命令行确实含 `comfy` 与 `main.py`"的进程**；认不出来就跳过并记日志——  
   **绝不按端口盲杀**。
@@ -1423,7 +1429,7 @@ node scripts/install.mjs --dry-run
 | 现象                          | 原因 / 处理                                                                                                      |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | 说"画个图"，助手说没有这个工具            | 插件没生效 → 确认 profile 的 `dsh.profile.bundles` 里有 `dsh-qwen-paint`，然后**彻底退出 DSH 重开**                             |
-| 报"连不上本机 ComfyUI"            | ComfyUI 没启动。双击 `本机 ComfyUI 的启动入口` 或先开「本机 ComfyUI 实例」（它会自动拉起引擎），等它起来再画                                        |
+| 报"连不上本机 ComfyUI"            | ComfyUI 没启动。先启动本机 ComfyUI（例如双击你本机 ComfyUI 的启动入口），等引擎起来再画                                        |
 | 报"等 ComfyUI 出图超时"           | 首次出图要加载 7.26 GB UNET + 6.31 GB 文本编码器，**第一次特别慢**；本机实测 25 步 1MP 约 62–124 秒，首次更久                                |
 | 报 `ComfyUI 报错：...` + 节点校验详情 | 模型文件名对不上或节点不存在 → 对照上面「依赖」里的三个文件名，以及 ComfyUI 版本需支持 `TextEncodeQwenImage21` / `QwenImage21Cache`（本机 0.37.0 内置） |
 | 图出来了但聊天框只有文字                | 交付卡片依赖会话工作区能取到该文件；把 `outputDir` 设在会话工作区内（默认就在桌面「千问1生图」）                                                      |
@@ -1453,7 +1459,7 @@ node scripts/selftest.mjs
 | `allowRemoteComfy`      | `false`                          | 是否允许 `comfyUrl` / `hipfireUrl` 指向非本机地址。默认 `false`（仅本机回环，代码层强制）。设为 `true` 后可连局域网/远程服务，请自行确认那是你信任的机器 |
 | `accelAutoInstall`      | `true`                           | 是否自动安装厂商加速包。**`true` 时会执行 `pip install` / `git clone` 并从 pip 源与 GitHub 下载（访问外部网络，但不发送提示词或图片）**。设为 `false` 完全关闭，出图不受影响 |
 | `outputDir`             | `C:\Users\<你的用户名>\Desktop\千问1生图` | 成品落盘目录                         |
-| `comfyOutputDir`        | `本机 ComfyUI 的 output 目录`      | 先在本地取文件，取不到才走 `/view`          |
+| `comfyOutputDir`        | `本机 ComfyUI 的 output 目录（自动探测）`      | 先在本地取文件，取不到才走 `/view`          |
 | `unet` / `clip` / `vae` | 三个千问文件名                          | 换模型时改这里                        |
 | `steps` / `resolution`  | `8` / `1024`                     | 默认步数（见下 `turbo8Steps`）与编码分辨率   |
 | `timeoutMs`             | `600000`                         | 单任务超时（10 分钟）                   |
