@@ -60,7 +60,7 @@ const IS_MAC = process.platform === 'darwin'
 /**
  * ⚠ 这些 `size` 与 `sha256` 全部**从 ModelScope 官方文件列表 API 抄下来的**，必须成对使用。
  *   要更新版本时，重新取一次 API：
- *     http<本地路径>/<owner>/<repo>/repo/files?Revision=master&Root=
+ *     https://www.modelscope.cn/api/v1/models/<owner>/<repo>/repo/files?Revision=master&Root=
  *   主模型 + CLIP/VAE 全部来自 `Comfy-Org/Qwen-Image-2.1`。
  *
  * ⚠⚠ 2026-10-12：**曾经有过"轻量档（GGUF Q4_K_M）"，已整个撤掉。**
@@ -158,8 +158,8 @@ const modelsFor = (tier) => {
 
 const REPO = 'Comfy-Org/Qwen-Image-2.1'
 /** ModelScope 官方下载前缀（resolve/<revision>/<仓库内路径>）。 */
-const REPO_BASE = `http<本地路径>/${REPO}/resolve/master/`
-const REPO_PAGE = `http<本地路径>/${REPO}`
+const REPO_BASE = `https://modelscope.cn/models/${REPO}/resolve/master/`
+const REPO_PAGE = `https://modelscope.cn/models/${REPO}`
 /**
  * GGUF 档的仓库与下载源。
  *
@@ -187,8 +187,8 @@ const GGUF_REPO_PAGE = `https://huggingface.co/${GGUF_REPO}`
 /** GGUF 的**全部**候选 URL（下载失败时依次换下一个）。 */
 const ggufUrlsOf = (model) => GGUF_BASES.map((b) => `${b}${model.dir}/${model.name}`)
 
-const COMFY_RELEASE = 'http<本地路径>'
-const COMFY_REPO = 'http<本地路径>'
+const COMFY_RELEASE = 'https://github.com/comfyanonymous/ComfyUI/releases/latest/download/ComfyUI_windows_portable_nvidia.7z'
+const COMFY_REPO = 'https://github.com/comfyanonymous/ComfyUI'
 
 /* ------------------------------------------------------------------ 小工具 ---- */
 
@@ -234,12 +234,12 @@ function which(exe) {
  *
  * ⚠⚠ 诚实声明：**A 卡那条路本脚本作者无法实测**（开发机是 N 卡，也不会在开发机上装）。
  *    所以 A 卡的命令**全部照 AMD 官方博客来**，一个字没自己编：
- *    http<本地路径>
+ *    https://rocm.blogs.amd.com/artificial-intelligence/comfyui-windows/README.html
  *    下载源只用 **AMD 官方软件仓库 repo.radeon.com**（不是任何第三方加速站）✓
  */
 
 /** AMD 官方 Windows ROCm wheels（AMD 官方 CDN）。 */
-const ROCM_WHEELS = 'http<本地路径>/'
+const ROCM_WHEELS = 'https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/'
 const ROCM_TORCH = '2.9.1+rocm7.2.1'
 const ROCM_TORCHVISION = '0.24.1+rocm7.2.1'
 const ROCM_TORCHAUDIO = '2.9.1+rocm7.2.1'
@@ -255,7 +255,7 @@ const ASSUME_YES = has('--yes')
  * 显卡型号 → ROCm 的 gfx 代号。
  *
  * ⚠⚠ 本表**照 AMD 官方的 Windows 支持列表逐条核对过**，第 3 列就是官方的态度：
- *   http<本地路径>
+ *   https://rocm.docs.amd.com/projects/install-on-windows/en/latest/reference/system-requirements.html
  *
  *   · 'ok' = 官方明确支持（Runtime ✅ / HIP SDK ✅）
  *   · 'no' = 官方**明确不支持**（❌）→ 列出来是为了**拦住用户**，不是引导他安装
@@ -569,7 +569,7 @@ function run(label, exe, argv, cwd) {
 
 /**
  * A 卡一键部署。**每一条命令都来自 AMD 官方博客**
- * （http<本地路径>），
+ * （https://rocm.blogs.amd.com/artificial-intelligence/comfyui-windows/README.html），
  * 下载源只有 AMD 官方仓库 `repo.radeon.com` + ComfyUI 官方 GitHub + Comfy-Org 官方模型。
  *
  * ⚠ 这套操作很重：ROCm 版 PyTorch 约 3 GB、模型 13 GB；而且是装在**别人的机器**上，
@@ -611,7 +611,7 @@ async function amdSetup(targetRoot, gfx, checkOnly) {
   }
   if (gfx === null) {
     console.log('    gfx 代号  ：⚠ 认不出来 —— 请照 AMD 官方支持列表自己挑一个：')
-    console.log('      http<本地路径>')
+    console.log('      https://rocm.docs.amd.com/projects/install-on-windows/en/latest/reference/system-requirements.html')
   } else {
     console.log(`    gfx 代号  ：${gfx.code}（AMD 官方${gfx.support === 'ok' ? '**支持**' : '**明确不支持**'}）`)
   }
@@ -794,7 +794,7 @@ if (gpu.vendor === 'apple') {
     console.log('')
     console.log('  macOS 请按 **ComfyUI 官方「Apple Mac silicon」** 的步骤装：')
     console.log('    1) 装 **pytorch nightly**（Apple 的 Metal 加速指南）：')
-    console.log('       http<本地路径>/')
+    console.log('       https://developer.apple.com/metal/pytorch/')
     console.log('    2) 按 ComfyUI 官方「Manual Installation」装依赖')
     console.log('    3) 启动：`python main.py` —— **官方没有 Mac 专属启动参数**，直接跑即可')
     console.log('')
@@ -966,7 +966,7 @@ if (CHECK_ONLY) {
     : `\n（--check）还差 ${needDownload} 个模型，共约 ${gb(MODELS.reduce((s, m) => s + m.size, 0))}，没有下载。`)
   console.log(`  去掉 --check 重跑就会自动下载。来源：`
     + `${needGguf ? GGUF_REPO_PAGE : REPO_PAGE}（主模型）`
-    + ' + http<本地路径>（CLIP / VAE）')
+    + ' + https://modelscope.cn/models/Comfy-Org/Qwen-Image-2.1（CLIP / VAE）')
   process.exit(allOk ? 0 : 1)
 }
 
@@ -1030,7 +1030,7 @@ if (tier === 'lite' && !CHECK_ONLY) {
   console.log('')
   console.log('  ⚠ **还差一步**：轻量档用 .gguf 主模型，需要 **ComfyUI-GGUF** 自定义节点才能加载。')
   console.log('     把它克隆到 ComfyUI 的 custom_nodes 下，然后重启 ComfyUI：')
-  console.log('       git clone http<本地路径> "<你的ComfyUI>/custom_nodes/ComfyUI-GGUF"')
+  console.log('       git clone https://github.com/city96/ComfyUI-GGUF "<你的ComfyUI>/custom_nodes/ComfyUI-GGUF"')
   console.log('     **没装的话出图会被 ComfyUI 直接拒收**（插件会在优化面板上提醒你）。')
   console.log(`  ⚠ 该 GGUF 来自 ${GGUF_REPO}（Uncensored 系，是实测能配 ComfyUI-GGUF 的一类）。`)
 }

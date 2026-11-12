@@ -1,8 +1,8 @@
 # dsh-qwen-paint —— ComfyUI Registry 元数据
 #
 # ★★ 2026-10-14（用户要求）：按 **ComfyUI Registry 官方规范**重写。
-#   依据：http<本地路径>
-#         http<本地路径>
+#   依据：https://docs.comfy.org/registry/specifications
+#         https://docs.comfy.org/registry/publishing
 #
 # ⚠⚠ 必须先读这一段（否则会误解本条目）
 #   本插件是 **DSH（DeepSeek Harness）插件**，**不是** ComfyUI custom_node：
@@ -22,13 +22,13 @@
 name = "dsh-qwen-paint"
 # 语义化版本 X.Y.Z；每次发布必须递增，且旧版本号不可复用。
 # ⚠ 与 package.json 的 version 保持**同一个数**，避免两处版本号打架。
-version = "0.19.1"
+version = "0.19.2"
 description = "⚠ DSH（DeepSeek Harness）插件，不是 ComfyUI 节点：通过 HTTP 调用你本机的 ComfyUI，用官方 Qwen-Image 2.1 Turbo 出图（8/9 步 sigma / 多图编辑 / 裁剪回贴重绘 / 移除 / 四向扩图 / OOM 自动回退）。装进 ComfyUI 的 custom_nodes 不会生效 —— 它需要 DSH 宿主。"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
-  { name = "yanfei0725", url = "http<本地路径>" },
-  { name = "wonderandyou", url = "http<本地路径>" },
+  { name = "yanfei0725", url = "https://github.com/yanfei0725/dsh-qwen-paint" },
+  { name = "wonderandyou", url = "https://github.com/wonderandyou/dsh-qwen-paint" },
 ]
 keywords = [
   "dsh", "deepseek-harness", "comfyui", "qwen-image", "qwen-image-2.1",
@@ -49,9 +49,9 @@ dependencies = []
 
 # 规范要求：repository 走 [project.urls].Repository（不是 [tool.comfy].repo）
 [project.urls]
-Repository = "http<本地路径>"
-Documentation = "http<本地路径>#readme"
-"Bug Tracker" = "http<本地路径>"
+Repository = "https://github.com/yanfei0725/dsh-qwen-paint"
+Documentation = "https://github.com/yanfei0725/dsh-qwen-paint#readme"
+"Bug Tracker" = "https://github.com/yanfei0725/dsh-qwen-paint/issues"
 
 # ════════════════════════════════════════════════════════════════════════════
 # [tool.comfy] —— ComfyUI Registry 扩展字段（**字段名大小写敏感**）
@@ -66,4 +66,4 @@ DisplayName = "DSH Qwen Paint (DeepSeek Harness 插件)"
 # ⚠ Icon 暂不填：本仓库目前**没有**符合规范（SVG/PNG/JPG/GIF、≤400×400、正方形）的图标文件。
 #   填一个不存在的 URL 只会显示裂图，不如先空着。
 #   放好 `assets/icon.png` 后取消下面这行的注释即可：
-# Icon = "http<本地路径>"
+# Icon = "https://raw.githubusercontent.com/yanfei0725/dsh-qwen-paint/main/assets/icon.png"

@@ -24,12 +24,12 @@
 
 - 出图数据（提示词与图片）只发往本机 `127.0.0.1` / `localhost` / `::1` 的 ComfyUI，由 `lib/net-guard.js` 在代码层强制。
 - 无云端模型服务、无 API 密钥、无调用费用。
-- 版本 0.19.1；许可证 MIT。
+- 版本 0.19.2；许可证 MIT。
 
 ## 关键文档 / Docs
 
-- [README.md](http<本地路径>)：首屏 Features / Installation / Usage，完整参数、网络边界与出图路径
-- [INSTALL.md](http<本地路径>)：安装步骤、profile 选择与排错
-- [package.json](http<本地路径>)：`dsh` 字段、兼容性与工具清单
-- [cordis.patch.yml](http<本地路径>)：bundle 补丁
-- [LICENSE](http<本地路径>)：MIT
+- [README.md](https://github.com/yanfei0725/dsh-qwen-paint/blob/main/README.md)：首屏 Features / Installation / Usage，完整参数、网络边界与出图路径
+- [INSTALL.md](https://github.com/yanfei0725/dsh-qwen-paint/blob/main/INSTALL.md)：安装步骤、profile 选择与排错
+- [package.json](https://github.com/yanfei0725/dsh-qwen-paint/blob/main/package.json)：`dsh` 字段、兼容性与工具清单
+- [cordis.patch.yml](https://github.com/yanfei0725/dsh-qwen-paint/blob/main/cordis.patch.yml)：bundle 补丁
+- [LICENSE](https://github.com/yanfei0725/dsh-qwen-paint/blob/main/LICENSE)：MIT

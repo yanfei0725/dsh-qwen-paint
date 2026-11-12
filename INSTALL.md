@@ -42,7 +42,7 @@
 
 | 依赖 | 说明 |
 |---|---|
-| **ComfyUI** | 本机已装且能启动（默认端口 `8188`）。[官方仓库](http<本地路径>) |
+| **ComfyUI** | 本机已装且能启动（默认端口 `8188`）。[官方仓库](https://github.com/comfyanonymous/ComfyUI) |
 | **千问 Qwen-Image 2.1 模型** | 三个文件，共约 **14.2 GB**（官方 Turbo 主模型，见下表） |
 | **裁剪回贴节点** | `ComfyUI-Inpaint-CropAndStitch`（提供 `InpaintCropImproved / InpaintStitchImproved`） |
 | **Node.js** | DSH 自带的环境就够 |
@@ -84,7 +84,7 @@ node scripts/setup.mjs --tier full|lite       直接指定主模型档位（★ 
 | **2）轻量档** | `qwen-image-2.1-Q4_K_M.gguf` | 约 **4.2 GB** | 显存较小（8 GB 及以下，如 **RTX 5060**） |
 
 - **CLIP / VAE 两档共用**，只换主模型。
-- 轻量档要额外装 **[ComfyUI-GGUF](http<本地路径>)** 到 `custom_nodes`
+- 轻量档要额外装 **[ComfyUI-GGUF](https://github.com/city96/ComfyUI-GGUF)** 到 `custom_nodes`
   后重启 ComfyUI（插件会探测；没装不会静默降级，会明确提示）。
 - 选定后写进 `cordis.patch.yml` 的 `unet`；插件**按文件名后缀自动选加载器**，不用再配别的。
 - 脚本 / CI 里不指定 `--tier` 时**默认完整档** —— 老流程一字不变。
@@ -152,8 +152,8 @@ winget install --id=Python.Python.3.12 -e
 
 | 东西 | 来源 | 哈希怎么核 |
 |---|---|---|
-| **三个模型** | **ModelScope 官方直连**：<http<本地路径>> | 期望值取自该仓库**文件列表 API 的 `sha256`** |
-| **ComfyUI 本体** | [GitHub 官方 release](http<本地路径>) | ⚠ 官方 release **不公布哈希**，所以脚本**默认不自动下它**；显式加 `--download-comfy` 才会下，而且会**再问一次** |
+| **三个模型** | **ModelScope 官方直连**：<https://modelscope.cn/models/Comfy-Org/Qwen-Image-2.1> | 期望值取自该仓库**文件列表 API 的 `sha256`** |
+| **ComfyUI 本体** | [GitHub 官方 release](https://github.com/comfyanonymous/ComfyUI/releases) | ⚠ 官方 release **不公布哈希**，所以脚本**默认不自动下它**；显式加 `--download-comfy` 才会下，而且会**再问一次** |
 
 **为什么模型来源可信**：该仓库的上传者是 **Comfy Org 官方组织自己**
 （仓库信息里 `Organization.GithubAddress = https://comfy.org/`），
@@ -182,7 +182,7 @@ winget install --id=Python.Python.3.12 -e
 | **完整档**（默认，回车） | `qwen_image_2.1_turbo_int8_convrot.safetensors` | 6.8 GB |
 | **轻量档** | `qwen-image-2.1-UC-Q4_K_M.gguf`（GGUF Q4_K_M） | 4.3 GB |
 
-> 轻量档**必须另装 ComfyUI-GGUF 节点**（`git clone http<本地路径> "<你的ComfyUI>/custom_nodes/ComfyUI-GGUF"`），
+> 轻量档**必须另装 ComfyUI-GGUF 节点**（`git clone https://github.com/city96/ComfyUI-GGUF "<你的ComfyUI>/custom_nodes/ComfyUI-GGUF"`），
 > 否则出图会被 ComfyUI 直接拒收。该 GGUF 属 Uncensored 系，介意可装完后自行替换
 > `models/unet` 里的文件。
 >
@@ -198,7 +198,7 @@ winget install --id=Python.Python.3.12 -e
 
 ComfyUI 官方对 Apple Silicon（**M1–M4**）**只提供手动安装**（没有便携包），所以流程不一样：
 
-1. 装 **pytorch nightly** —— 按 Apple 的 Metal 加速指南：<http<本地路径>/>
+1. 装 **pytorch nightly** —— 按 Apple 的 Metal 加速指南：<https://developer.apple.com/metal/pytorch/>
 2. 按 ComfyUI 官方「Manual Installation」装依赖
 3. 启动：`python main.py` —— **官方没有 Mac 专属启动参数**，直接跑即可
 

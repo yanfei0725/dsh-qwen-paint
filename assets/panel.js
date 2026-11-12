@@ -127,7 +127,14 @@
     out.mode = okMode ? src.mode : 'image'
     Object.keys(defs).forEach(function (key) {
       if (!Object.prototype.hasOwnProperty.call(src, key)) return
-      out[key] = clampByDef(defs[key], src[key])
+      var def = defs[key]
+      // ★ 自由文本控制项（负面提示词）：按字符截断，不参与数字 clamp。
+      if (def && def.type === 'text') {
+        var raw = typeof src[key] === 'string' ? src[key] : String(src[key] == null ? '' : src[key])
+        out[key] = def.max && def.max > 0 ? raw.slice(0, def.max) : raw
+        return
+      }
+      out[key] = clampByDef(def, src[key])
     })
     return out
   }
@@ -486,6 +493,29 @@
     return wrap
   }
 
+  /** 自由文本控制项（负面提示词）：渲染成 textarea。 */
+  function textField(label, key, opts) {
+    var def = defsByKey()[key] || {}
+    var wrap = el('div', 'cp-field' + (opts && opts.disabled ? ' cp-off' : ''))
+    var top = el('div', 'cp-field-top')
+    top.appendChild(el('span', 'cp-label', label))
+    wrap.appendChild(top)
+    var ta = el('textarea', 'cp-textarea cp-text')
+    ta.rows = 2
+    ta.placeholder = (opts && opts.placeholder) || ''
+    ta.value = String(state[key] !== undefined ? state[key] : (def['default'] !== undefined ? def['default'] : ''))
+    if (opts && opts.hint) ta.placeholder = ta.placeholder
+    wrap.appendChild(ta)
+    if (opts && opts.hint) wrap.appendChild(el('p', 'cp-hint', opts.hint))
+    ta.addEventListener('input', function () {
+      var raw = String(ta.value)
+      state[key] = def.max && def.max > 0 ? raw.slice(0, def.max) : raw
+      scheduleSave()
+    })
+    wrap._paint = function () { ta.value = String(state[key] != null ? state[key] : '') }
+    return wrap
+  }
+
   function render() {
     var modes = (schema && schema.modes) || []
     var ticks = aspectTicks()
@@ -561,6 +591,10 @@
         hint.textContent = d + '（只压画幅像素预算，不改蒸馏步数 —— 不掉画质）'
       },
     }))
+    // ★ 0.19.2：负面提示词升为一级可调（之前只藏在风格包里）。
+    common.appendChild(textField('负面提示词', 'negative', {
+      hint: '不想出现的东西：blurry、多余文字、畸变等。留空用模型默认。',
+    }))
     panel.appendChild(common)
 
     // ★ 视频参数组：帧数与帧率**真接** generate_video（见 lib/video-workflow.js）。
@@ -609,6 +643,9 @@
       hint: '仅在原生链路（textControl=native）真正按它采样；官方 Turbo 链固定 8/9 步蒸馏，会忽略本值。',
       warn: true,
     }))
+    body.appendChild(field('提示词引导 CFG', 'cfg', {
+      hint: '引导尺度。蒸馏链（Turbo）强制 1.0；原生链默认 2.5，可调。',
+    }))
     body.appendChild(field('每轮张数', 'count', { hint: '同一次调用出多张只加载一次模型。' }))
     body.appendChild(field('降噪 denoise', 'denoise', { disabled: true, hint: '编辑链的降噪由任务链内部按 LoRA 工作点定，暂不由面板接管。' }))
     body.appendChild(field('VAE 分块 tileSize', 'tileSize', { disabled: true, hint: 'VAE 分块由优化开关接管，暂不走面板。' }))
@@ -623,7 +660,8 @@
     reset.addEventListener('click', function () {
       var defs = defsByKey()
       Object.keys(defs).forEach(function (k) {
-        if (Number.isFinite(defs[k]['default'])) state[k] = defs[k]['default']
+        if (defs[k] && defs[k].type === 'text') state[k] = defs[k]['default'] != null ? defs[k]['default'] : ''
+        else if (Number.isFinite(defs[k]['default'])) state[k] = defs[k]['default']
       })
       state.mode = 'image'
       syncInputs()

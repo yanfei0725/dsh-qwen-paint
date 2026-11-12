@@ -60,10 +60,16 @@ dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 > 才可把 `comfyUrl` / `hipfireUrl` 指向局域网（如 `192.168.1.100`）或远程主机——此时插件会向你指定的地址发送提示词与图片数据。
 > 这是**用户主动选择**的行为，不是默认状态。
 
-> **原作者**：@奇迹与你（<http<本地路径>>）  
-> **优化版作者**：@yanfei0725（<http<本地路径>>）　｜　**许可协议**：MIT　｜　**当前版本**：`0.19.1`
+> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：MIT　｜　**当前版本**：`0.19.2`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
 
 ---
+
+## 0.19.2 更新说明
+
+- **负面提示词可调**：从"只藏在风格包里"升为面板一级控制项（`画面设置`卡片的「负面提示词」文本框，最长 300 字），与风格包自带的 negative 并存——留空即不覆盖风格包。
+- **CFG 可调**：`高级设置`新增「提示词引导 CFG」滑块（1.0–8.0，步长 0.5）。蒸馏链（Turbo8 / 官方 Turbo）强制 1.0（>1 会过曝崩边），原生链默认 2.5，拨了才覆盖。
+- **修正发布元数据**：`homepage` / `bugs` / `repository` / `original.repository` 在历史上被误写成占位符，已恢复为真实 GitHub 地址。
+- **修复文档链接**：README / INSTALL / 站点页面 / 安装脚本里 68 处公开 URL 曾被同一批占位符误伤，已按发布前的原始文本逐处回填（ComfyUI / ComfyUI-GGUF / ModelScope / AMD ROCm / Comfy Registry 等）。
 
 ## 0.19.1 更新说明
 
@@ -924,7 +930,7 @@ DSH STORE 自动审核在 Issue #1390 的**第二轮**反馈中确认：0.17.2 �
 
 ComfyUI 官方对 Apple Silicon（M1–M5）**只提供手动安装**（没有便携包），所以：
 
-1. 装 **pytorch nightly** —— 按 Apple 的 Metal 加速指南：<http<本地路径>/>
+1. 装 **pytorch nightly** —— 按 Apple 的 Metal 加速指南：<https://developer.apple.com/metal/pytorch/>
 2. 按 ComfyUI 官方「Manual Installation」装依赖
 3. 启动：`python main.py`（插件会自动补上下面那条参数，你**不需要**手写）
 
@@ -1120,9 +1126,9 @@ UNETLoader → CLIPLoader → VAELoader → TextEncodeQwenImage21
 
 | 部件                                 | 放哪                         | 说明                                                                                                                                                            |
 | ---------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `turbo8_lora_step2500.safetensors` | `models\loras\`（约 1.36 GB） | 八步蒸馏 LoRA，[chriswritescode/Turbo8-LoRA-Qwen-Image-2.1](http<本地路径>)                                     |
-| `TE-Speed-QwenImage21`             | `custom_nodes\`            | 跳步缓存节点，[tl2012tl/TE-Speed-QwenImage21](http<本地路径>)（**闭源 `nodes.pyd`**，见下）                                               |
-| `ComfyUI-Qwen-Image-2.1-Speedup`   | `custom_nodes\`            | ★ 2026-10-09 新增：步级残差缓存，[frakd/ComfyUI-Qwen-Image-2.1-Speedup](http<本地路径>)（**MIT，纯 Python，无闭源件**）。与 TE-Speed 实测可叠 |
+| `turbo8_lora_step2500.safetensors` | `models\loras\`（约 1.36 GB） | 八步蒸馏 LoRA，[chriswritescode/Turbo8-LoRA-Qwen-Image-2.1](https://huggingface.co/chriswritescode/Turbo8-LoRA-Qwen-Image-2.1)                                     |
+| `TE-Speed-QwenImage21`             | `custom_nodes\`            | 跳步缓存节点，[tl2012tl/TE-Speed-QwenImage21](https://github.com/tl2012tl/TE-Speed-QwenImage21)（**闭源 `nodes.pyd`**，见下）                                               |
+| `ComfyUI-Qwen-Image-2.1-Speedup`   | `custom_nodes\`            | ★ 2026-10-09 新增：步级残差缓存，[frakd/ComfyUI-Qwen-Image-2.1-Speedup](https://github.com/frakd/ComfyUI-Qwen-Image-2.1-Speedup)（**MIT，纯 Python，无闭源件**）。与 TE-Speed 实测可叠 |
 
 另外启动时默认带一个参数：**`--use-quad-cross-attention`**（注意力后端）。  
 关掉它见下面「可调项」的 `comfyAttentionBackend`。
@@ -1254,7 +1260,7 @@ CLIP 与 VAE 两档共用，**只有主模型不同**。
 
 1. **要另装 ComfyUI-GGUF 节点**（`city96/ComfyUI-GGUF`），否则出图会被 ComfyUI 直接拒收：
    ```
-   git clone http<本地路径> "<你的ComfyUI>/custom_nodes/ComfyUI-GGUF"
+   git clone https://github.com/city96/ComfyUI-GGUF "<你的ComfyUI>/custom_nodes/ComfyUI-GGUF"
    ```
 2. **该 GGUF 是 Uncensored 系**的 —— 经核实，目前能在 ComfyUI-GGUF 下跑起来的
    Qwen-Image GGUF 只有这一类。介意的话装完自行替换 `models/unet` 里的文件即可，
@@ -1433,7 +1439,7 @@ node scripts/install.mjs --dry-run
 | 报"等 ComfyUI 出图超时"           | 首次出图要加载 7.26 GB UNET + 6.31 GB 文本编码器，**第一次特别慢**；本机实测 25 步 1MP 约 62–124 秒，首次更久                                |
 | 报 `ComfyUI 报错：...` + 节点校验详情 | 模型文件名对不上或节点不存在 → 对照上面「依赖」里的三个文件名，以及 ComfyUI 版本需支持 `TextEncodeQwenImage21` / `QwenImage21Cache`（本机 0.37.0 内置） |
 | 图出来了但聊天框只有文字                | 交付卡片依赖会话工作区能取到该文件；把 `outputDir` 设在会话工作区内（默认就在桌面「千问1生图」）                                                      |
-| 出图报 `value not in list` / 被直接拒收 | **选了轻量档（GGUF）但没装 ComfyUI-GGUF 节点** —— 克隆 [ComfyUI-GGUF](http<本地路径>) 到 `custom_nodes` 后重启 ComfyUI。插件会在优化面板**置顶用橙色块提醒你** |
+| 出图报 `value not in list` / 被直接拒收 | **选了轻量档（GGUF）但没装 ComfyUI-GGUF 节点** —— 克隆 [ComfyUI-GGUF](https://github.com/city96/ComfyUI-GGUF) 到 `custom_nodes` 后重启 ComfyUI。插件会在优化面板**置顶用橙色块提醒你** |
 | 显存不够 / 很慢                   | 三个模型共约 14 GB，8 GB 卡必然换入换出。两个办法：① **装插件时选「轻量档」**（GGUF Q4_K_M，约 4.3 GB，见上面「主模型两个档位」）；② 降低 `megapixels`（如 0.5） |
 | 优化面板里点了开关，像"没反应"          | 面板里那几个开关（A 卡专属内核 / 异步卸载 / SageAttention）是**启动参数** ⇒ **改完要重启 ComfyUI** 才生效（面板提示里写了）。另外它们是**内存态**，重载 DSH 会回到 `cordis.patch.yml` 里的值 —— 想永久生效就写进配置 |
 | macOS 上找不到 ComfyUI          | 官方对 Apple Silicon **只提供手动安装**（没有便携包）。装好后用 `node scripts/setup.mjs --comfy <你的 ComfyUI 目录>` 指定位置即可（详见 [INSTALL.md](INSTALL.md)） |
@@ -1551,7 +1557,7 @@ LoRA 与缓存节点现在**无条件**接在模型链上。最小可行回退�
 
 | 文件 | 作用 |
 | --- | --- |
-| `pyproject.toml` | Registry 元数据。按[官方规范](http<本地路径>)填写：`[project]` 的 `name`/`version`/`license`/`dependencies` + `[project.urls].Repository`，`[tool.comfy]` 的 `PublisherId`/`DisplayName`（**字段名大小写敏感**） |
+| `pyproject.toml` | Registry 元数据。按[官方规范](https://docs.comfy.org/registry/specifications)填写：`[project]` 的 `name`/`version`/`license`/`dependencies` + `[project.urls].Repository`，`[tool.comfy]` 的 `PublisherId`/`DisplayName`（**字段名大小写敏感**） |
 | `.comfyignore` | 排除开发脚本、构建产物与内部报告，让 Registry 归档更干净（语法同 `.gitignore`） |
 | `.github/workflows/publish_action.yml` | 推送到 `main` 且改动涉及 `pyproject.toml` 时**自动发布**（官方模板） |
 
@@ -1634,12 +1640,12 @@ LoRA 与缓存节点现在**无条件**接在模型链上。最小可行回退�
 - **15 种流光的配色抄自「月匠」** —— 原样照搬、一个色标没改，仅作致敬与复用，  
   相关权利归原作者；原作者若有异议，联系即删。
 - **模型权重**来自 **Comfy Org 官方在 ModelScope 的仓库**  
-  （<http<本地路径>>）。  
+  （<https://modelscope.cn/models/Comfy-Org/Qwen-Image-2.1>）。  
   本仓库**只记录官方 SHA256**，**不转存、不镜像**任何权重文件。
-- **ComfyUI** 是 [comfyanonymous/ComfyUI](http<本地路径>) 的作品，  
+- **ComfyUI** 是 [comfyanonymous/ComfyUI](https://github.com/comfyanonymous/ComfyUI) 的作品，  
   本插件只是通过它的 HTTP API 下任务。
 
 ## 作者
 
-**原作者：@奇迹与你**　｜　<http<本地路径>>  
-**优化版：@yanfei0725**　｜　<http<本地路径>>
+**原作者：@奇迹与你**　｜　<https://github.com/wonderandyou/dsh-qwen-paint>  
+**优化版：@yanfei0725**　｜　<https://github.com/yanfei0725/dsh-qwen-paint>

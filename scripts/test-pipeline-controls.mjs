@@ -101,8 +101,8 @@ ok('★★ 面板没被拨过时 controlsToPref 返回空对象（不压掉记�
 ok('★ 只输出用户真动过的键：只把 steps 改成 12 时，载荷里只有 steps',
   Object.keys(controlsToPref({ ...DEFAULT_CONTROLS, steps: 12 })).join(',') === 'steps',
   JSON.stringify(controlsToPref({ ...DEFAULT_CONTROLS, steps: 12 })))
-ok('controlsToPref 不含任何"假生效"字段（键域限定在 size/megapixels/steps/count）',
-  Object.keys(pref).every((k) => ['size', 'megapixels', 'steps', 'count'].includes(k)))
+ok('controlsToPref 不含任何"假生效"字段（键域限定在 size/megapixels/steps/count/cfg/negative）',
+  Object.keys(pref).every((k) => ['size', 'megapixels', 'steps', 'count', 'cfg', 'negative'].includes(k)))
 
 // ---- ⑤ 落盘往返 + 坏文件 ----
 const tmp = mkdtempSync(path.join(os.tmpdir(), 'cp-controls-'))

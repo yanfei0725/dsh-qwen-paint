@@ -21,4 +21,4 @@ Allow: /
 User-agent: CCBot
 Allow: /
 
-Sitemap: http<本地路径>
+Sitemap: https://yanfei0725.github.io/dsh-qwen-paint/sitemap.xml

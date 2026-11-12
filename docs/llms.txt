@@ -6,7 +6,7 @@
 
 ## 是什么
 
-- 面向 DeepSeek Harness (DSH) 的本地图像生成与编辑插件，版本 0.19.1，MIT 许可。
+- 面向 DeepSeek Harness (DSH) 的本地图像生成与编辑插件，版本 0.19.2，MIT 许可。
 - 经本机 ComfyUI 调用 Qwen-Image 2.1 / 官方 Turbo 模型；结果落盘并在会话界面内直接呈现。
 - 工具：`draw_image`（文生图 / 1–16 张参考图编辑）、`inpaint_image`（局部重绘）、`remove_image`（元素移除）、`outpaint_image`（四向扩图）、`upscale_image`（高清放大）。
 - 平台：Windows / Linux；NVIDIA / Intel Arc / AMD 显卡。
@@ -26,12 +26,12 @@
 
 ## 文档
 
-- [README.md](http<本地路径>): 完整能力说明、参数与排错
-- [INSTALL.md](http<本地路径>): 安装步骤与 profile 选择
-- [仓库版 llms.txt](http<本地路径>): 给直接读取仓库的 Agent 的概览
-- [package.json](http<本地路径>): 版本、dsh 字段、兼容性与发布文件清单
-- [cordis.patch.yml](http<本地路径>): DSH bundle 补丁
-- [LICENSE](http<本地路径>): MIT
+- [README.md](https://github.com/yanfei0725/dsh-qwen-paint/blob/main/README.md): 完整能力说明、参数与排错
+- [INSTALL.md](https://github.com/yanfei0725/dsh-qwen-paint/blob/main/INSTALL.md): 安装步骤与 profile 选择
+- [仓库版 llms.txt](https://github.com/yanfei0725/dsh-qwen-paint/blob/main/llms.txt): 给直接读取仓库的 Agent 的概览
+- [package.json](https://github.com/yanfei0725/dsh-qwen-paint/blob/main/package.json): 版本、dsh 字段、兼容性与发布文件清单
+- [cordis.patch.yml](https://github.com/yanfei0725/dsh-qwen-paint/blob/main/cordis.patch.yml): DSH bundle 补丁
+- [LICENSE](https://github.com/yanfei0725/dsh-qwen-paint/blob/main/LICENSE): MIT
 
 ## 不提供
 

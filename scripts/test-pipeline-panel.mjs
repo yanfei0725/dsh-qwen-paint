@@ -129,12 +129,14 @@ const fetch = (url, init) => {
             common: [
               { key: 'aspect', type: 'slider', min: 0, max: 6, step: 1, ticks: ['1:1', '3:4', '4:3', '2:3', '3:2', '16:9', '9:16'], default: 0 },
               { key: 'speedPercent', type: 'slider', min: 25, max: 100, step: 5, default: 100 },
+              { key: 'negative', type: 'text', default: '', max: 300, label: '负面提示词' },
             ],
             video: [],
             advanced: [
               { key: 'seed', type: 'number', min: -1, max: 2 ** 32 - 1, default: -1 },
               { key: 'count', type: 'number', min: 1, max: 4, step: 1, default: 1 },
               { key: 'steps', type: 'slider', min: 4, max: 40, step: 1, default: 8 },
+              { key: 'cfg', type: 'slider', min: 1, max: 8, step: 0.5, default: 1 },
               { key: 'fps', type: 'slider', min: 8, max: 30, step: 1, default: 24 },
               { key: 'denoise', type: 'slider', min: 0.1, max: 1, step: 0.05, default: 0.85 },
               { key: 'tileSize', type: 'slider', min: 256, max: 1024, step: 128, default: 512 },
@@ -164,8 +166,8 @@ const fetch = (url, init) => {
         // 假服务端得**回显你提交的值**（真服务端也是这么做的：返回合并后的完整控制项），
         //   否则"切模式后 state 被回包覆盖成 image"会被误判成面板丢状态。
         controls: Object.assign({
-          mode: 'image', aspect: 0, speedPercent: 100, seed: -1, steps: 8,
-          count: 1, fps: 24, denoise: 0.85, tileSize: 512, chunkOverlap: 8,
+          mode: 'image', aspect: 0, speedPercent: 100, negative: '', seed: -1, steps: 8,
+          cfg: 1, count: 1, fps: 24, denoise: 0.85, tileSize: 512, chunkOverlap: 8,
         }, bodyJson || {}),
         summary: '生图模式 · 1:1 · 速度 100%',
       }),
@@ -271,7 +273,7 @@ ok('★ 生图/视频 tab 可选；**只有混合**仍 disabled（链里缺 tts 
 ok('禁用原因写进了 note（不是静默禁用）',
   String(panelEl.querySelector('.cp-note').textContent).includes('本插件没有的后端段'))
 const fields = panelEl.querySelectorAll('.cp-field')
-ok('常用 2 + 视频 3 + 高级 6 = 11 项', fields.length === 11, String(fields.length))
+ok('常用 3 + 视频 3 + 高级 7 = 13 项（含负面提示词 textarea 与 CFG 滑块）', fields.length === 13, String(fields.length))
 const disabledInputs = panelEl.querySelectorAll('input').filter((i) => i.disabled === true)
 ok('★ 未切视频模式时：帧数/帧率禁用 + 运动幅度始终禁用 + denoise/tile/chunk 禁用 = 6',
   disabledInputs.length === 6, String(disabledInputs.length))
