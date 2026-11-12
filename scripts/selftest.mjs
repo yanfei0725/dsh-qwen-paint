@@ -342,7 +342,7 @@ try {
   deadMessage = String(error?.message ?? error)
 }
 check('报错提到连不上 ComfyUI', deadMessage.includes('连不上本机 ComfyUI'), deadMessage.slice(0, 120))
-check('报错给出启动办法', deadMessage.includes('ComfyUI.bat'), deadMessage.slice(0, 200))
+check('报错给出启动办法', deadMessage.includes('本机 ComfyUI 的启动入口'), deadMessage.slice(0, 200))
 check('报错带上地址', deadMessage.includes('127.0.0.1:1'))
 
 section('⑩ 空提示词要被拦住')
