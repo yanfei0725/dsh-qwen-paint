@@ -1,6 +1,6 @@
 # dsh-qwen-paint · (绘图)千问（优化版）
 
-DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合，文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech），模型无关角色参考。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。QQ 交流群 454707710。
+DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合，文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech），模型无关角色参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。QQ 交流群 454707710。
 
 ## Features
 
@@ -16,12 +16,14 @@ DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行。�
 | 文生视频 / 图生视频 | `generate_video` | 经本机 ComfyUI 调用 Wan 2.2 / XT-5B 系列视频模型，成品落盘并显示在会话里 |
 | 语音合成（TTS） | `generate_speech`（独立） / `generate_hybrid`（三段中的一段） | 本机 `ComfyUI-Qwen-TTS` + Qwen3-TTS 权重，产出 mp3 / flac（按 ComfyUI 返回的真实扩展名）；两条路共用同一条 TTS 段，只想配音不必跑完三段，**插件不自动下载音频模型** |
 | 图→音→视频混合 | `generate_hybrid` | 一张图配一段语音再合成视频，适合做带旁白的短片 |
+| 生成历史（可搜索） | `list_generated_images` | 本机 SQLite 记录每次生成的提示词 / 参数 / 时间 / 路径，支持关键词、类型、日期筛选与分页；界面里可看大图、复制路径、从历史移除（**只划掉记录，不删磁盘文件**） |
 
 - **模型自动下载包（可选）**：`node scripts/setup.mjs --video-models` 提供**视频模型自动下载包** —— 默认不装、需你显式执行，官方仓库文件清单运行时动态列举、由你选档位，多源轮询 + 断点续传 + 服务器权威 size + sha256 双校验，不合格删除；核显档位另有 `--igpu-download`（同样默认关闭）。音频模型权重**不自动下载**，缺件只给清单。
 - **本地、免 API**：出图数据（提示词与图片）只发往本机 `127.0.0.1` / `localhost` / `::1` 的 ComfyUI，由 `lib/net-guard.js` 在代码层强制；**无需任何 API 密钥，不产生调用费用**。
 - **模型与运行**：经本机 **ComfyUI** 调用 **Qwen-Image 2.1 / 官方 Turbo**（图）、**Wan 2.2 / XT-5B 系列**（视频）与 **Qwen3-TTS**（语音），无需云端模型服务。
 - **平台**：Windows / Linux，自动适配 NVIDIA / Intel Arc / AMD 显卡，也支持 Intel / AMD **核显共享内存**（含 8 GB 低内存档位）。
 - **CPU 加速档（可选，默认关）**：按 CPU 指令集给五档 `cpuAccel`（`off` / `safe` / `balanced` / `max` / `force-cpu`），安装引导面板里逐档显示「**这台机器上真实会挂什么参数**」；默认 `off` = 一个参数都不加。详见 0.2.0 更新说明。
+- **生成历史（0.3.0）**：每次出图 / 视频 / 配音都会写一条到 `<outputDir>/.qwen-paint-history.db`（SQLite，用 Node 内置 `node:sqlite`，零外部依赖）。菜单**最上面**「历史 → 生成历史」可按关键词 / 类型 / 日期翻旧账、看大图、复制路径；「移除」只从列表划掉，**不动磁盘文件**。Agent 侧对应工具 `list_generated_images`，可以「把上周那只柴犬找出来再改」。⚠ 持久化需要 **Node >= 22.5**；更低版本不假装有历史，如实降级为「只读本次会话记忆日志」。
 - **DSH 兼容**：`>=0.2.0-rc.2`（见 `package.json` 的 `dsh.compatibility`）。
 
 ## Installation
@@ -34,7 +36,7 @@ DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行。�
 dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 ```
 
-> 使用 `desktop` profile 时须**先完全退出 DSH**。本包发布到 npm 后可用 `dsh plugin add dsh-qwen-paint` 按包名安装；在此之前须指向本地目录或本地包。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
+> 使用 `desktop` profile 时须**先完全退出 DSH**。本包**已发布到 npm**（`dsh-qwen-paint`，当前 `0.3.0`），可直接 `dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式仅用于开发或试用未发布改动。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
 
 ## Usage
 
@@ -57,6 +59,7 @@ dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 | **移除物体** | 结果图下方「更多编辑」→「移除物体」→ 涂出要去掉的东西 → 点「移除并补全」，不用写提示词 |
 | **四向扩图 / 高清放大** | 「更多编辑」→ 点预设（四周各 20%、左右各 30%、2/4/8 倍…），不用填参数 |
 | 选一张以前的图来编辑 | 菜单**最上面**「常用（点开就能用）」→「图片编辑台」列出最近生成的图；或「圈选重绘最近一张图」懒人直达 |
+| **翻旧账**：找上周生成的那张图 | 菜单**最上面**「历史」→「生成历史」 | 按关键词 / 类型 / 日期筛，点缩略图看大图，可复制路径贴到别处；「移除」只从列表划掉，不会删你的文件 |
 | **视频选帧去修**：只改中间某一帧 | 菜单「视频（选帧改 → 截一段）」→ 拖进度条或 `←` `→` 逐帧 →「抽这一帧去修」→ 直接进圈选重绘（**不需要 ffmpeg**） |
 | **截取视频的一段** | 同一个浮层：按帧数（起始/结束帧）或按时间（`0:01.5`）选 →「截取这一段」；也可「按间隔抽帧」批量取关键帧（这两项需要 ffmpeg） |
 | **缩略图轨道 / 把改稿贴回视频** | 同一个浮层：加载后自动生成 10 张缩略图，点一下跳到该处；改完图点「把改好的图贴回这一帧」→ 选最近改好的图 → 产出新 mp4（缩略图零依赖；**贴回需要 ffmpeg**，没装会明确提示） |
@@ -99,7 +102,7 @@ dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 
 > **QQ 交流群**：`454707710`　｜　**反馈 / 提问 / 提需求**都走这里，issue 也欢迎：<https://github.com/yanfei0725/dsh-qwen-paint/issues>
 
-> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：MIT　｜　**当前版本**：`0.3.0`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
+> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：MIT　｜　**当前版本**：`0.3.1`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
 
 ---
 
@@ -160,6 +163,43 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 - `/object_info` 不可达时能力清单查不到，但通用兜底仍可用于任何扩散模型。
 
 ---
+
+## 生成历史：翻旧账与复用（0.3.1）
+
+每次生成（图 / 视频 / 音频）都会在出图目录下留一条记录，存在 `<outputDir>/.qwen-paint-history.db`：
+
+| 项 | 说明 |
+| --- | --- |
+| 存什么 | 提示词、工具名、模型、步数 / CFG / seed、尺寸、时间、文件路径。**只存相对 `outputDir` 的路径** —— 整体搬目录也不会失效，也不把本机绝对路径写进库 |
+| 怎么查 | 菜单最上面「历史」→「生成历史」：关键词（提示词 / 文件名 / 模型）、类型（图 / 视频 / 音频 / 其它）、日期范围、分页 |
+| 怎么用 | 点缩略图看大图；「复制路径」把**绝对路径**贴到别处（比如再交给 `draw_image` 的 `references`） |
+| 怎么删 | 「移除」= 软删除（库里 `deleted=1`），**绝不删磁盘上的文件**；真想删自己去文件夹删 |
+| Agent 侧 | 工具 `list_generated_images`（`keyword` / `kind` / `date_from` / `date_to` / `limit` / `offset`），纯本地只读、不调 ComfyUI |
+| 端点 | `GET /api/qwen-paint/history`、`GET /api/qwen-paint/history/stats`、`POST /api/qwen-paint/history/delete` —— 均仅本机请求；写操作 POST + `application/json` |
+
+### Node 版本与降级口径
+
+`package.json` 的 `engines` 仍是 **`>=18.0.0`** —— 插件本体（出图 / 视频 / 语音 / 编辑）在 Node 18 上照常工作。
+只有**历史持久化**依赖 Node 内置的 `node:sqlite`（**Node >= 22.5** 才有）：
+
+| 你的 Node | 历史行为 |
+| --- | --- |
+| `>= 22.5` | 全量：SQLite 持久化，可搜索 / 分页 / 软删除；`available: true`、`persistent: true` |
+| `< 22.5` | 降级：`available: false`、`persistent: false`，只能读既有 `.qwen-paint-memory.jsonl` 做内存过滤；界面与工具都会**明说「未持久化」**，不假装有数据 |
+
+刻意**不**把 `engines` 提到 `>=22.5`：那会把一批能正常出图的用户直接挡在门外，代价只是少一个可搜索的历史库。
+
+## 0.3.1 更新说明
+
+- **生成历史（新）**：SQLite 存储（`<outputDir>/.qwen-paint-history.db`，只用 Node 内置 `node:sqlite`，零外部依赖）+ 菜单**最上面**的「历史 → 生成历史」入口 + Agent 工具 `list_generated_images`。关键词 / 类型 / 日期范围 / 分页 / 大图预览 / 复制路径；「移除」是软删除，**绝不删磁盘文件**；Node < 22.5 如实降级为 `available/persistent: false`。⚠ 上一版把它写进了 0.3.0 的更新说明，但 0.3.0 的发布包里**并不包含**这几个文件（当时还在本地未提交），实际是随 0.3.1 首次发布 —— 这里做个更正。
+- **回归从 48 套涨到 51 套 / 3,511 项断言**：新增 `test-history.mjs`（真跑 `node:sqlite` 临时库 + 降级路径 + 端点围栏 + vm 假 DOM 真派发事件）、`test-http-errors.mjs`、`test-ui-pointer.mjs`。
+- **修掉 4 个问题**（都不是新功能，是既有缺陷）：
+  1. 生成历史的「关闭（Esc）」只写在按钮文案里，**根本没绑 keydown** —— 假接线，已补真实监听；
+  2. `test-http-errors.mjs` 硬编码「10 条静态资源路由」，加两条就会被挡住。**没有把 10 改成 12**，而是升级成「文件名集合逐字相等 + 文件真实存在」两条更硬的判据；
+  3. 顺着上一条发现 `assets/loading.gif` 的**路由在、文件不在**（只会 404，且没有任何前端消费者）—— 属既有遗留，本轮只记账不动它；
+  4. 我自己第一版 `test-history.mjs` 把 `ok(name, cond)` 的实参与形参写反，**140 项「全绿」其实全在判「消息串非空」**。修正后立刻暴出 2 处真失败。这条已写进项目记忆当反面教材。
+- **文档补齐 Node 降级口径**：`engines` 刻意仍是 `>=18.0.0`（插件本体照常工作），只有历史持久化需要 Node >= 22.5；两档行为逐条列清，不假装低版本也有历史库。
+- **修正一处工作流节点白名单**：`QwenImage21Cache` 的 `device`（auto/gpu/cpu/off）与 `dtype`（default/int8/int4）现在做合法值回落，写错词不会把整个 prompt 卡在 ComfyUI 队列里报错。
 
 ## 0.3.0 更新说明
 

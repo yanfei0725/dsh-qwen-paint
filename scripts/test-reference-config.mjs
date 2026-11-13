@@ -61,7 +61,8 @@ ok('出站字段白名单只有 query / limit / media',
 console.log('\n[4] 端点接线与前端不越界')
 const indexSrc = read('lib/index.js')
 ok('四个 /api/comfy-pipeline/reference* 端点都已注册',
-  (indexSrc.match(/path: '\/api\/comfy-pipeline\/reference/g) ?? []).length === 4)
+  ['/reference', '/reference/prefer', '/reference/search', '/reference/adapt']
+    .every((suffix) => indexSrc.includes("reg('/api/comfy-pipeline" + suffix + "'")))
 const panelSrc = read('assets/panel.js')
 ok('★ 面板里只有一条联网检索出口', (panelSrc.match(/consent: true/g) ?? []).length === 1)
 ok('★ 面板绝不渲染 <img>（否则浏览器会自动下载远程字节）',

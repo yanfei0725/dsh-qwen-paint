@@ -135,7 +135,7 @@ console.log('— 接线')
 const idx = read('lib/index.js')
 const panel = read('assets/panel.js')
 ok('★ host 注册了 GET /api/comfy-pipeline/progress',
-  idx.includes("path: '/api/comfy-pipeline/progress'") && idx.includes('buildProgress('))
+  idx.includes("reg('/api/comfy-pipeline/progress'") && idx.includes('buildProgress('))
 ok('★ 生图链在提交后登记、落盘后摘除（两条都是真调用，不是注释）',
   idx.includes('inFlight.set(promptId, {') && idx.includes('inFlight.delete(promptId)'))
 // ★ 2026-11-10 审计：上面那条只查「字符串存在」，抓不到「set 写在 waitForResult 之后」

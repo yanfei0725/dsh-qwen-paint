@@ -1,8 +1,8 @@
 # dsh-qwen-paint
 
-> DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合，文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech），模型无关角色参考。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。QQ 交流群 454707710。
+> DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合，文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech），模型无关角色参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。QQ 交流群 454707710。
 
-本仓库是 DSH 的本地插件（bundle），不是 Web 服务：没有 HTTP API、没有 OpenAPI 规范，也没有 MCP server。安装方式是本地目录，本包未发布到 npm。
+本仓库是 DSH 的本地插件（bundle），不是 Web 服务：没有 HTTP API、没有 OpenAPI 规范，也没有 MCP server。本包**已发布到 npm**（`dsh-qwen-paint`，当前 `0.3.0`），既可按包名安装，也可指向本地目录做开发调试。
 
 ## 能力 / Tools
 
@@ -20,13 +20,14 @@
 - CPU 加速档（可选，默认关；`cpuAccel` 五档）：`off` / `safe`（`--preview-method none` + 线程钉物理核）/ `balanced`（`+ --use-pytorch-cross-attention`）/ `max`（`+ --bf16-unet --bf16-text-enc`，仅当实测有 AVX512-BF16，否则自动降级并说明原因）/ `force-cpu`（`--cpu`，自动摘掉显存参数与 GPU 专属注意力内核，并把 `QwenImage21Cache.device` 改成 `cpu`）。指令集识别实测优先（Linux 读 `/proc/cpuinfo` flags），Windows/macOS 退型号推断并标注未实测；未知给 `null` 不给 `false`。线程走 `OMP_NUM_THREADS` / `MKL_NUM_THREADS` / `OPENBLAS_NUM_THREADS`（不是 GGUF 的 `n_threads`，该字段不存在）
 - CPU 端点：`GET /api/qwen-paint/cpu-profile`（画像 + 五档各自在本机的真实参数）、`POST /api/qwen-paint/cpu-accel`（选档，落 uiState）；均仅本机请求、不含绝对路径
 - 目标机实测入口：`node scripts/cpu-probe.mjs [--bench] [--dump-config]`（只读，借 ComfyUI 自带 python 问 PyTorch 的 CPU capability）
+- 生成历史（本机 SQLite）：`GET /api/qwen-paint/history`（`q` / `kind` / `from` / `to` / `limit` / `offset`）、`GET /api/qwen-paint/history/stats`、`POST /api/qwen-paint/history/delete`（软删除，只置 `deleted=1`，**绝不删磁盘文件**）；Agent 工具 `list_generated_images`。库文件 `<outputDir>/.qwen-paint-history.db`，只存相对 `outputDir` 的路径。持久化依赖 Node 内置 `node:sqlite`（**Node >= 22.5**）；更低版本返回 `available:false` / `persistent:false` 并如实说明，不假装有数据；`engines` 仍为 `>=18.0.0`
 
 ## 安装 / Installation
 
 - **视频模型自动下载包**：`node scripts/setup.mjs --video-models`，默认关闭、需你显式执行；官方仓库文件清单运行时动态列举、由你选档位，多源轮询 + 断点续传 + 服务器权威 size + sha256 双校验，不合格删除。同类还有 `--igpu-download`（核显档，默认关闭）。
 - 一键安装：双击仓库根目录的 `一键安装.cmd`
 - CLI：`dsh plugin --profile desktop add link:<本插件目录的绝对路径>`（使用 desktop profile 时须先完全退出 DSH）
-- 未发布到 npm，因此不能用 `dsh plugin add dsh-qwen-paint` 按包名安装
+- **已发布到 npm**：`dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式用于开发调试
 - 要求 DSH >= 0.2.0-rc.2、Node >= 18.0.0
 - **可选核显型号**（`lib/igpu-profiles.js`）：AMD Radeon 780M / 680M / 760M / 660M / 8060S，Intel Iris Xe 96EU / UHD / Arc 140V / 140T / B390 共 10 档。`node scripts/setup.mjs --list-igpu` 列清单（零联网零下载）；`--igpu <id>` 选型号；`--igpu-download` 才真下推荐模型（默认关闭、`--check` 永远不下载、按服务器权威 size + sha256 双校验）。
 - 核显后端建议：AMD 消费级核显 → DirectML；Intel 核显 → OpenVINO；仅 Ryzen AI Max+ 395 / Radeon 8060S（gfx1151）有 AMD 官方 Windows ROCm 原生支持。**插件不自动更换 PyTorch 后端、不自动安装这些后端**，需用户自行配置。
@@ -38,7 +39,7 @@
 - **第三类出口：可选的联网参考图检索，默认拒绝**。配置项 `referenceSearchEndpoint` 默认为占位符 `<API_ENDPOINT>`，未替换时一律拒绝出站；换成外部 https 端点后仍须**每次检索单独显式同意**（`consent: true`，没有"记住同意"的常开开关）。出站字段仅 `query` / `limit` / `media`，不含提示词、seed、本机路径或凭据；只返回候选 URL，不自动下载图片字节。端点与候选 URL 都拒绝回环 / 内网 / 云元数据地址（含 IPv6 形态）以防 SSRF，不跟随重定向。
 - 角色参考适配层与模型无关：按 `/object_info` 的真实节点能力协商策略（按输入槽找节点，不靠类名猜），协商不到需配套权重的专属适配器就回落到只用基础节点的通用兜底；默认不启用 = 零漂移。
 - 无云端模型服务、无 API 密钥、无调用费用。
-- 版本 0.3.0；许可证 MIT。
+- 版本 0.3.1；许可证 MIT。
 
 ## 关键文档 / Docs
 

@@ -1,7 +1,13 @@
-/* assets/setup-guide.css —— 图形化安装引导的样式（全部带 sg- 前缀，不碰宿主类名） */
+/* assets/setup-guide.css —— 图形化安装引导的样式（全部带 sg- 前缀，不碰宿主类名）
+ *
+ * ★ 2026-11-13 修「点不动 / 关不掉」：
+ *   · z-index 抬到 2147483600/3601（仍低于宿主可能的 2147483647），避免被别的浮层盖住；
+ *   · 显式声明指针事件可用，防宿主全局规则把交互吞掉；
+ *   · [hidden] 用 !important，防宿主 CSS reset 覆盖 UA 的 [hidden] 导致面板关不掉。
+ */
 
 .sg-fab {
-  position: fixed; right: 20px; bottom: 22px; z-index: 2147483002;
+  position: fixed; right: 20px; bottom: 22px; z-index: 2147483600; pointer-events: auto;
   padding: 12px 18px; border-radius: 999px; border: 1px solid rgba(125,179,255,.55);
   background: linear-gradient(135deg, #2b6cb0, #1a4971); color: #fff;
   font: 600 13.5px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -14,14 +20,14 @@
 .sg-fab[data-ready="1"] { border-color: rgba(72,199,142,.7); background: linear-gradient(135deg, #217a56, #175c41); }
 
 .sg-panel {
-  position: fixed; right: 20px; bottom: 78px; z-index: 2147483003;
+  position: fixed; right: 20px; bottom: 78px; z-index: 2147483601; pointer-events: auto;
   width: min(560px, calc(100vw - 32px)); max-height: min(78vh, 760px); overflow: auto;
   box-sizing: border-box; padding: 18px 20px 16px; border-radius: 16px;
   background: #1c1d22; color: #ecedf1; border: 1px solid rgba(255,255,255,.14);
   box-shadow: 0 24px 72px rgba(0,0,0,.58);
   font: 13px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
 }
-.sg-panel[hidden] { display: none; }
+.sg-panel[hidden] { display: none !important; }
 @media (prefers-color-scheme: light) {
   .sg-panel { background: #fff; color: #14161b; border-color: rgba(15,23,42,.12); box-shadow: 0 24px 72px rgba(15,23,42,.22); }
 }

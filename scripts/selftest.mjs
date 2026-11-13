@@ -121,8 +121,9 @@ check('注册了 draw_image（apply 直接注册，不经 root.inject）', tool.
 // 2026-11-10：+ generate_video（Wan 2.2 / XT-5B 视频链）7 → 8；
 //             + generate_hybrid（image→tts→video 三段串行）8 → 9
 // 2026-11-13：+ generate_speech（B3 独立 TTS 工具）9 → 10
-//   ★ 这是**有意的行为变更**（真的多注册了一个工具），不是改测试迁就 bug。
-check('注册了 10 个工具（draw + video + hybrid + speech + 2 诊断 + upscale + inpaint/remove/outpaint）', registered.length === 10,
+// 2026-11-13：+ list_generated_images（SQLite 生成历史查询）10 → 11
+//   ★ 这两次都是**有意的行为变更**（真的多注册了工具），不是改测试迁就 bug。
+check('注册了 11 个工具（draw + video + hybrid + speech + 2 诊断 + history + upscale + inpaint/remove/outpaint）', registered.length === 11,
   registered.map((t) => t.name))
 check('两个诊断工具都在（list_available_models / check_acceleration）',
   registered.some((t) => t.name === 'list_available_models')

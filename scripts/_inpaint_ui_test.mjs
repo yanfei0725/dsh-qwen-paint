@@ -55,7 +55,7 @@ console.log('\n=== 2. 蒙版用完即删 + 不再只拼时间戳（源码级） 
 console.log('\n=== 3. 插件自有图片路由 /api/qwen-paint/file（源码级） ===')
 {
   const IDX = strip(INDEX)
-  ok('注册了 /api/qwen-paint/file', INDEX.includes("path: '/api/qwen-paint/file'"))
+  ok('注册了 /api/qwen-paint/file', INDEX.includes("reg('/api/qwen-paint/file'"))
   const FR = strip(FILE_ROUTE)
   ok('只收 GET/HEAD（其它方法 405）', FR.includes("'GET only'"))
   ok('限本机请求（isLocalRequest 围栏）', /fileBytesHandler[\s\S]{0,800}isLocalRequest\(req\)/u.test(FR))
@@ -89,7 +89,7 @@ console.log('\n=== 5. /api/qwen-paint/inpaint 顶层可信请求围栏（AUTH002
   //   并且必须剥注释 —— 修复说明里原样引用了 isLocalRequest(req)，不剥就是假通过。
   const IDX = strip(INDEX)
   const start = IDX.indexOf('const inpaintHandler =')
-  const end = IDX.indexOf("path: '/api/qwen-paint/inpaint'", start)
+  const end = IDX.indexOf("reg('/api/qwen-paint/inpaint'", start)
   const H = start >= 0 && end > start ? IDX.slice(start, end) : ''
   const atFence = H.indexOf('isLocalRequest(req)')
   const atGuard = H.indexOf('guardWriteRequest(req, res)')

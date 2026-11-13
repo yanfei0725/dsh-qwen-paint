@@ -95,8 +95,8 @@ ok('超长段被截断且**记录**在 truncated（不静默）', (() => {
 })())
 
 console.log('— 接线（不是只有模块）')
-ok('★ host 注册了 GET/POST /api/comfy-pipeline/library', indexSrc.includes("path: '/api/comfy-pipeline/library'"))
-ok('★ host 注册了 GET /api/comfy-pipeline/skills', indexSrc.includes("path: '/api/comfy-pipeline/skills'"))
+ok('★ host 注册了 GET/POST /api/comfy-pipeline/library', indexSrc.includes("reg('/api/comfy-pipeline/library'"))
+ok('★ host 注册了 GET /api/comfy-pipeline/skills', indexSrc.includes("reg('/api/comfy-pipeline/skills'"))
 ok('★ 生图链用 promptForModel（不是原始 prompt）', indexSrc.includes('prompt: promptForModel,'))
 ok('★ 视频链也用 promptForModel', (indexSrc.match(/prompt: promptForModel,/g) ?? []).length >= 2)
 ok('★ 文件名仍用原始 prompt（不被风格前缀污染）',

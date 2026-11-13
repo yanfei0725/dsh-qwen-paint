@@ -29,6 +29,25 @@
     return n
   }
 
+  /**
+   * ★ 2026-11-13 二轮修复：用户报「引导里的选项还是点不动」。
+   * DSH 宿主会吞事件，但吞哪一类不确定 ⇒ click / pointerup / mouseup / touchend 全监听，
+   * 300ms 冷却去重保证一次手势只跑一次。打了 direct 标记让全局兜底别再补一次。
+   */
+  var TAP_UP = ['click', 'pointerup', 'mouseup', 'touchend']
+  function tap(node, fn) {
+    if (!node || typeof node.addEventListener !== 'function') return
+    if (typeof node.setAttribute === 'function') node.setAttribute('data-dshqp-direct', '1')
+    var last = 0
+    var run = function (ev) {
+      var now = Date.now()
+      if (now - last < 300) return
+      last = now
+      fn(ev)
+    }
+    for (var i = 0; i < TAP_UP.length; i += 1) node.addEventListener(TAP_UP[i], run)
+  }
+
   function injectCss() {
     if (document.getElementById('dshqp-cpu-accel-css')) return
     var l = document.createElement('link')
@@ -101,6 +120,9 @@
     radio.value = m.id
     radio.checked = m.selected === true
     radio.addEventListener('change', function () { onPick(m.id) })
+    // 宿主吞 click 时 label 也不会激活 radio ⇒ 直接给整张档位卡片一条多事件源通道。
+    // pick() 里有 busy 防重，change 与这里同时到达也只会真正提交一次。
+    tap(card, function () { radio.checked = true; onPick(m.id) })
     head.appendChild(radio)
     head.appendChild(el('span', 'ca-mode-label', m.label))
     if (m.effectiveMode && m.effectiveMode !== m.id) {
@@ -154,7 +176,7 @@
     h.appendChild(el('span', 'ca-h-title', 'CPU 指令集与加速档'))
     var reload = el('button', 'ca-mini', '重新检测')
     reload.type = 'button'
-    reload.addEventListener('click', load)
+    tap(reload, load)
     h.appendChild(reload)
     box.appendChild(h)
 

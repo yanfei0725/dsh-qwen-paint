@@ -1,12 +1,12 @@
 # dsh-qwen-paint
 
-> DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合，文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech），模型无关角色参考。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。QQ 交流群 454707710。
+> DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合，文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech），模型无关角色参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。QQ 交流群 454707710。
 
 本站是 `dsh-qwen-paint` 的静态文档页，供搜索引擎与 AI Agent 抓取。插件本身是运行在用户本机的 DSH bundle（按本地目录安装），**不是 Web 服务**：本站没有 HTTP API、没有 OpenAPI 规范、没有 MCP server，也不收集或转发任何用户数据。因此本站不声明 `ai-plugin.json` / OpenAPI / MCP manifest —— 伪造这些信号会让 Agent 误以为存在可远程调用的服务。
 
 ## 是什么
 
-- 面向 DeepSeek Harness (DSH) 的本地**视频 / 生图 / TTS 全能**生成与编辑插件，版本 0.3.0，MIT 许可；三大能力并列主推，不是「只做生图」。
+- 面向 DeepSeek Harness (DSH) 的本地**视频 / 生图 / TTS 全能**生成与编辑插件，版本 0.3.1，MIT 许可；三大能力并列主推，不是「只做生图」。
 - 经本机 ComfyUI 调用 Qwen-Image 2.1 / 官方 Turbo 模型；结果落盘并在会话界面内直接呈现。
 - 工具：`draw_image`（文生图 / 1–16 张参考图编辑）、`inpaint_image`（局部重绘）、`remove_image`（元素移除）、`outpaint_image`（四向扩图）、`upscale_image`（高清放大）、`generate_video`（文生 / 图生视频）、`generate_speech`（独立 Qwen3-TTS 语音合成）、`generate_hybrid`（图→音→视频混合）。
 - 平台：Windows / Linux；NVIDIA / Intel Arc / AMD 显卡，以及核显 / 共享显存与 8 GB 低内存档位。
@@ -20,7 +20,7 @@
 
 ## 怎么安装
 
-- 本包未发布到 npm，不能按包名安装；按本地目录安装。
+- 本包**已发布到 npm**（`dsh-qwen-paint`，当前 `0.3.0`）：`dsh plugin add dsh-qwen-paint` 按包名安装；本地目录形式用于开发调试。
 - 命令：`dsh plugin --profile desktop add link:<本插件目录的绝对路径>`
 - 使用 `desktop` profile 前需先完全退出 DSH；无构建步骤，`lib/` 即最终运行代码。
 
@@ -39,6 +39,15 @@
 - **合并规则**：启动参数按 ComfyUI argparse 的**互斥组**裁决（同组只留最后一个）—— 同时挂两个不是「后者生效」，是进程启动即退出。
 - 本机端点：`GET /api/qwen-paint/cpu-profile`（画像 + 五档各自在本机的真实参数）、`POST /api/qwen-paint/cpu-accel`（选档，落 `uiState`）；均仅本机请求，响应不含绝对路径。
 - 目标机实测入口：`node scripts/cpu-probe.mjs [--bench] [--dump-config]` —— 纯只读，借 ComfyUI 自带 python 问 PyTorch 的 CPU capability，不装包、不下模型、不重启。
+
+## 生成历史（0.3.1 追加）
+
+- 每次生成（图 / 视频 / 音频）写一条记录到 `<outputDir>/.qwen-paint-history.db`（SQLite，Node 内置 `node:sqlite`，零外部依赖）；**只存相对 `outputDir` 的路径**，不把本机绝对路径写进库。
+- 界面入口：菜单最上面「历史 → 生成历史」，支持关键词 / 类型 / 日期筛选、分页、看大图、复制路径。
+- 删除是**软删除**（库里 `deleted=1`），**绝不删除用户磁盘上的图片 / 视频 / 音频文件**。
+- Agent 工具 `list_generated_images`（`keyword` / `kind` / `date_from` / `date_to` / `limit` / `offset`），纯本地只读、不调用 ComfyUI。
+- 本机端点：`GET /api/qwen-paint/history`、`GET /api/qwen-paint/history/stats`、`POST /api/qwen-paint/history/delete`；均仅本机请求，写操作要求 POST + `application/json`。
+- **Node 版本口径**：持久化需要 **Node >= 22.5**；更低版本 `available: false` / `persistent: false`，只能读既有记忆日志做内存过滤，界面与工具都会明说「未持久化」。`package.json` 的 `engines` 仍为 `>=18.0.0`（不因这一个可选能力抬高整包门槛）。
 
 ## 网络边界
 

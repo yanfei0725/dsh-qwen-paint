@@ -169,6 +169,12 @@ console.log('\n=== 4. 外部集成状态：白名单脱敏 ===')
   ok('★ 自动下载包口径：视频/核显 opt-in、音频 manual', s.packs.videoModels.autoDownload === 'opt-in'
     && s.packs.igpuModels.autoDownload === 'opt-in' && s.packs.audioModels.available === false)
   ok('异常入参不抛错', buildIntegrationState('x').ok === true && buildIntegrationState(null).ok === true)
+  // ★ 2026-11-13 审计修复：以前写死 true；用户显式 allowRemoteComfy 时插件确实能连远端，
+  //   快照必须如实反映配置，不能靠声明蒙混。默认仍为 true（向后兼容）。
+  ok('★ comfyLocalOnly 不再写死，如实反映当前配置',
+    buildIntegrationState({}).service.comfyLocalOnly === true
+    && buildIntegrationState({ comfyLocalOnly: false }).service.comfyLocalOnly === false
+    && buildIntegrationState({ comfyLocalOnly: true }).service.comfyLocalOnly === true)
   const cat = buildRouteCatalog()
   ok('端点目录机器可读且条数一致', cat.count === INTEGRATION_ROUTES.length && cat.routes.length === cat.count && cat.localOnly === true)
   ok('目录项不可被外部改坏（每次返回副本）', (() => { cat.routes[0].path = 'HACK'; return INTEGRATION_ROUTES[0].path !== 'HACK' })())
@@ -284,12 +290,18 @@ console.log('\n=== 6. host 接线静态锁 + 端点目录 ⊆ 真实注册 ===')
   const runner = readSrc('lib/task-runner.js')
   const endpointFiles = [
     'lib/index.js', 'lib/integration-endpoints.js', 'lib/video-frames-endpoints.js',
-    'lib/reference-endpoints.js', 'lib/ui-edit-endpoints.js', 'lib/file-route.js',
+    'lib/reference-endpoints.js', 'lib/ui-edit-endpoints.js', 'lib/file-route.js', 'lib/asset-route.js',
   ].map((f) => readSrc(f)).join('\n')
 
   ok('★ 端点处理器已挂到 host', idx.includes('makeIntegrationHandlers({') && idx.includes('registerIntegrationRoutes('))
-  ok('★ 四个 assets 静态路由已挂到 host', ['setup-guide.js', 'setup-guide.css', 'mask-fx.js', 'mask-fx.css']
-    .every((n) => idx.includes("assetRoute('" + n + "'")))
+  // ★ 2026-11-13：assetRoute 已外置成 lib/asset-route.js 的表驱动注册（index.js 瘦身 4 KB）。
+  //   行为没变，但源码字面量搬了家 ⇒ 断言改指新落点，且覆盖面从 4 个扩到全部 10 个。
+  const assetMod = readSrc('lib/asset-route.js')
+  ok('★ 静态资源路由已外置成表驱动并由 host 注册',
+    idx.includes('registerAssetRoutes(webCtx.webServer')
+    && ['loading.webp', 'loading.gif', 'panel.js', 'panel.css', 'setup-guide.js',
+      'setup-guide.css', 'mask-fx.js', 'mask-fx.css', 'cpu-accel.js', 'cpu-accel.css']
+      .every((n) => assetMod.includes(`'${n}'`)))
   ok('★ client.js 挂载两个新脚本', cli.includes('loadQpExtras()') && cli.includes('function loadQpExtras()')
     && cli.includes('qwen-paint/setup-guide.js') && cli.includes('qwen-paint/mask-fx.js'))
   ok('★ 蒙版导出与参数下发都接上', cli.includes('window.DshQpMaskFx.exportMask(maskCanvas)') && cli.includes('maskFx: fx'))

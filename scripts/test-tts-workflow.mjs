@@ -138,7 +138,7 @@ ok('buildTtsWorkflow：VoiceDesign 链带 instruct', () => {
 })
 ok('★ index.js 的 modes 端点用真实 /object_info 决定 hybrid 可用性', () => {
   const s = src('lib/index.js')
-  assert.ok(s.includes("path: '/api/comfy-pipeline/modes'"))
+  assert.ok(s.includes("reg('/api/comfy-pipeline/modes'"))
   assert.ok(s.includes('probeTts(catalogForTts(objectInfo))'))
   assert.ok(s.includes('TTS_FALLBACK_CHAINS.map'))
 })

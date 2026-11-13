@@ -37,6 +37,21 @@
     return n
   }
 
+  /** ★ 与 setup-guide.js / cpu-accel.js 同口径：四种 up 事件全监听 + 冷却去重。 */
+  var TAP_UP = ['click', 'pointerup', 'mouseup', 'touchend']
+  function tap(node, fn) {
+    if (!node || typeof node.addEventListener !== 'function') return
+    if (typeof node.setAttribute === 'function') node.setAttribute('data-dshqp-direct', '1')
+    var last = 0
+    var run = function (ev) {
+      var now = Date.now()
+      if (now - last < 300) return
+      last = now
+      fn(ev)
+    }
+    for (var i = 0; i < TAP_UP.length; i += 1) node.addEventListener(TAP_UP[i], run)
+  }
+
   function clamp(x, lim) {
     var n = Number(x)
     if (!isFinite(n)) return lim.def
@@ -100,7 +115,7 @@
     head.appendChild(el('span', 'mf-head-title', '蒙版精修 · 羽化 / 边缘融合 / 卸载内存'))
     var reset = el('button', 'mf-mini', '恢复默认')
     reset.type = 'button'
-    reset.addEventListener('click', function () {
+    tap(reset, function () {
       Object.keys(LIMITS).forEach(function (k) { v[k] = LIMITS[k].def })
       v.invert = false; v.preview = true
       box.querySelectorAll('input[type=range]').forEach(function (r) {
@@ -150,7 +165,7 @@
     mem.appendChild(sel)
     var now = el('button', 'mf-mini', '立即释放')
     now.type = 'button'
-    now.addEventListener('click', function () {
+    tap(now, function () {
       now.disabled = true
       now.textContent = '释放中…'
       fetch(API, {

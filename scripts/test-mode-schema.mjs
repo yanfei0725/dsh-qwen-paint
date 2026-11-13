@@ -77,7 +77,7 @@ const clientSrc = read('lib/client.js')
 const HOST_PATH = '/api/comfy-pipeline/schema'
 const CLIENT_PATH = 'api/comfy-pipeline/schema'
 ok('index.js 注册 GET /api/comfy-pipeline/schema',
-  indexSrc.includes(`path: '${HOST_PATH}'`) && indexSrc.includes('buildSchemaSnapshot'))
+  indexSrc.includes(`reg('${HOST_PATH}'`) && indexSrc.includes('buildSchemaSnapshot'))
 ok('client.js 用 fetch 读同源 schema 并挂 window.ComfyPipelineSchema',
   clientSrc.includes(`fetch('${CLIENT_PATH}'`) && clientSrc.includes('window.ComfyPipelineSchema'))
 ok('client.js 零静态 import/export（非 ESM 单入口硬约束）',

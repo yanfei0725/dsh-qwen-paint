@@ -35,8 +35,8 @@ const ok = (name, cond, extra = '') => {
 
 console.log('[1] UI 接线：功能真的够得着')
 ok('两个图片编辑端点已注册',
-  INDEX.includes("path: '/api/qwen-paint/recent-images'")
-  && INDEX.includes("path: '/api/qwen-paint/quick-edit'"))
+  INDEX.includes("reg('/api/qwen-paint/recent-images'")
+  && INDEX.includes("reg('/api/qwen-paint/quick-edit'"))
 ok('三个工具引用在注册时已保存（端点才能直接 execute）',
   ['removeToolRef = removeTool', 'outpaintToolRef = outpaintTool', 'upscaleToolRef = upscaleTool']
     .every((s) => INDEX.includes(s)))
@@ -59,8 +59,17 @@ ok('★ 默认局部重绘仍走原端点，且蒙版参数随 payload 一起下
   && CLIENT.includes('{ image: imagePath, prompt: text, maskPng, maskFx: fx }')
   && CLIENT.includes('maskPng = window.DshQpMaskFx')
   && CLIENT.includes('const fx = window.DshQpMaskFx'))
+// ★ 2026-11-13：三份浮层骨架已收敛成 makeOverlay(extraClass)，
+//   原来那个拼出来的 className 字面量不再出现在源码里 —— 断言改指新落点，并顺手锁住去重本身。
 ok('★ 工作台是独立浮层、开窗前清残留（不碰消息树 / 不叠层）',
-  CLIENT.includes('.dshqp-wb-overlay') && CLIENT.includes('dshqp-mask-overlay dshqp-wb-overlay'))
+  CLIENT.includes('.dshqp-wb-overlay')
+  && CLIENT.includes("makeOverlay('dshqp-wb-overlay')")
+  && CLIENT.includes('function makeOverlay('))
+ok('★ 三处浮层骨架真的收敛到一个 helper',
+  (CLIENT.match(/const \{ overlay, card \} = makeOverlay\(/gu) ?? []).length === 3)
+ok('★ 四份 recent-images 拉取真的收敛到 fetchRecent()',
+  CLIENT.includes('function fetchRecent()')
+  && (CLIENT.match(/fetchRecent\(\)\s*\.then/gu) ?? []).length === 4)
 
 console.log('\n[2] 端点行为与安全围栏（注入假 deps，全程离线）')
 const tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'dshqp-wb-'))
