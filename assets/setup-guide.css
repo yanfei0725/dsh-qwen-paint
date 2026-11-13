@@ -1,0 +1,69 @@
+/* assets/setup-guide.css —— 图形化安装引导的样式（全部带 sg- 前缀，不碰宿主类名） */
+
+.sg-fab {
+  position: fixed; right: 20px; bottom: 22px; z-index: 2147483002;
+  padding: 12px 18px; border-radius: 999px; border: 1px solid rgba(125,179,255,.55);
+  background: linear-gradient(135deg, #2b6cb0, #1a4971); color: #fff;
+  font: 600 13.5px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: .01em; cursor: pointer;
+  box-shadow: 0 10px 30px rgba(10,30,60,.42), 0 0 0 4px rgba(125,179,255,.10);
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.sg-fab:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(10,30,60,.52); }
+.sg-fab:active { transform: translateY(0); }
+.sg-fab[data-ready="1"] { border-color: rgba(72,199,142,.7); background: linear-gradient(135deg, #217a56, #175c41); }
+
+.sg-panel {
+  position: fixed; right: 20px; bottom: 78px; z-index: 2147483003;
+  width: min(560px, calc(100vw - 32px)); max-height: min(78vh, 760px); overflow: auto;
+  box-sizing: border-box; padding: 18px 20px 16px; border-radius: 16px;
+  background: #1c1d22; color: #ecedf1; border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 24px 72px rgba(0,0,0,.58);
+  font: 13px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.sg-panel[hidden] { display: none; }
+@media (prefers-color-scheme: light) {
+  .sg-panel { background: #fff; color: #14161b; border-color: rgba(15,23,42,.12); box-shadow: 0 24px 72px rgba(15,23,42,.22); }
+}
+.sg-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.sg-h3 { margin: 0; font-size: 16px; font-weight: 650; }
+.sg-headline { margin-top: 3px; font-size: 12px; opacity: .68; }
+.sg-x { flex: none; width: 28px; height: 28px; border-radius: 8px; border: 1px solid rgba(255,255,255,.16);
+  background: transparent; color: inherit; font-size: 18px; line-height: 1; cursor: pointer; }
+.sg-x:hover { background: rgba(255,255,255,.08); }
+.sg-barwrap { height: 6px; border-radius: 99px; background: rgba(127,127,127,.22); overflow: hidden; }
+.sg-bar { height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, #4a90e2, #48c78e); transition: width .35s ease; }
+.sg-progress { margin: 7px 0 10px; font-size: 12px; opacity: .72; }
+.sg-pack { padding: 9px 11px; border-radius: 9px; font-size: 12px;
+  background: rgba(72,199,142,.10); border: 1px solid rgba(72,199,142,.30); }
+.sg-safety { margin: 9px 0 12px; padding: 8px 11px; border-radius: 9px; font-size: 12px; opacity: .82;
+  background: rgba(125,179,255,.09); border: 1px solid rgba(125,179,255,.24); }
+.sg-list { display: flex; flex-direction: column; gap: 9px; }
+.sg-card { padding: 11px 12px; border-radius: 11px; border: 1px solid rgba(127,127,127,.22); background: rgba(127,127,127,.055); }
+.sg-card[data-status="done"] { border-color: rgba(72,199,142,.42); }
+.sg-card[data-status="todo"] { border-color: rgba(230,170,70,.42); }
+.sg-card-head { display: flex; align-items: center; gap: 10px; }
+.sg-no { flex: none; font: 700 12px/1 ui-monospace, monospace; opacity: .5; }
+.sg-title-box { flex: 1; min-width: 0; }
+.sg-title { font-weight: 600; font-size: 13.5px; }
+.sg-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 3px; }
+.sg-tag { font-size: 10.5px; padding: 1px 6px; border-radius: 99px; border: 1px solid rgba(127,127,127,.35); opacity: .85; }
+.sg-tag-net { border-color: rgba(230,170,70,.6); }
+.sg-tag-ask { border-color: rgba(230,110,110,.6); }
+.sg-status { flex: none; font-size: 11px; opacity: .72; }
+.sg-card[data-status="done"] .sg-status { color: #48c78e; opacity: 1; }
+.sg-hint { margin: 8px 0; font-size: 12.3px; opacity: .88; }
+.sg-extra { margin: 7px 0 0; font-size: 11.6px; opacity: .66; }
+.sg-cmdrow { display: flex; align-items: center; gap: 7px; margin-top: 7px; }
+.sg-cmd { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; padding: 7px 9px; border-radius: 7px;
+  font: 11.5px/1.3 ui-monospace, SFMono-Regular, Consolas, monospace;
+  background: rgba(0,0,0,.24); border: 1px solid rgba(127,127,127,.22); }
+@media (prefers-color-scheme: light) { .sg-cmd { background: rgba(15,23,42,.05); } }
+.sg-choices { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 7px; }
+.sg-btn { padding: 6px 10px; border-radius: 7px; cursor: pointer; font-size: 11.8px;
+  border: 1px solid rgba(127,127,127,.34); background: rgba(127,127,127,.10); color: inherit; }
+.sg-btn:hover { background: rgba(127,127,127,.19); }
+.sg-btn-copy { flex: none; border-color: rgba(125,179,255,.55); color: #9dc3ff; }
+.sg-json { max-height: 210px; overflow: auto; padding: 9px; border-radius: 8px; font: 11px/1.4 ui-monospace, monospace;
+  background: rgba(0,0,0,.26); border: 1px solid rgba(127,127,127,.22); }
+.sg-foot { display: flex; gap: 7px; margin-top: 12px; }

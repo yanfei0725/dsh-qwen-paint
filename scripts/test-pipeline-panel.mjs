@@ -102,6 +102,8 @@ const body = makeNode('body')
 const head = makeNode('head')
 const posted = []
 const libraryPosts = []
+const referencePosts = []       // POST /reference/prefer：只该有 strategy 一个字段
+const referenceSearchPosts = [] // POST /reference/search：必须逐次显式 consent
 const document = {
   readyState: 'loading', // 自挂载只登记监听，测试自己决定什么时候 mount
   body,
@@ -187,6 +189,45 @@ const fetch = (url, init) => {
           { id: 'drawio', name: 'drawio', desc: '流程图' },
         ],
         selected: 'none', instruction: '', skills: ['archify'],
+      }),
+    })
+  }
+  // 角色参考：能力快照（GET）+ 策略偏好（POST prefer）+ 逐次同意的检索（POST search）
+  if (String(url).includes('reference')) {
+    const isPost = Boolean(init && init.method === 'POST')
+    const bodyJson = isPost && init.body ? JSON.parse(init.body) : null
+    if (String(url).includes('/prefer')) {
+      if (isPost) referencePosts.push({ url, body: bodyJson })
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ ok: true, preferred: bodyJson ? bodyJson.strategy : '', enabled: Boolean(bodyJson && bodyJson.strategy) }),
+      })
+    }
+    if (String(url).includes('/search')) {
+      if (isPost) referenceSearchPosts.push({ url, init, body: bodyJson })
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          ok: true, count: 2,
+          candidates: [
+            { url: 'https://images.example.org/a.png', title: 'A' },
+            { url: 'https://images.example.org/b.png', title: 'B' },
+          ],
+        }),
+      })
+    }
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({
+        ok: true, online: true, preferred: '', selected: 'universal-latent',
+        selectedLabel: '通用兜底（VAEEncode → latent_image）', nodeCount: 42,
+        mode: String(url).includes('mode=video') ? 'video' : 'image',
+        strategies: [
+          { id: 'ip-adapter-ref', label: 'IP-Adapter 参考', tier: 3, maxRefs: 4, available: false },
+          { id: 'universal-latent', label: '通用兜底', tier: 0, maxRefs: 1, available: true },
+        ],
+        characterLock: null,
+        web: { endpointPlaceholder: '<API_ENDPOINT>', consent: 'per-request-explicit', defaultAction: 'deny', outboundFields: ['query', 'limit', 'media'] },
       }),
     })
   }
@@ -312,6 +353,54 @@ ok('★ POST body 是洗过的载荷（63 → 65 已对齐）',
   last && last.body.speedPercent === 65, last ? String(last.body.speedPercent) : '无')
 ok('POST body 不含未声明的键', last && !('evil' in last.body))
 ok('★ 切模式后再拨滑块，mode 仍是 video（state 不丢）', last && last.body.mode === 'video')
+
+// ---- ⑤ 角色参考卡片：模型无关策略 + 逐次同意的联网检索 ----
+// 全部用独立类名，绝不挤进上面锁死的「13 个 .cp-field / 6 个 disabled input」。
+const refCards = panelEl.querySelectorAll('.cp-card').filter((c) => String(c.className).includes('cp-reference'))
+ok('★ 角色参考是独立卡片（不占 .cp-field 名额）', refCards.length === 1, String(refCards.length))
+const refSel = panelEl.querySelector('.cp-ref-select')
+ok('★ 策略下拉含「不启用 / 自动协商 / 后端策略清单」', Boolean(refSel) && refSel.children.length === 4,
+  refSel ? String(refSel.children.length) : '缺')
+ok('★ 默认选中「不启用」（零漂移）', refSel && refSel.value === '')
+ok('★★ 页面加载后不主动发任何联网检索请求（默认拒绝）', referenceSearchPosts.length === 0,
+  String(referenceSearchPosts.length))
+const refBtn = panelEl.querySelector('.cp-ref-search')
+ok('★ 检索按钮标明「仅本次同意」（不是常开开关）',
+  Boolean(refBtn) && String(refBtn.textContent).includes('仅本次同意'))
+// 空查询词：点了也不出站，且如实提示
+refBtn.listeners.click.forEach((fn) => fn({ target: refBtn }))
+ok('★ 空查询词点了也不发请求（并如实说明没发）',
+  referenceSearchPosts.length === 0
+  && String(panelEl.querySelector('.cp-ref-result').textContent).includes('未发起任何联网请求'))
+// 填查询词 → 一次点击 = 一次 consent:true
+const refQuery = panelEl.querySelector('.cp-ref-query')
+refQuery.value = '红发角色 三视图'
+refQuery.listeners.input.forEach((fn) => fn({ target: refQuery }))
+refBtn.listeners.click.forEach((fn) => fn({ target: refBtn }))
+ok('★★ 每次检索都显式带 consent:true（一次点击只管一次）',
+  referenceSearchPosts.length === 1
+  && referenceSearchPosts[0].body.consent === true
+  && referenceSearchPosts[0].body.query === '红发角色 三视图',
+  JSON.stringify(referenceSearchPosts))
+ok('★★ 出站载荷只有 query / consent / limit（不含提示词 seed 路径 凭据）',
+  Object.keys(referenceSearchPosts[0].body).sort().join(',') === 'consent,limit,query',
+  Object.keys(referenceSearchPosts[0].body).join(','))
+await new Promise((r) => setTimeout(r, 0))
+ok('★ 候选只以文本 URL 呈现（绝不渲染 img 自动下载字节）',
+  panelEl.querySelectorAll('img').length === 0
+  && String(panelEl.querySelector('.cp-ref-candidates').textContent).includes('https://'))
+ok('★ 检索结束按钮恢复可用，同意不残留成开关', refBtn.disabled === false)
+// 切策略：只发一个 id，不触发任何联网检索
+refSel.value = 'auto'
+refSel.listeners.change.forEach((fn) => fn({ target: refSel }))
+ok('★ 切策略只 POST strategy 到 /prefer，且不触发联网检索',
+  referencePosts.length === 1
+  && referencePosts[0].url === 'api/comfy-pipeline/reference/prefer'
+  && Object.keys(referencePosts[0].body).join(',') === 'strategy'
+  && referencePosts[0].body.strategy === 'auto'
+  && referenceSearchPosts.length === 1,
+  JSON.stringify(referencePosts))
+ok('★ 导出 getReferenceState 便于回归核对状态', typeof panel.getReferenceState === 'function')
 
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项）`)
 process.exit(fail === 0 ? 0 : 1)

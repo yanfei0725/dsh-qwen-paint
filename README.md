@@ -1,6 +1,6 @@
 # dsh-qwen-paint · (绘图)千问（优化版）
 
-DSH 插件 / DeepSeek Harness：本地文生图、图生图、局部重绘、元素移除、四向扩图与高清放大。经本机 ComfyUI 调用 Qwen-Image 2.1 / 官方 Turbo，出图数据仅走 127.0.0.1 回环，无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD 显卡。
+DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合，文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech），模型无关角色参考。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。QQ 交流群 454707710。
 
 ## Features
 
@@ -12,10 +12,16 @@ DSH 插件 / DeepSeek Harness：本地文生图、图生图、局部重绘、元
 | 元素移除 | `remove_image` | 移除蒙版内物体并补全背景 |
 | 四向扩图 | `outpaint_image` | 上 / 下 / 左 / 右按百分比外扩 |
 | 高清放大 | `upscale_image` | 与内置放大共用同一套节点图 |
+| 角色参考（模型无关） | `draw_image` / `generate_video` | 可选 `referenceStrategy`：按后端 `/object_info` 真实能力协商，协商不到专属适配器自动回落通用兜底 |
+| 文生视频 / 图生视频 | `generate_video` | 经本机 ComfyUI 调用 Wan 2.2 / XT-5B 系列视频模型，成品落盘并显示在会话里 |
+| 语音合成（TTS） | `generate_speech`（独立） / `generate_hybrid`（三段中的一段） | 本机 `ComfyUI-Qwen-TTS` + Qwen3-TTS 权重，产出 mp3 / flac（按 ComfyUI 返回的真实扩展名）；两条路共用同一条 TTS 段，只想配音不必跑完三段，**插件不自动下载音频模型** |
+| 图→音→视频混合 | `generate_hybrid` | 一张图配一段语音再合成视频，适合做带旁白的短片 |
 
+- **模型自动下载包（可选）**：`node scripts/setup.mjs --video-models` 提供**视频模型自动下载包** —— 默认不装、需你显式执行，官方仓库文件清单运行时动态列举、由你选档位，多源轮询 + 断点续传 + 服务器权威 size + sha256 双校验，不合格删除；核显档位另有 `--igpu-download`（同样默认关闭）。音频模型权重**不自动下载**，缺件只给清单。
 - **本地、免 API**：出图数据（提示词与图片）只发往本机 `127.0.0.1` / `localhost` / `::1` 的 ComfyUI，由 `lib/net-guard.js` 在代码层强制；**无需任何 API 密钥，不产生调用费用**。
-- **模型与运行**：经本机 **ComfyUI** 调用 **Qwen-Image 2.1 / 官方 Turbo**，无需云端模型服务。
-- **平台**：Windows / Linux，自动适配 NVIDIA / Intel Arc / AMD 显卡。
+- **模型与运行**：经本机 **ComfyUI** 调用 **Qwen-Image 2.1 / 官方 Turbo**（图）、**Wan 2.2 / XT-5B 系列**（视频）与 **Qwen3-TTS**（语音），无需云端模型服务。
+- **平台**：Windows / Linux，自动适配 NVIDIA / Intel Arc / AMD 显卡，也支持 Intel / AMD **核显共享内存**（含 8 GB 低内存档位）。
+- **CPU 加速档（可选，默认关）**：按 CPU 指令集给五档 `cpuAccel`（`off` / `safe` / `balanced` / `max` / `force-cpu`），安装引导面板里逐档显示「**这台机器上真实会挂什么参数**」；默认 `off` = 一个参数都不加。详见 0.2.0 更新说明。
 - **DSH 兼容**：`>=0.2.0-rc.2`（见 `package.json` 的 `dsh.compatibility`）。
 
 ## Installation
@@ -40,11 +46,33 @@ dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 擦掉画面里的路人
 ```
 
-也可显式调用：`draw_image`（`prompt` / `references`）、`inpaint_image`（`image` / `mask` / `prompt`）、`remove_image`、`outpaint_image`、`upscale_image`。完整参数与出图路径见下文「用法」「出图落在哪」。
+## 快速上手 · 功能在哪点（不用记工具名）
+
+装完重启 DSH 后，**输入框右下角的状态点**是总入口；生成的**每张图片下方**也直接摆了按钮。
+
+| 想做的事 | 在哪点 |
+| --- | --- |
+| 出图 / 图生视频 | 直接说话：「画一只橘猫」「把这张图做成 5 秒视频」 |
+| **圈选重绘**：手动涂出要改的地方 | 结果图下方「圈选重绘」，或直接点图片 → 用画笔把要改的地方涂白 → 写一句要改成什么（也可点常用说法） |
+| **移除物体** | 结果图下方「更多编辑」→「移除物体」→ 涂出要去掉的东西 → 点「移除并补全」，不用写提示词 |
+| **四向扩图 / 高清放大** | 「更多编辑」→ 点预设（四周各 20%、左右各 30%、2/4/8 倍…），不用填参数 |
+| 选一张以前的图来编辑 | 菜单**最上面**「常用（点开就能用）」→「图片编辑台」列出最近生成的图；或「圈选重绘最近一张图」懒人直达 |
+| **视频选帧去修**：只改中间某一帧 | 菜单「视频（选帧改 → 截一段）」→ 拖进度条或 `←` `→` 逐帧 →「抽这一帧去修」→ 直接进圈选重绘（**不需要 ffmpeg**） |
+| **截取视频的一段** | 同一个浮层：按帧数（起始/结束帧）或按时间（`0:01.5`）选 →「截取这一段」；也可「按间隔抽帧」批量取关键帧（这两项需要 ffmpeg） |
+| **缩略图轨道 / 把改稿贴回视频** | 同一个浮层：加载后自动生成 10 张缩略图，点一下跳到该处；改完图点「把改好的图贴回这一帧」→ 选最近改好的图 → 产出新 mp4（缩略图零依赖；**贴回需要 ffmpeg**，没装会明确提示） |
+| 画幅 / 速度 / 负面词 / CFG / 角色参考 | 「Comfy 控制」浮标面板（可拖动） |
+
+> 圈选重绘一直是"点结果图"触发的，但以前只有一个鼠标悬停提示，很多人以为没这功能 ——
+> 现在每张结果图下面都有可见按钮。「首次使用向导」是**环境体检**，不是使用教学。
+
+完整的 30 秒验证步骤、功能速查表、第一次上手走法和「没反应怎么自查」，见 **`INSTALL.md` 第五节**；
+把安装交给 DSH 时用 `给DSH安装的话.md`，里面也补了「装完之后」那段引导。
+
+也可显式调用工具：`draw_image`（`prompt` / `references`）、`generate_video`、`generate_speech`（`text`）、`generate_hybrid`、`inpaint_image`（`image` / `mask` / `prompt`）、`remove_image`、`outpaint_image`、`upscale_image`。完整参数与出图路径见下文「用法」「出图落在哪」。
 
 ## 网络边界（请以本节为准）
 
-插件的网络出口有**两类，边界不同**。
+插件的网络出口有**三类，边界不同**。
 
 **① 出图数据流**（提示词、参考图）—— 只发往 `comfyUrl`（ComfyUI）与 `hipfireUrl`（hipfire serve）。
 **默认仅本机回环**（`127.0.0.1` / `localhost` / `::1`），且这一约束**由代码层强制**（`lib/net-guard.js`）：
@@ -56,13 +84,110 @@ dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 但**不发送任何提示词或图片**。设为 `accelAutoInstall: false` 即可完全关闭，出图功能不受影响。
 详见下文「权限与已知风险」。
 
+**③ 联网参考图检索**（可选，**默认拒绝**）—— 配置项 `referenceSearchEndpoint` 默认是占位符
+`<API_ENDPOINT>`，**未替换时任何检索请求都被同意门直接拒绝**，插件保持纯离线。替换成你自己指定的
+外部 `https` 端点后，仍必须**每次检索单独显式同意**（`consent: true`；面板上是「仅本次同意并检索」
+按钮，点一次只管一次，没有"记住同意"的常开开关）。出站载荷由白名单重新构造，只有
+`query` / `limit` / `media` 三个字段，**不含提示词、seed、本机路径或凭据**；端点与候选 URL
+都拒绝回环 / 内网 / 云元数据地址（含 IPv6 形态）以防 SSRF，且不跟随重定向。
+插件**只返回候选图片 URL，不自动下载远程字节**；你选定后自行保存，再走既有的本地参考图上传流程。
+详见下文「角色参考（模型无关）与联网参考图检索」。
+
 > ⚠ 为如实披露能力：插件提供了 `allowRemoteComfy` 开关（默认 `false`）。用户**显式**设为 `true` 后，
 > 才可把 `comfyUrl` / `hipfireUrl` 指向局域网（如 `192.168.1.100`）或远程主机——此时插件会向你指定的地址发送提示词与图片数据。
 > 这是**用户主动选择**的行为，不是默认状态。
 
-> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：MIT　｜　**当前版本**：`0.19.2`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
+> **QQ 交流群**：`454707710`　｜　**反馈 / 提问 / 提需求**都走这里，issue 也欢迎：<https://github.com/yanfei0725/dsh-qwen-paint/issues>
+
+> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：MIT　｜　**当前版本**：`0.3.0`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
 
 ---
+
+## 角色参考（模型无关）与联网参考图检索
+
+### 它解决什么
+
+同一个角色跨多张图 / 多段视频保持形象一致。这里**没有绑定任何具体模型**：不要求本机装 Qwen、
+Wan、ControlNet 或 IP-Adapter，也不要求额外权重。新增模型只需往策略表里加一条数据，
+不需要写模型专用分支。
+
+### 三层机制（按运行时能力协商）
+
+| 层 | 机制 | 前提 |
+| --- | --- | --- |
+| 参数层 | 固定 seed / 锚定关键帧 / 段间 overlap | 无 |
+| 节点层 | 按后端 `/object_info` 的**真实节点集合**选策略（`requires` 取 AND、`requiresAny` 取 OR，按优先级排） | 后端在线且装了对应节点 |
+| 通用兜底 | 只用任何扩散模型都有的基础节点：生图找带 `latent_image` 输入的节点并接 `VAEEncode`；视频找带 `start_image` 输入的节点接首帧 | 无 |
+
+协商不到专属适配器时**自动回落通用兜底**，并在 `notes` 里如实写明回落，不假装启用了点名的策略。
+找节点靠 `/object_info` 自报的输入槽而不是靠类名猜：需要补可选槽时，后端没自报该槽就**不落地**
+（`applied: false` + 说明），绝不提交一个 ComfyUI 必拒的节点、也不给节点凭空加输入来假装"通用"。
+VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就有该输入的节点。
+
+### 零漂移保证
+
+**不启用 = 逐字节不变**。只有同时满足「显式给了 `referenceStrategy`（或面板选了策略）」、
+「确实有参考图」、「计划能落地」三个条件时才会改工作流；否则 `adaptReference()` 返回
+**原工作流对象引用**，连 `structuredClone` 都不做，`__plan` / `__effective` / `__cnet`
+等不可枚举元信息完整保留。真正注入节点后会用 `workflow-meta` 重建这些元信息。
+视频侧未启用策略时，参考图不上传、工作流不改动，纯文生视频行为不变。
+
+### 参数与本机端点
+
+- `draw_image` / `generate_video` 新增可选参数 `referenceStrategy`（`'auto'` 或具体策略 id；
+  **不在 required 里**）。优先级：**显式工具入参 > 面板选择 > 未启用**。
+  面板选择只存进程内存，不写配置、不写记忆，重启回默认。
+- `GET /api/comfy-pipeline/reference?mode=image|video`：能力快照（节点数、可用策略清单、
+  当前选中策略、视频分段计划、联网同意要求）。
+- `POST /api/comfy-pipeline/reference/prefer`：写入面板选中的策略 id（`''` = 关闭）。
+- `POST /api/comfy-pipeline/reference/adapt`：纯工作流变换，只返回结果供检视，
+  不提交 ComfyUI、不下载任何字节。
+- `POST /api/comfy-pipeline/reference/search`：联网候选检索，见下。
+- 四个端点都只允许本机请求；三个写端点另过 `guardWriteRequest`（POST + `application/json`）。
+
+### 联网检索：默认拒绝，逐次同意
+
+`referenceSearchEndpoint` 默认为占位符，**不替换就一律拒绝**。即使替换了合法 https 端点，
+也必须在**每一次**请求里显式给 `consent: true`；面板上的「仅本次同意并检索」按钮点一次只管一次，
+没有常开开关。只返回候选 URL，插件不下载远程图片字节，面板也只以文本方式列出 URL
+（渲染 `<img>` 会让浏览器自动下载，等于绕过同意门）。
+
+### 诚实边界
+
+- 视频角色一致性目前只产出**分段计划**（固定 seed / 锚定首帧 / 段间 overlap），
+  **未自动接入 RIFE 或时序平滑节点**，计划里会明确标注，不谎称已平滑。
+- 专属适配器需要对应权重；没装就回落通用兜底，约束强度取决于后端能力，不承诺跨模型同等效果。
+- `/object_info` 不可达时能力清单查不到，但通用兜底仍可用于任何扩散模型。
+
+---
+
+## 0.3.0 更新说明
+
+- **图形化安装引导（入口不再藏）**：右下角常驻「一键安装引导」大按钮，7 步卡片（环境检查 → ComfyUI → 生图主模型 → 视频模型 → 语音 → 核显档位 → 挂载 DSH）+ 进度条 + 状态灯，每步直接给可复制的命令。⚠ 网页侧**不会**替你 spawn 本机进程（那是安全红线），所以最后一步仍需你把命令粘进终端 —— 这是刻意设计，不是没做完。
+- **CPU 指令集识别 + 五档加速**：读 `/proc/cpuinfo` 的 flags（Windows / macOS 退化为型号推断并标注「未实测」），识别 `AVX2 / AVX512F / AVX512-BF16`，给 `off / safe / balanced / max / force-cpu` 五档：`--preview-method none`、`--use-pytorch-cross-attention`、`--bf16-unet + --bf16-text-enc`（仅硬件支持时）、`--cpu`（自动摘掉显存参数与 GPU 专属注意力内核）。`OMP/MKL/OPENBLAS_NUM_THREADS` 按**物理核**注入，全平台可下发。默认 `off` = 一个参数都不加。
+- **蒙版精修真接线**：羽化 / 边缘融合 / 外扩 / 重绘强度 / 反选 / 笔刷柔和度全部落到 `InpaintCropImproved` 与 `ManualSigmas`；羽化在浏览器 canvas 上按蒙版分辨率归一后真实模糊（不是摆个没反应的滑块），反选走 `mask_invert`。
+- **卸载内存模式**：`off / auto / manual` 三态，`auto` 在任务收尾时向本机 ComfyUI 发 `/free`（只发 `cfg.comfyUrl`，fire-and-forget 不影响出图结果）。
+- **外部集成**：`/api/qwen-paint/integration/state` 与 `/integration/routes` 提供脱敏状态快照与端点目录，不含本机绝对路径、用户名、凭据、对话内容。
+- **发布口径机制化**：新增 `scripts/test-release-metadata.mjs`，把「简介 / 描述 / 版本号 / 文档」逐字同步变成回归断言 —— 漏改一处就红。
+- **审计修复**：反选曾经是假接线（节点写死 `mask_invert: false`）、`QwenImage21Cache` 的 `device`/`dtype` 缺枚举校验、`setupGuideReady` 写死 `true`、静态资源缺 `nosniff`、`/quick-edit` 白带 `maskFx` —— 本轮全部修掉并加了对应断言。
+
+## 0.2.0 更新说明
+
+- **能力版图补齐**：视频生成（文生视频 / 图生视频）、Qwen3-TTS 语音合成、图→音→视频混合模式、模型无关角色参考、图片编辑台（圈选重绘 / 移除 / 扩图 / 放大）全部写进简介与文档；音频能力在界面里可直接选用，**暂不提供音频模型自动下载**。
+- **安装**：首次安装问完生图模型档位后，再问是否下载视频模型；官方仓库文件清单运行时动态列举、由用户自己选档位，沿用多源轮询 + 断点续传 + 失败可自备文件。
+- **低配**：核显 / 共享显存 / 8 GB 内存档位，自动轻量模型 + 省显存参数 + 分辨率与并发预算；出图速度设了可量化的验收门槛。
+- **安全与效率**：轻量安全加固、工具描述与探测复用优化、UI 主题统一与更典雅的视觉层次。
+- **工具与回包收口**：新增独立 `generate_speech`（与混合模式共用同一条 TTS 段，不再有两份实现）；10 个工具的 description 集中到 `lib/tool-descriptions.js` 统一口径，注册时统一按 `output.schema` 声明字段收口回包；`lib/index.js` 257085 → 251058 B。
+- **时间轴增强**：缩略图轨道（隐藏 `<video>` + `<canvas>` 取帧，零依赖、不上传视频字节、不需要 ffmpeg）与「改完的帧回贴成视频」（新本机端点 `/api/qwen-paint/video/replace-frame`，ffmpeg 走 argv 数组、路径限出图目录内、不拼 shell）。
+- **可选核显型号**：`lib/igpu-profiles.js` 收拢 AMD 780M/680M/760M/660M/8060S 与 Intel Iris Xe 96EU/UHD/Arc 140V/140T/B390 共 10 档，`--list-igpu` 列清单、`--igpu <id>` 选型号、`--igpu-download` 才下载（默认关、`--check` 优先、size+sha256 双校验）；型号参考秒数如实标注「社区其它模型、未经实测、不可比」，**不替换** `speedTargetSec`。本轮**未做任何核显硬件实测、未改任何 PyTorch 后端、未实际下载模型**。
+- **CPU 指令集识别与加速档（可选，默认关）**：`lib/cpu-profile.js` 识别 CPU 型号 / 物理核心数 / AVX2 / AVX-512 / AVX512-BF16 / AMX-BF16。**实测优先**：Linux 读 `/proc/cpuinfo` 的 `flags`（标 `isaVerified: true`）；Windows / macOS 上 Node 读不到 procfs，退化为型号推断并明确标注「未实测」；型号也认不出来时三项能力给 `null` 而**不是** `false` —— 「不知道」不能当成「不支持」，否则会静默关掉用户本来能用的加速。五档 `cpuAccel`：
+  - `off`（默认）：一个启动参数、一个环境变量都不加，与升级前完全一致；
+  - `safe`：`--preview-method none`（该值本来就是 ComfyUI 默认，这里是**显式锁死**防预览偷算力）+ 线程钉物理核；
+  - `balanced`：`+ --use-pytorch-cross-attention`（**方向上更稳，速度未必更快**，文档里不吹成加速开关）；
+  - `max`：`+ --bf16-unet --bf16-text-enc` —— **仅当实测有 AVX512-BF16**；不支持或未知时自动降级到 `balanced` 并在面板里写清降级原因（不会谎称「用户关掉了」）；
+  - `force-cpu`：`--cpu`，自动**摘掉** `--highvram/--lowvram/--novram/--reserve-vram` 与 `--use-sage-attention/--use-flash-attention/--use-ck-attention`（后三者要 import CUDA/HIP 扩展，纯 CPU 机器上挂着会启动即崩），并把工作流里 `QwenImage21Cache` 的 `device` 改成 `cpu`（官方说明：KV 缓存放内存、后台预取、几乎不掉速）。
+  线程数走 `OMP_NUM_THREADS` / `MKL_NUM_THREADS` / `OPENBLAS_NUM_THREADS` 环境变量（Windows 的 `.cmd` 用 `set`，POSIX 用 `export`）—— **不是** GGUF 加载器的 `n_threads`，ComfyUI-GGUF 的 `UnetLoaderGGUF.INPUT_TYPES` 里根本没有这个字段。合并启动参数时按 argparse **互斥组**裁决（同组只留最后一个），因为同时挂两个不是"后者生效"，是启动直接退出。面板改档位落 `uiState`（重启也记得住），启动参数需重启 ComfyUI 生效、工作流级改动下次出图生效。目标机实测入口：`node scripts/cpu-probe.mjs [--bench] [--dump-config]`（借 ComfyUI 自带 python 问 PyTorch 的 CPU capability，只读）。
+- **发布纪律**：版本号与简介同步更新；本版本仅本地改动，npm / GitHub 发布需单独授权。
 
 ## 0.19.2 更新说明
 
@@ -767,8 +892,8 @@ DSH STORE 自动审核在 Issue #1390 的**第二轮**反馈中确认：0.17.2 �
 - **新增已知风险第 4 条**：明确 `accelAutoInstall: true`（默认）会装包、会出网、
   **不发送提示词或图片**，并给出**关闭方法**（`accelAutoInstall: false`，关掉后出图不受影响）。
 - **顶部「网络边界」段落重写**为两类出口，不再用"不依赖外部网络"这种绝对化说法。
-- **区分清楚"不下载什么"**：插件**不下载模型权重**、**不自动安装第三方自定义节点**
-  （这两条原本就是事实，保留并写明确）。
+- **区分清楚"不下载什么"**：插件**不自动下载任何模型权重**（提供的是可选、默认关闭、需你显式执行的下载包：`--video-models` / `--igpu-download` / `--tier`），也**不自动安装第三方自定义节点**。
+  ⚠ 2026-11-13 订正：早期版本写成「插件不下载模型权重」，容易让人误读成「不支持视频模型下载包」；  实际视频模型自动下载包一直随插件提供，只是从不默认开启。
 
 ### 回归测试
 
@@ -967,6 +1092,7 @@ ComfyUI 官方对 Apple Silicon（M1–M5）**只提供手动安装**（没有�
 > ⚠ **Intel Mac**：没有 CUDA / ROCm / XPU 任何一条厂商计算栈。
 > 带 AMD 独显的机型走 MPS（识别为「Intel Mac + AMD 独显」）；
 > 只有 Intel 核显的机型实际上只能跑 CPU，**出图会非常慢** —— 这是硬件事实，不粉饰。
+> （Windows / Linux 上的核显是另一回事：那边有 XPU / 共享显存路径，见「核显 / 共享显存」。）
 > ⚠ 上述 Mac 优化**没有真机实测**（开发机是 Windows + ROCm）。
 > 依据是 ComfyUI 与 PyTorch 的源码/官方文档（都可复核），但"能快多少"给不出数字。
 > 想回到"一个参数都不加"：把 `comfyAttentionBackend` 设为 `default`。
@@ -1286,7 +1412,32 @@ CLIP 与 VAE 两档共用，**只有主模型不同**。
 
 脚本**先看显卡再决定怎么装**：N 卡用 ComfyUI 官方便携包；**AMD Radeon 走 ROCm 路线**  
 （AMD 官方 Windows wheels，装完还是 ComfyUI，**插件本身不用换**，模型也是同一套）；  
-Intel 核显基本跑不动。
+Intel 核显走「共享显存」路线（见下一节），**能出图但明显偏慢**，不再劝退。
+
+### 核显 / 共享显存 / 8 GB 内存（0.2.0 新增）
+
+核显没有独立显存，是拿**系统内存**当显存用。插件对这条路径的做法：
+
+- **识别**：Intel UHD / Iris Xe 等核显会被判成 `intel_igpu`（`sharedMemory: true`），
+  不会被误当成"小显存独显"。
+- **启动参数**：自动加 `--lowvram`（权重按需换入内存），不挂任何厂商加速包 ——
+  核显上装那些包只会拖慢启动、不会变快。
+- **精度档**：共享显存**无论报多大显存都强制最轻档**（GGUF Q4），这是核显上最稳的选择。
+- **不误下 CUDA 包**：安装脚本对 Intel 分支不会去下 N 卡的便携包，默认推荐轻量档。
+- **门槛是量化的**：`check_acceleration` 会给出具体秒数目标与建议档位，
+  字段带 `unverified: true` —— 这是**默认目标值，未经真机实测校准**，真机跑一张后替换。
+
+实测口径（请按自己的机器复核，别当承诺）：
+
+| 硬件 | 能否出图 | 默认速度门槛（unverified） |
+|---|---|---|
+| 核显 + 8 GB 整机内存 | 能，但明显偏慢 | 约 360 s / 张 |
+| 核显 + 16 GB 整机内存 | 能，达到可接受区间 | 约 180 s / 张 |
+| 独显 8 GB | 能 | 约 120 s / 张 |
+| 独显 ≥ 16 GB | 能，舒适 | 约 60 s / 张 |
+
+> ⚠ 上表是**待校准的默认目标值**，不是实测结论。分辨率、步数、并发都会显著改变结果。
+> 想让 8 GB 机器更快：选轻量档（GGUF Q4）+ 降 `megapixels`（如 0.5）+ 关掉并发。
 
 AMD 用户先 `node scripts/setup.mjs --check` 看计划，确认后 `--yes` 执行。  
 ⚠ 三条必读：**A 卡可能静默出错**（跑完必须人眼看图）、**别升 ROCm 10.0**  
@@ -1299,6 +1450,39 @@ AMD 用户先 `node scripts/setup.mjs --check` 看计划，确认后 `--yes` 执
 > 只在识别到这一代时把这件事写进面板提示，免得你"装完发现认不到卡"。
 > 注意力后端上它与 RDNA2 同样走保守的 `--use-pytorch-cross-attention`
 > （ROCm 的 AOTriton 融合内核只覆盖 RDNA3 / 3.5 / 4，CK SDPA 也不覆盖 gfx101x）。
+
+#### 用户可选的核显型号（0.2.0 追加，2026-11-13）
+
+上面那条是**按内存/显存自动判档**；这里再给一条**按具体核显型号自己选**的路子。
+型号档案在 `lib/igpu-profiles.js`，安装脚本里三个开关：
+
+```bash
+node scripts/setup.mjs --list-igpu                    # 列出全部可选型号与建议（零联网 / 零下载）
+node scripts/setup.mjs --igpu amd-780m --check       # 指定型号看建议，只看不改
+node scripts/setup.mjs --igpu amd-780m --igpu-download   # 只有显式加这个开关才会下载
+```
+
+| 品牌 | 可选型号 | 建议后端 | 建议量化 | 建议边长 |
+|---|---|---|---|---|
+| AMD | Radeon **780M** / **680M** / **760M** / **660M** | DirectML | GGUF Q4（弱档建议更轻、自备） | 720（660M 建议 512） |
+| AMD | Radeon **8060S**（Ryzen AI Max+ 395） | ROCm 原生（gfx1151） | 可考虑 BF16 / FP8 | 720 |
+| Intel | **Iris Xe 96EU** / **UHD** / **Arc 140V** / **140T** / **B390** | OpenVINO | GGUF Q4（UHD 建议更轻、自备） | 720（UHD 建议 512） |
+
+优先级（按用户清单的综合体验口径，非跑分）：`Arc B390 > 780M ≈ Arc 140V > 680M ≈ Iris Xe 96EU`。
+
+> ⚠⚠ **三条必读，别把清单当承诺**
+> ① 清单里的秒数（780M 约 15 s、680M 约 120 s、Iris Xe 512² 约 12 s、Arc 140V 约 54 s 等）
+> 来自用户提供的机型清单 / 社区公开分享，测的是 **SD 1.5 / SDXL / Z-Image-Turbo 等其它模型**，
+> 与本插件的 Qwen-Image 2.1 工作流**不可直接比较**，也**不是本插件实测**；
+> 档案里每条都带 `unverified: true` / `comparable: false`，**绝不替换** `speedTargetSec`。
+> ② DirectML / OpenVINO 需要**用户自己更换 ComfyUI 的 PyTorch 后端**，插件不自动装、不自动改环境；
+> Windows ROCm 官方原生支持的核显目前只有 8060S（gfx1151）这一档。
+> ③ **自动下载默认关闭**。下了也是按服务器权威值校验：
+> `qwen-image-2.1-UC-Q4_K_M.gguf`，`4604558112 B`，
+> sha256 `e79c8a009f2ecbdb6c70fd663d9aea9ee304a0d91f347e4169a756b8ad141b41`；
+> 大小或哈希不符一律删除。`--check` 永远不下载。前置条件会如实列出：需装
+> `ComfyUI-GGUF`，且节点要认 `general.architecture=qwen_image21`
+> （本机这版 `IMG_ARCH_LIST` 只有 `qwen_image`，**严格名不匹配**，可能需要升级节点）。
 
 完整说明见 [INSTALL.md](INSTALL.md) 的「AMD Radeon 用户」一节。
 
@@ -1606,8 +1790,7 @@ LoRA 与缓存节点现在**无条件**接在模型链上。最小可行回退�
    从 pip 源 / GitHub 下载安装。**这是真实的、会改动你环境的操作**，且**会访问外部网络**（不发送提示词或图片）。
    - **关闭方法**：配置 `accelAutoInstall: false`。关掉后出图功能**不受任何影响**，只是少了厂商专用加速；
      需要时可手动调用 `check_acceleration(action:'install')`。
-   - **模型权重不在此列**：插件**不下载** Qwen-Image 等模型权重，也不自动安装第三方自定义节点 ——
-     这些必须你自己准备（缺失时插件会给明确指引，**不会假装已装上**）。
+   - **模型权重不在此列**：插件**不会自动下载** Qwen-Image / Wan / Qwen3-TTS 等模型权重，也不自动安装第三方自定义节点 —— 随插件提供的是**可选、默认关闭**的下载脚本（`--video-models` / `--igpu-download` / `--tier`），要不要跑、跑哪一档都由你决定；缺件时插件给明确指引，**不会假装已装上**。
 5. **`--novram` / `--lowvram` 等档位是拿速度换空间**：显存不够时能跑，但**会明显变慢**，
    这不是 bug（见上文「显存 / 内存档位」）。
 6. **`comfyUrl` / `hipfireUrl` 可被用户改成外部地址**（必须显式开启 `allowRemoteComfy`）：

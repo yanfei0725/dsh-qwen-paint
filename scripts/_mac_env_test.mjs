@@ -207,8 +207,24 @@ if (sh === null) {
 }
 
 console.log('\n=== ③ 注入只在 macOS 生效（其它平台没有 MPS 后端） ===')
-ok('★ launchEnv 的构造被 IS_MAC 闸住（非 macOS 直接返回空数组）',
-  /const launchEnv = \(\(\) => \{\s*\n\s*if \(!IS_MAC\) return \[\]/u.test(HOST))
+// ★ 2026-11-13 更新判据（原判据已过期，不是行为回退）：
+//   旧写法锁的是源码结构 `if (!IS_MAC) return []`。本轮为了在 **Windows 上也注入
+//   CPU 线程变量**（OMP_NUM_THREADS 等），把结构改成了：
+//     const kept = []
+//     if (IS_MAC) { ...只放 MPS 相关... }
+//     for (const pair of CPU_ACCEL.env ?? []) kept.push(pair)
+//   语义等价（非 macOS 仍然不带任何 MPS 变量），但结构变了 ⇒ 旧正则必然红。
+//   不放宽、改成锁**更本质**的两件事：
+//     ① MPS 变量只能出现在 `if (IS_MAC)` 分支内（非 Mac 分支之前不许出现）；
+//     ② CPU 线程变量的注入必须在 `if (IS_MAC)` 块**之外**（否则 Windows 上永远空转）。
+const launchEnvBlock = (HOST.match(/const launchEnv = \(\(\) => \{[\s\S]*?\n  \}\)\(\)/u) ?? [''])[0]
+ok('★ launchEnv 段能定位到（否则下面两条断言等于没跑）', launchEnvBlock.length > 100)
+ok('★ MPS 变量只在 IS_MAC 分支里注入（非 macOS 不会带 MPS 环境）',
+  /if \(IS_MAC\) \{[\s\S]*?PYTORCH_MPS_HIGH_WATERMARK_RATIO/u.test(launchEnvBlock)
+  && !/PYTORCH_MPS_HIGH_WATERMARK_RATIO/u.test(launchEnvBlock.split('if (IS_MAC) {')[0] ?? ''))
+ok('★★ CPU 线程变量在 IS_MAC 分支**之外**注入（Windows 上也要生效）',
+  launchEnvBlock.includes('CPU_ACCEL.env')
+  && launchEnvBlock.indexOf('CPU_ACCEL.env') > launchEnvBlock.indexOf('if (IS_MAC) {'))
 ok('★ 两个开关名与端点参数对得上（applempsfallback / applempsunlimited）',
   HOST.includes("['applempsfallback', 'appleMpsFallback'")
   && HOST.includes("['applempsunlimited', 'appleMpsUnlimitedMem'"))

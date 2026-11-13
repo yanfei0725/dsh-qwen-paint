@@ -22,6 +22,7 @@
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
+import { makeSpeechTool } from '../lib/speech-tool.js'
 const ROOT = path.resolve(import.meta.dirname, '..')
 const idx = await import(pathToFileURL(path.join(ROOT, 'lib', 'index.js')).href)
 const {
@@ -40,6 +41,20 @@ const cfg = { ...DEFAULTS, outputDir: path.join(ROOT, '.tmp-tool-contract') }
 let pass = 0, fail = 0
 const ok = (n, c, x) => { c ? (pass++, console.log('  OK  ', n)) : (fail++, console.log('  FAIL', n, x ?? '')) }
 
+// B3：独立语音工具同样必须满足 DSH 的 output 契约。deps 全是假实现，零联网、零 spawn。
+const speechDeps = {
+  cfg, log,
+  ensureComfyUp: async () => {},
+  loadObjectInfoFor: async () => ({}),
+  catalogForTts: () => ({ nodes: {} }),
+  submitPrompt: async () => 'pid',
+  fetchOutputBytes: async () => Buffer.from(''),
+  fetchWithTimeout: async () => ({ ok: true, json: async () => ({}) }),
+  cancelReason: () => new Error('cancelled'),
+  safeStem: () => 'x',
+  uniquePath: async () => 'x.mp3',
+}
+
 const tools = [
   ['draw_image', makeDrawTool(ctx, cfg, log, null, noop)],
   ['list_available_models', makeListModelsTool(cfg, log)],
@@ -48,6 +63,7 @@ const tools = [
   ['inpaint_image', makeEditTool(cfg, log)],
   ['remove_image', makeRemoveTool(cfg, log)],
   ['outpaint_image', makeOutpaintTool(cfg, log)],
+  ['generate_speech', makeSpeechTool(speechDeps)],
 ]
 
 for (const [label, tool] of tools) {

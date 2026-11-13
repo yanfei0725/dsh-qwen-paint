@@ -323,6 +323,36 @@
 .cp-skill-name { color: var(--cp-text); }
 .cp-skill-desc { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--cp-dim); }
 
+/* ---- 角色参考（模型无关策略 + 逐次同意的联网检索） ----
+ * 沿用 .cp-card > * + * 的统一间距，不另写 margin 覆盖，避免和其它卡片节奏不一致。 */
+.cp-ref-select { width: 100%; }
+.cp-ref-query {
+  display: block; width: 100%; box-sizing: border-box; padding: 8px 10px;
+  border: 1px solid var(--cp-line); border-radius: var(--cp-r-ctl);
+  background: var(--cp-sunken); color: var(--cp-text);
+  font: 400 12px/1.5 var(--cp-font);
+  transition: border-color 140ms var(--cp-ease), background 140ms var(--cp-ease);
+}
+.cp-ref-query::placeholder { color: var(--cp-dim); }
+.cp-ref-query:focus { border-color: var(--cp-accent-line); }
+.cp-ref-search {
+  display: inline-block; min-height: 32px; padding: 7px 13px;
+  border: 1px solid var(--cp-accent-line); border-radius: var(--cp-r-ctl);
+  background: var(--cp-accent-wash); color: var(--cp-text);
+  font: 500 12px/1.3 var(--cp-font); cursor: pointer;
+  transition: color 140ms var(--cp-ease), background 140ms var(--cp-ease), border-color 140ms var(--cp-ease);
+}
+.cp-ref-search:hover:not(:disabled) { border-color: var(--cp-accent); }
+.cp-ref-search:disabled { opacity: .55; cursor: default; }
+.cp-hint.cp-ref-status { color: var(--cp-muted); }
+.cp-hint.cp-ref-result { color: var(--cp-warn); word-break: break-word; }
+.cp-hint.cp-ref-candidates {
+  padding: 8px 10px; border: 1px solid var(--cp-line); border-radius: var(--cp-r-ctl);
+  background: var(--cp-sunken); color: var(--cp-dim);
+  font: 400 11px/1.6 var(--cp-mono); white-space: pre-wrap; word-break: break-all;
+}
+.cp-hint.cp-ref-candidates:empty { display: none; }
+
 /* ---- 键盘焦点：统一可见环 ---- */
 .cp-fab:focus-visible,
 .cp-panel button:focus-visible,
@@ -346,6 +376,7 @@
   .cp-fab, .cp-fab-dot, .cp-tab, .cp-x, .cp-reset,
   .cp-field input[type="range"]::-webkit-slider-thumb,
   .cp-select, .cp-textarea, .cp-field input[type="number"],
+  .cp-ref-query, .cp-ref-search,
   .cp-ticks span, .cp-skill-tag, .cp-skill-dot, .cp-progress-fill {
     transition: none;
   }

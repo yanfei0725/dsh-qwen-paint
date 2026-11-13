@@ -138,8 +138,9 @@ ok('★ 速度%/画幅控制项真的被视频链消费', idxSrc.includes('video
 ok('★ 加速档走 pick(installed)，没有 Wan 对应节点时**不注入**（不假装加速）',
   idxSrc.includes('pickAccelProfile') && idxSrc.includes('accelProfile.wanNode'))
 ok('工具数仍是 8（selftest 那边同步过）', idxSrc.includes("name: 'generate_video'"))
+// ★ 2026-11-13：工具描述集中到 lib/tool-descriptions.js，断言改读新文件（不是删/放宽）。
 ok('★ 工具描述如实写"短片段，做不了 60 秒长片"（不承诺做不到的事）',
-  idxSrc.includes('做不了 60 秒长片'))
+  read('lib/tool-descriptions.js').includes('做不了 60 秒长片'))
 
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项）`)
 process.exit(fail === 0 ? 0 : 1)

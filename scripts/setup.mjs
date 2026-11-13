@@ -25,6 +25,15 @@
  *       · 不指定时：**交互式终端会弹一句问你**（显存多选 1，显存少选 2）；
  *         非交互环境则默认 full（与之前完全一致）。
  *       · full = int8 主模型（画质最好）；lite = GGUF Q4_K_M（约 4.2 GB，给 8GB 小卡）。
+ *   node scripts/setup.mjs --list-igpu         列出全部**可选核显型号**与建议（★ 2026-11-13）
+ *       · 纯展示：零联网、零探测、零下载、零落盘。
+ *       · 覆盖 AMD 780M/680M/760M/660M/8060S 与 Intel Iris Xe 96EU/UHD/Arc 140V/140T/B390。
+ *   node scripts/setup.mjs --igpu <id> --check  指定型号看建议，但**只看不改**
+ *   node scripts/setup.mjs --igpu <id> --igpu-download
+ *       · **只有显式加 --igpu-download 才会真下**推荐模型；默认绝不下载。
+ *       · 下载后按服务器权威 size + sha256 双校验，不合格删除；--check 优先级最高。
+ *   ⚠ 型号清单里的秒数是社区/用户提供的其它模型数据，**不是本插件实测指标**，
+ *     也**不可**与本插件的 speedTargetSec 直接比较；插件不做任何核显硬件实测。
  * ============================================================================
  */
 
@@ -35,6 +44,12 @@ import { createHash } from 'node:crypto'
 import { spawn, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import readline from 'node:readline/promises'
+import { runVideoModelStep, targetDirOf } from './video-model-catalog.mjs'
+// ★ 2026-11-13：用户可选的核显型号档案（纯数据，不联网、不探测、不下载）。
+import {
+  listIgpuOptions, igpuPlanFor, findIgpuProfile, matchIgpuProfile,
+  IGPU_DOWNLOAD_CATALOG, IGPU_AUTO_DOWNLOAD_DEFAULT,
+} from '../lib/igpu-profiles.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const args = process.argv.slice(2)
@@ -45,6 +60,37 @@ const valueOf = (flag) => {
 }
 
 const CHECK_ONLY = has('--check')
+/**
+ * ★ 2026-11-13：**用户可选的核显型号** —— 只做适配，不做任何硬件实测。
+ *   · `--list-igpu`          列出全部可选型号与建议（纯展示，零联网零下载）
+ *   · `--igpu <id>`          指定型号，安装时按它给建议
+ *   · `--igpu-download`      **显式开关**：才真的去下推荐模型；默认**绝不下载**
+ *   · `--check`              永远不下载，优先级高于上面所有开关
+ */
+const LIST_IGPU = has('--list-igpu')
+const IGPU_ARG = valueOf('--igpu')
+const IGPU_DOWNLOAD = has('--igpu-download')
+
+if (LIST_IGPU) {
+  console.log('\n可选的核显型号（用户清单适配 · 全部未经本插件真机实测）\n')
+  for (const [i, o] of listIgpuOptions().entries()) {
+    const p = igpuPlanFor(o.id)
+    const ref = p.reference?.sec === null ? '无出图秒数' : `参考约 ${p.reference.sec}s（${p.reference.workload}）`
+    console.log(`  ${String(i + 1).padStart(2)}) ${o.id.padEnd(24)} ${o.name}`)
+    console.log(`      后端 ${p.backendLabel} | 量化 ${p.quantLabel} | 建议 ${o.resolution}px | ${ref}`)
+  }
+  console.log('\n  ⚠ 上面的秒数来自用户清单 / 社区公开分享，测的是 SD / SDXL / Z-Image-Turbo 等')
+  console.log('    **其它模型**，与本插件的 Qwen-Image 2.1 工作流不可直接比较，也不是实测结论。')
+  console.log('  ⚠ DirectML / OpenVINO 需要用户自行更换 ComfyUI 的 PyTorch 后端，插件不自动改环境。')
+  console.log(`  ⚠ 自动下载默认关闭（${IGPU_AUTO_DOWNLOAD_DEFAULT}）：只有显式加 --igpu-download 才会下。\n`)
+  console.log('  用法：node scripts/setup.mjs --igpu amd-780m --check')
+  console.log('        node scripts/setup.mjs --igpu amd-780m --igpu-download\n')
+  process.exit(0)
+}
+if (IGPU_ARG !== null && (String(IGPU_ARG).startsWith('--') || findIgpuProfile(IGPU_ARG) === null)) {
+  console.error(`✗ --igpu 收到的型号「${IGPU_ARG}」不在清单里（或漏写了值）。先跑 --list-igpu 看可选值。`)
+  process.exit(1)
+}
 /** --check 只比大小（秒回）；--verify 才真的重算 SHA256（13 GB 要等一会儿）。 */
 const FORCE_VERIFY = has('--verify')
 const WANT_COMFY = has('--download-comfy')
@@ -185,7 +231,15 @@ const GGUF_BASES = [
 ]
 const GGUF_REPO_PAGE = `https://huggingface.co/${GGUF_REPO}`
 /** GGUF 的**全部**候选 URL（下载失败时依次换下一个）。 */
-const ggufUrlsOf = (model) => GGUF_BASES.map((b) => `${b}${model.dir}/${model.name}`)
+const ggufUrlsOf = (model) => [
+  // ★ 2026-11-13：优先走**实测可达**的镜像备份仓库 —— 原 GGUF_REPO 已改名，
+  //   旧路径实测 302 → 404。只在文件名 / 大小 / sha256 三项都与服务器权威值
+  //   一致时才插入，避免把新源错套到别的模型上。旧两源保留（失败时会依次轮询）。
+  ...IGPU_DOWNLOAD_CATALOG
+    .filter((m) => m.name === model.name && m.size === model.size && m.sha256 === model.sha256)
+    .flatMap((m) => m.sources),
+  ...GGUF_BASES.map((b) => `${b}${model.dir}/${model.name}`),
+]
 
 const COMFY_RELEASE = 'https://github.com/comfyanonymous/ComfyUI/releases/latest/download/ComfyUI_windows_portable_nvidia.7z'
 const COMFY_REPO = 'https://github.com/comfyanonymous/ComfyUI'
@@ -766,7 +820,7 @@ const VENDOR_LABEL = {
   nvidia: 'NVIDIA → 走 ComfyUI 官方便携包（CUDA）',
   amd: 'AMD → 走 ROCm 路线（下面单独说明）',
   apple: 'Apple Silicon → 官方**手动安装**（pytorch nightly + python main.py）',
-  intel: 'Intel 核显 → 基本跑不动，建议换台机器',
+  intel: 'Intel 核显 / 共享显存 → 能跑（走共享内存 + 轻量档），但比独显慢，详见下方说明',
   unknown: '⚠ 认出了显卡名字，但认不出是哪家',
 }
 console.log(`  判定：${VENDOR_LABEL[gpu.vendor]}`)
@@ -819,7 +873,33 @@ if (gpu.vendor === 'amd') {
     }
   }
 }
-if (comfyDir === null && gpu.vendor !== 'amd' && gpu.vendor !== 'apple') {
+if (gpu.vendor === 'intel') {
+  // ★★★ 2026-11-12 新增：**Intel 核显 / 共享显存（含 Arc 走 XPU 的也走这条说明）** 这条路。
+  //   之前这条分支会**兜底走 NVIDIA 的 CUDA 便携包** —— 对核显是灾难：下完根本跑不起来。
+  //   现在明确走"共享内存 + 轻量档"路径：
+  //     · 不自动下 CUDA 便携包（那是为 N 卡准备的，核显用不了）；
+  //     · 优先用 `--comfy <已有 ComfyUI 目录>` 指到的那份；
+  //     · 没有就告诉用户怎么装（官方手动装 + 按需 IPEX/XPU），不替他猜。
+  console.log('\n① 找 ComfyUI …（Intel 核显走共享内存路径，不下载 CUDA 便携包）')
+  const found = findComfyDir()
+  comfyDir = found.dir
+  if (comfyDir !== null) {
+    console.log(`  ✓ ${comfyDir}（${found.from}）`)
+  } else if (valueOf('--comfy')) {
+    comfyDir = valueOf('--comfy')
+    console.log(`  ✓ 用你指定的：${comfyDir}`)
+  } else {
+    console.log('  ✗ 没找到已装的 ComfyUI，脚本里也没有 Intel 专用便携包。')
+    console.log('')
+    console.log('  Intel 核显 / 共享显存怎么装（共享 GPU 内存越大越好，建议整机 ≥ 16 GB）：')
+    console.log('    1) 装 ComfyUI（官方 Manual Installation，或你已有的那份）；')
+    console.log('    2) 核显走 XPU 后端：按需装 Intel Extension for PyTorch（IPEX，带 --extra-index-url）；')
+    console.log('    3) 启动插件后默认会走 --lowvram（权重按需换入系统内存）+ 轻量 GGUF q4 主模型。')
+    console.log('    装好之后用 `--comfy <你的 ComfyUI 目录>` 重跑本脚本继续下模型。')
+    process.exit(0)
+  }
+}
+if (comfyDir === null && gpu.vendor !== 'amd' && gpu.vendor !== 'apple' && gpu.vendor !== 'intel') {
   // ↓↓↓ 这一段是 NVIDIA 那条路，与 0.1.0 完全一致，一个字没动 ↓↓↓
   console.log('\n① 找 ComfyUI …')
   const found = findComfyDir()
@@ -896,22 +976,67 @@ if (TIER_ARG !== null && !TIERS[TIER_ARG]) {
   console.error(`✗ --tier 只能是 ${Object.keys(TIERS).join(' / ')}，收到的是「${TIER_ARG}」`)
   process.exit(1)
 }
-let tier = DEFAULT_TIER
+// ★ 2026-11-12：Intel 核显 / 共享显存默认走轻量档（GGUF q4，最省内存）。
+let tier = gpu.vendor === 'intel' ? 'lite' : DEFAULT_TIER
 if (TIER_ARG !== null) {
   tier = TIER_ARG
 } else if (process.stdin.isTTY && !CHECK_ONLY) {
-  console.log('\n  主模型有两个档位，请选一个（**直接回车 = 1**）：')
+  console.log('\n  主模型有两个档位，请选一个：')
   for (const [i, k] of ['full', 'lite'].entries()) {
-    console.log(`    ${i + 1}) ${TIERS[k].label}`)
+    const rec = gpu.vendor === 'intel' && k === 'lite' ? '（Intel 核显推荐）' : ''
+    console.log(`    ${i + 1}) ${TIERS[k].label}${rec}`)
     console.log(`       ${TIERS[k].hint}`)
   }
+  const defHint = gpu.vendor === 'intel' ? '回车 = 2（轻量档）' : '回车 = 1'
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-  const answer = await rl.question('  请选择 [1/2]（回车 = 1）：')
+  const answer = await rl.question(`  请选择 [1/2]（${defHint}）：`)
   rl.close()
-  tier = String(answer).trim().toLowerCase() === '2' || String(answer).trim() === 'lite'
+  // ★ 2026-11-12：Intel 核显默认（回车）→ 轻量档。
+  const a = String(answer).trim().toLowerCase()
+  tier = a === '2' || a === 'lite' || (gpu.vendor === 'intel' && a === '')
     ? 'lite' : 'full'
 }
 const MODELS = modelsFor(tier)
+
+/* ★★★ 2026-11-13：**用户可选的核显型号** —— 只给建议，不改硬件、不跑实测。
+   · `--igpu <id>` 显式指定；交互终端会把清单摆出来让用户自己挑（0 = 不指定）。
+   · `matchIgpuProfile()` 只用来标注「按设备名推荐」，**绝不替用户做决定**。
+   · 这一段纯输出，零联网、零下载、零落盘；`--check` 也能看到建议。 */
+let igpuId = IGPU_ARG
+const recommendedIgpu = matchIgpuProfile(gpu.names)
+if (igpuId === null && process.stdin.isTTY && !CHECK_ONLY) {
+  const opts = listIgpuOptions()
+  console.log('\n  核显型号（可选 · 只影响建议，不改环境、不跑实测）：')
+  console.log('    0) 不指定（跳过）')
+  for (const [i, o] of opts.entries()) {
+    const rec = recommendedIgpu?.id === o.id ? '  ← 按检测到的设备名推荐' : ''
+    console.log(`    ${i + 1}) ${o.name}  [${o.id}]${rec}`)
+  }
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  const answer = await rl.question('  请选择编号或 id（回车 = 0，不指定）：')
+  rl.close()
+  const a = String(answer).trim()
+  if (/^\d+$/u.test(a)) {
+    const n = Number(a)
+    if (n >= 1 && n <= opts.length) igpuId = opts[n - 1].id
+  } else if (a !== '' && findIgpuProfile(a) !== null) {
+    igpuId = a
+  }
+}
+const IGPU_PLAN = igpuPlanFor(igpuId)
+if (IGPU_PLAN !== null) {
+  console.log(`\n  · 已选核显型号：${IGPU_PLAN.name}`)
+  console.log(`    后端 ${IGPU_PLAN.backendLabel}｜量化 ${IGPU_PLAN.quantLabel}｜建议 ${IGPU_PLAN.resolution}px｜显存档 ${IGPU_PLAN.vramMode}`)
+  if (IGPU_PLAN.backendChangesEnv) console.log(`    ⚠ ${IGPU_PLAN.backendHint}`)
+  if (IGPU_PLAN.reference.sec !== null) {
+    console.log(`    参考量级：${IGPU_PLAN.reference.workload} 约 ${IGPU_PLAN.reference.sec}s`
+      + '（社区/用户清单，测的是其它模型，不可与本插件指标直接比较）')
+  }
+  console.log(`    ${IGPU_PLAN.notes}`)
+  console.log(`    自动下载：${IGPU_DOWNLOAD ? '★ 已显式开启（--igpu-download）' : '关闭（默认；要下需显式加 --igpu-download）'}`)
+} else if (recommendedIgpu !== null && !CHECK_ONLY) {
+  console.log(`\n  · 设备名可能是「${recommendedIgpu.name}」，未替你指定；跑 --list-igpu 看全部可选项。`)
+}
 
 console.log(`\n② 检查千问 Qwen-Image 2.1 模型（放到 ${modelsRoot}）…`)
 console.log(`  档位：${TIERS[tier].label}`)
@@ -967,7 +1092,60 @@ if (CHECK_ONLY) {
   console.log(`  去掉 --check 重跑就会自动下载。来源：`
     + `${needGguf ? GGUF_REPO_PAGE : REPO_PAGE}（主模型）`
     + ' + https://modelscope.cn/models/Comfy-Org/Qwen-Image-2.1（CLIP / VAE）')
+  console.log('  · 视频模型是可选功能：--check 不联网、不下载；要装请单独跑 --video-models。')
   process.exit(allOk ? 0 : 1)
+}
+
+/* ★★★ 2026-11-13：**可选自动下载** —— 只有显式 `--igpu-download` 且已选型号才执行。
+   ⚠ 位置必须留在 `--check` 的 process.exit **之后**：`--check` 永远不下载。
+   ⚠ 默认 IGPU_AUTO_DOWNLOAD_DEFAULT = false，不给开关时整段跳过（只打印一句提示）。
+   ⚠ 下完按服务器权威 size + sha256 双校验，不合格一律删除，绝不留下半成品。
+   ⚠ 不自动装 PyTorch 后端 / 不自动装 ComfyUI-GGUF 节点：缺件在 requires 里如实列出。 */
+if (IGPU_DOWNLOAD && IGPU_PLAN !== null && IGPU_PLAN.downloadable) {
+  console.log('\n②-b 可选补齐：核显推荐主模型（已显式开启 --igpu-download）…')
+  const picked = IGPU_DOWNLOAD_CATALOG.filter((m) => IGPU_PLAN.suggestedDownloads.includes(m.id))
+  for (const m of picked) {
+    const dest = path.join(modelsRoot, m.dir, m.name)
+    const cur = fs.existsSync(dest) ? fs.statSync(dest).size : 0
+    if (cur === m.size) {
+      console.log(`  ✓ ${m.name} 已存在，大小与服务器权威值一致（${gb(m.size)}）`)
+      continue
+    }
+    console.log(`  · ${m.name}（${gb(m.size)}）—— ${m.note}`)
+    console.log(`    前置条件：${m.requires.join('；')}`)
+    let done = false
+    for (const [i, url] of m.sources.entries()) {
+      if (i > 0) console.log('  ↻ 换源重试')
+      const got = await downloadWithCurl(url, dest)
+      const gotSize = fs.existsSync(dest) ? fs.statSync(dest).size : 0
+      if (!got.ok && gotSize !== m.size) {
+        console.error(`  ✗ 该源失败（curl 退出码 ${got.code}）`)
+        continue
+      }
+      if (gotSize !== m.size) {
+        console.error(`  ✗ 大小 ${mb(gotSize)} ≠ 权威值 ${mb(m.size)} → 删除，不得使用`)
+        fs.rmSync(dest, { force: true })
+        continue
+      }
+      process.stdout.write('    大小对上了，算 SHA256 …')
+      const digest = await sha256Of(dest)
+      if (digest !== m.sha256) {
+        console.error('\r  ✗ SHA256 与服务器权威值不一致 → 删除，不得使用')
+        fs.rmSync(dest, { force: true })
+        continue
+      }
+      console.log('\r  ✓ 大小与 SHA256 都与服务器权威值一致')
+      done = true
+      break
+    }
+    if (!done) {
+      console.error(`  ✗ ${m.sources.length} 个源都没拿到合格文件；未使用任何半成品。`)
+      allOk = false
+    }
+  }
+} else if (IGPU_PLAN !== null && IGPU_PLAN.downloadable) {
+  console.log('\n  · 核显推荐主模型**未下载**（默认关闭）。要自动补齐请显式加 --igpu-download；')
+  console.log('    也可自备 .gguf 放进 models/unet，插件会按文件名自动挑。')
 }
 
 if (needDownload === 0) {
@@ -1101,6 +1279,63 @@ if (!CHECK_ONLY && allOk && comfyDir !== null) {
       console.log('    ⚠ 没能自动写入 cordis.patch.yml（结构可能被改过）—— 请手动加一行：')
       console.log(`        outputDir: '${norm(chosen)}'`)
     }
+  }
+}
+
+/* ②d 视频模型（可选）—— 0.2.0 新增 ------------------------------------------------
+ *
+ * 规矩（沿用生图档位的交互，但更保守）：
+ *  · 默认**不装**：视频权重 9–32 GB，问一句才动；`--yes` 也不等于同意装视频模型。
+ *  · `--video-models` 显式要装；`--no-video-models` 明确不要；`--video-pick <编号>`
+ *    给无人值守用（必须和 --video-models 一起给，否则不替用户选）。
+ *  · 官方文件清单运行时从镜像站 / 原站 API 动态拉，文件名、大小、SHA256 全用服务器返回值；
+ *    拉不到就如实认输并给「自备文件」这条路，**绝不拿记忆里的名字兜底**。
+ *  · 显卡品牌只影响推荐，装不装、装哪个始终由用户决定；配套加速项只作参考、不代装。
+ *  · 只下载、不上传：本步骤不会读取、打包或发送本机任何模型文件。
+ */
+if (!CHECK_ONLY) {
+  console.log('\n②d 视频模型（可选，装文生视频 / 图生视频才需要）…')
+  const VIDEO_PICK = valueOf('--video-pick')
+  const wantVideo = has('--video-models') ? 'yes'
+    : has('--no-video-models') ? 'no' : null
+  const askLine = async (q) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+    const answer = await rl.question(q)
+    rl.close()
+    return answer
+  }
+  /** 清单走 curl：当前代理下 Node fetch 到 huggingface.co 会 502，curl 走系统代理可达。 */
+  const fetchCatalogText = (url) => {
+    const r = spawnSync('curl.exe', ['-sS', '-L', '--fail', '--max-time', '20', url], {
+      encoding: 'utf8', maxBuffer: 8 * 1024 * 1024,
+    })
+    if (r.status !== 0 || !r.stdout) throw new Error(`curl 退出码 ${r.status ?? 'null'}`)
+    return r.stdout
+  }
+  const destOf = (f) => {
+    const d = targetDirOf(f.path)
+    return d === null ? null : path.join(modelsRoot, d, f.name)
+  }
+  const report = await runVideoModelStep({
+    vendor: gpu.vendor,
+    want: wantVideo,
+    isTTY: Boolean(process.stdin.isTTY) || VIDEO_PICK !== null,
+    ask: async (q) => (VIDEO_PICK !== null && q.includes('选一个') ? VIDEO_PICK : askLine(q)),
+    log: (s) => console.log(s),
+    fetchText: fetchCatalogText,
+    download: (url, dest) => downloadWithCurl(url, dest),
+    statSize: (p) => (fs.existsSync(p) ? fs.statSync(p).size : 0),
+    sha256Of,
+    resolveDest: destOf,
+    removeFile: (p) => fs.rmSync(p, { force: true }),
+    existsLocal: (f) => {
+      const d = destOf(f)
+      return d !== null && fs.existsSync(d) && fs.statSync(d).size === f.size
+    },
+  })
+  if (report.installed.length > 0) {
+    console.log(`  视频模型已就位：${report.installed.map((f) => f.name).join('、')}`)
+    console.log('  ⚠ 首次用视频功能前请重启一次 ComfyUI（让新权重进模型列表）。')
   }
 }
 

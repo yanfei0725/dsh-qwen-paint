@@ -119,11 +119,16 @@ ok('★ index.js 注册了 generate_hybrid 且真的调 runHybrid', () => {
   assert.ok(s.includes("step('register.generate_hybrid'"))
   assert.ok(s.includes('await runHybrid({'))
 })
-ok('★ index.js 混合模式的缺件闸门：probeTts 不 available 就抛 reason', () => {
-  const s = src('lib/index.js')
+ok('★ 缺件闸门：probeTts 不 available 就抛 reason（语音段与混合模式共用一条）', () => {
+  // ★ 2026-11-13：TTS 段外置到 lib/speech-tool.js。断言改读新文件，并锁住
+  //   index.js 仍保留前置闸门 + 通过 speechRunner 复用同一段，不是删断言迁就搬迁。
+  const s = src('lib/speech-tool.js')
   assert.ok(s.includes('if (!probe.available) throw new Error(probe.reason)'))
-  assert.ok(s.includes('buildTtsWorkflow(caps'))
+  assert.ok(s.includes('buildTtsWorkflow(ttsCaps'))
   assert.ok(s.includes('waitForAudio('))
+  const idx = src('lib/index.js')
+  assert.ok(idx.includes('if (!probe.available) throw new Error(probe.reason)'))
+  assert.ok(idx.includes('speechRunner('))
 })
 ok('★ index.js 段间卸载走 /free，且分段提交每段一个 prompt_id', () => {
   const s = src('lib/index.js')

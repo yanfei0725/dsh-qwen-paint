@@ -22,6 +22,8 @@ const mod = await import(pathToFileURL(path.join(ROOT, 'lib', 'index.js')).href)
 const { uiMaskPath } = mod.__internal
 const INDEX = readFileSync(path.join(ROOT, 'lib', 'index.js'), 'utf8')
 const CLIENT = readFileSync(path.join(ROOT, 'lib', 'client.js'), 'utf8')
+// ★ 2026-11-12：字节路由已外置（lib/index.js 贴 256 KB 上限），断言改读新文件
+const FILE_ROUTE = readFileSync(path.join(ROOT, 'lib', 'file-route.js'), 'utf8')
 // 剥注释：C 风格块注释 + 行注释（行注释带 m 标志逐行匹配）
 const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^\s*\/\/.*$/gmu, '')
 
@@ -54,10 +56,18 @@ console.log('\n=== 3. 插件自有图片路由 /api/qwen-paint/file（源码级�
 {
   const IDX = strip(INDEX)
   ok('注册了 /api/qwen-paint/file', INDEX.includes("path: '/api/qwen-paint/file'"))
-  ok('只收 GET/HEAD（其它方法 405）', IDX.includes("'GET only'"))
-  ok('限本机请求（isLocalRequest 围栏）', /fileBytesHandler[\s\S]{0,600}isLocalRequest\(req\)/u.test(IDX))
-  ok('★ 路径包含检查（挡掉 .. 穿越）', IDX.includes('startsWith(base + path.sep)'))
-  ok('吐的是 image/png 字节', IDX.includes("'content-type': 'image/png'"))
+  const FR = strip(FILE_ROUTE)
+  ok('只收 GET/HEAD（其它方法 405）', FR.includes("'GET only'"))
+  ok('限本机请求（isLocalRequest 围栏）', /fileBytesHandler[\s\S]{0,800}isLocalRequest\(req\)/u.test(FR))
+  ok('★ 路径包含检查（挡掉 .. 穿越）', FR.includes('startsWith(base + path.sep)'))
+  // ★ 2026-11-12 变更：以前**一律**回 image/png。视频选帧要在这里取 mp4，
+  //   写死 png 会让浏览器把 mp4 当图片解（直接黑屏）⇒ 改成按扩展名的 MIME 白名单。
+  ok('MIME 白名单仍把 .png 映射到 image/png', FR.includes("'.png': 'image/png'"))
+  ok('★ 视频能按 video/mp4 吐字节（否则 <video> 播不了）', FR.includes("'.mp4': 'video/mp4'"))
+  ok('未知扩展名不猜类型（回落 application/octet-stream）', FR.includes("'application/octet-stream'"))
+  // ★ 2026-11-12 轻量安全加固
+  ok('★ nosniff（防按内容嗅探成 HTML 执行）', FR.includes('x-content-type-options'))
+  ok('★ 先 stat 再读 + 大小上限（不把几 GB 视频读进内存）', FR.includes('st.size > maxBytes'))
 }
 
 console.log('\n=== 4. 弹窗三处修复（client.js 源码级） ===')

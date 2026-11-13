@@ -66,8 +66,30 @@ const SUITES = [
   { file: 'test-workflow-ast.mjs', note: 'B 线 WorkflowAST / 5 passes / 提交前校验与回滚 / comfy-catalog 接线' },
   { file: 'test-hybrid-runner.mjs', note: '混合模式三段编排（20/10/70 权重 / 分段 / 卸载 / 取消）' },
   { file: 'test-tts-workflow.mjs', note: 'TTS 兜底链 / 缺件报告 / 可插拔探测' },
+  // ★ 2026-11-13 B3 剩余：独立语音工具 + 描述集中层 + 回包按声明收口
+  { file: 'test-speech-tool.mjs', note: 'generate_speech / 描述集中层 / 回包收口（假 deps，零联网零媒体）' },
   { file: 'test-pipeline-modes.mjs', note: '面板 /modes 动态可用性（vm 真跑 mount）' },
   { file: 'test-ast-split.mjs', note: 'A 线 derive-slots + C 线零依赖源码 AST 零漂移验证器' },
+  // ★ 模型无关「角色参考」适配层 + 联网参考图硬同意门（两套都是纯 JS / 注入 fetch，不联网不派生子进程）
+  //   新增测试必须登记进本清单，否则等于没写：这两套不登记就永远不会被 npm test 跑到。
+  { file: 'test-reference-strategy.mjs', note: '角色参考：能力协商 / 模型无关查槽 / 零漂移 / I2V 起始帧契约' },
+  { file: 'test-reference-web.mjs', note: '联网参考图：逐请求同意门 / query 透传 / 端点 SSRF / 载荷白名单 / 不下载图片字节' },
+  { file: 'test-reference-config.mjs', note: '配置 / 契约 / 文档一致性：默认不可出站、占位符不漂移、面板只有一条联网出口' },
+  { file: 'test-ui-workbench.mjs', note: '图片编辑台：可见入口 / 端点围栏 / 蒙版清理 / 参数 clamp / 装完引导不回退' },
+  // ★ 0.2.0：视频模型清单 / 选型 / 下载护栏（纯注入，不联网、不下载、不派生子进程）
+  { file: 'test-video-model-catalog.mjs', note: '视频模型：官方清单权威值 / 按显卡推荐 / 默认不装 / 多源轮询 / 只下不传' },
+  { file: 'test-lowend.mjs', note: '核显 / 共享显存 / 8 GB：识别为共享显存 / 强制 gguf / 量化门槛 unverified / --lowvram / 不再劝退' },
+  { file: 'test-video-frames.mjs', note: '视频选帧：时间码↔帧号 / 两种选法归一 / argv 无注入 / 目录边界 / 无 ffmpeg 不假装成功' },
+  // ★ 2026-11-13 时间轴增强：缩略图轨道 + 改完的帧回贴
+  { file: 'test-video-replace.mjs', note: '帧回贴：区间换算 / overlay argv / 端点围栏 / 前端接线 / 体积红线' },
+  { file: 'test-igpu-profiles.mjs', note: '可选核显型号清单 / 诚实口径 / 可选自动下载默认关闭 / 低配判定回归锁（零联网零硬件探测）' },
+  { file: 'test-file-route.mjs', note: '媒体字节路由：穿越拦截 / 大小上限 / MIME 白名单 / nosniff / 只读' },
+  // ★ 2026-11-13 产品化改造：图形化引导 / 蒙版精修真接线 / 卸载内存 / 外部集成状态
+  { file: 'test-product-round.mjs', note: '产品化改造：引导步骤与同意门 / 蒙版参数真透传零漂移 / 卸载三态 / 端点围栏与脱敏 / 目录⊆注册 / 体积红线（全离线）' },
+  // ★ 2026-11-13 用户定「每次发布，简介 / 描述 / 版本号全部一起改」：把它变成机器护栏
+  { file: 'test-release-metadata.mjs', note: '发布元数据护栏：简介逐字同步 / 版本号六处一致 / 视频下载包能力口径 / 无误读措辞（漏改一处就红）' },
+  // ★ 2026-11-13 CPU 指令集识别 / 加速档：五档参数 + --cpu 互斥裁决 + 三态语义 + 端点围栏
+  { file: 'test-cpu-profile.mjs', note: 'CPU 加速档：型号/指令集三态 / 五档真实参数 / --cpu 摘显存与GPU内核 / 互斥组后者胜出 / QwenImage21Cache 覆盖 / 端点围栏与脱敏（全离线）' },
   // —— 契约 / 面板 / 步骤 ——
   { file: '_tool_contract_test.mjs', note: '工具契约' },
   { file: '_step4_dry_test.mjs', note: '4 步干跑' },

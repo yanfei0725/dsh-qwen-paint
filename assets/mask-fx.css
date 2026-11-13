@@ -1,0 +1,34 @@
+/* assets/mask-fx.css —— 蒙版精修控件（mf- 前缀，不碰宿主类名） */
+
+.mf-box {
+  flex: 1 1 100%; box-sizing: border-box; margin: 8px 0 2px; padding: 10px 12px;
+  border: 1px solid var(--qp-line, rgba(127,127,127,.28)); border-radius: 10px;
+  background: var(--qp-field, rgba(127,127,127,.06)); color: var(--qp-fg, inherit);
+  font-size: 12px;
+}
+.mf-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.mf-head-title { font-weight: 600; font-size: 12.5px; }
+.mf-mini {
+  padding: 3px 8px; border-radius: 6px; cursor: pointer; font-size: 11px;
+  border: 1px solid var(--qp-line-strong, rgba(127,127,127,.4));
+  background: transparent; color: inherit;
+}
+.mf-mini:hover { background: var(--qp-field-hover, rgba(127,127,127,.14)); }
+.mf-mini:disabled { opacity: .5; cursor: default; }
+.mf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 7px 14px; }
+.mf-field { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mf-field-top { display: flex; justify-content: space-between; gap: 6px; }
+.mf-label { opacity: .82; }
+.mf-val { font-variant-numeric: tabular-nums; opacity: .7; }
+.mf-range { width: 100%; accent-color: var(--qp-accent, #7db3ff); cursor: pointer; }
+.mf-checks { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 9px; }
+.mf-check { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; opacity: .9; }
+.mf-check input { cursor: pointer; accent-color: var(--qp-accent, #7db3ff); }
+.mf-mem { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 9px;
+  padding-top: 8px; border-top: 1px solid var(--qp-line, rgba(127,127,127,.24)); }
+.mf-select {
+  padding: 4px 7px; border-radius: 6px; font-size: 11.5px;
+  border: 1px solid var(--qp-line-strong, rgba(127,127,127,.4));
+  background: var(--qp-bg, transparent); color: inherit;
+}
+.mf-note { margin-top: 8px; font-size: 11px; opacity: .62; line-height: 1.5; }

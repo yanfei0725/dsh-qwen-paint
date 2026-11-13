@@ -142,13 +142,19 @@ ok('★ index.js 的 modes 端点用真实 /object_info 决定 hybrid 可用性'
   assert.ok(s.includes('probeTts(catalogForTts(objectInfo))'))
   assert.ok(s.includes('TTS_FALLBACK_CHAINS.map'))
 })
-ok('★★ index.js 不把音频落盘写死 .wav（SaveAudio 出 flac / MP3 出 mp3）', () => {
-  const s = src('lib/index.js')
-  assert.ok(s.includes('audioExt'))
+ok('★★ 语音段落盘不写死 .wav，且 index.js 不再有第二份 TTS 实现', () => {
+  // ★ 2026-11-13：TTS 段外置到 lib/speech-tool.js（混合模式与 generate_speech 共用）。
+  //   断言改读新文件，不是删掉或放宽；同时锁住「index.js 里没有第二份」。
+  const s = src('lib/speech-tool.js')
+  assert.ok(s.includes('exec(String(first?.filename'))
+  assert.ok(s.includes('toLowerCase()'))
   assert.ok(!s.includes('_tts.wav'))
+  const idx = src('lib/index.js')
+  assert.ok(!idx.includes('waitForAudio(cfg'))
+  assert.ok(idx.includes('speechRunner('))
 })
 ok('★ generate_hybrid 描述不再谎称「本机必须装 TTS 才行」', () => {
-  const s = src('lib/index.js')
+  const s = src('lib/tool-descriptions.js')
   assert.ok(s.includes('ComfyUI-Qwen-TTS'))
   assert.ok(!s.includes('qwen3-tts-gguf / MiniMax-H3'))
 })

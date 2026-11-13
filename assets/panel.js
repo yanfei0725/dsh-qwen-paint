@@ -29,6 +29,9 @@
   var PROGRESS_PATH = 'api/comfy-pipeline/progress'
   var LIBRARY_PATH = 'api/comfy-pipeline/library'
   var MODES_PATH = 'api/comfy-pipeline/modes'
+  var REFERENCE_PATH = 'api/comfy-pipeline/reference'
+  var REFERENCE_PREFER_PATH = 'api/comfy-pipeline/reference/prefer'
+  var REFERENCE_SEARCH_PATH = 'api/comfy-pipeline/reference/search'
   var FALLBACK_TIERS = [25, 50, 75, 100]
 
   // 默认与「本地没探到 modes 端点」一致：图/视频可用、混合禁用。
@@ -379,6 +382,109 @@
     }
   }
 
+  /* ---------- 角色参考：模型无关策略 + 逐次同意的联网检索 ----------
+   * 三条不能破的线：
+   *   ① 默认不启用任何策略（''）：生成路径与升级前逐字节一致，零漂移。
+   *   ② 策略偏好只存进程内存（服务端 /reference/prefer 也是），不落盘、不写记忆。
+   *   ③ 联网检索**绝不自动发**：只有用户主动点「仅本次同意并检索」才 POST 一次
+   *      带 consent:true 的请求；按钮不是开关，一次点击只管一次，不留"已同意"状态。
+   *      候选只以文本 URL 展示 —— 渲染 <img src=...> 会让浏览器自动下载远程字节，
+   *      等于绕过同意门，这条线不能碰。
+   */
+  var refState = {
+    available: false,
+    online: false,
+    mode: 'image',
+    preferred: '',
+    selectedLabel: '',
+    strategies: [],
+    web: null,
+    query: '',
+    busy: false,
+    hint: '',       // 能力探测类提示
+    note: '',       // 检索结果 / 错误（与探测提示分开，避免互相覆盖）
+    candidates: [],
+  }
+
+  function loadReference() {
+    var mode = state && state.mode === 'video' ? 'video' : 'image'
+    refState.mode = mode
+    return fetch(REFERENCE_PATH + '?mode=' + encodeURIComponent(mode), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null })
+      .then(function (j) {
+        refState.available = Boolean(j && j.ok === true)
+        if (!refState.available) {
+          refState.online = false
+          refState.strategies = []
+          refState.hint = '未探到角色参考能力端点（后端未启动 / 未升级）。其它功能不受影响。'
+          paintReference()
+          return
+        }
+        refState.online = j.online === true
+        refState.preferred = typeof j.preferred === 'string' ? j.preferred : ''
+        refState.selectedLabel = typeof j.selectedLabel === 'string' ? j.selectedLabel : ''
+        refState.strategies = Array.isArray(j.strategies) ? j.strategies : []
+        refState.web = j.web && typeof j.web === 'object' ? j.web : null
+        refState.hint = ''
+        paintReference()
+      })
+      .catch(function () {
+        refState.available = false
+        refState.online = false
+        refState.strategies = []
+        refState.hint = '未探到角色参考能力端点（后端未启动 / 未升级）。其它功能不受影响。'
+        paintReference()
+      })
+  }
+
+  function paintReference() {
+    if (!nodes || !nodes.reference) return
+    var box = nodes.reference
+    var sel = box.querySelector('.cp-ref-select')
+    var status = box.querySelector('.cp-ref-status')
+    var result = box.querySelector('.cp-ref-result')
+    var list = box.querySelector('.cp-ref-candidates')
+    var btn = box.querySelector('.cp-ref-search')
+    var query = box.querySelector('.cp-ref-query')
+    if (!sel || !status || !result || !list || !btn || !query) return
+
+    while (sel.children.length > 0) sel.removeChild(sel.children[0])
+    var off = el('option', null, '不启用（默认 · 不改工作流）')
+    off.value = ''
+    sel.appendChild(off)
+    var auto = el('option', null, '自动协商（按后端真实能力）')
+    auto.value = 'auto'
+    sel.appendChild(auto)
+    var usable = 0
+    for (var i = 0; i < refState.strategies.length; i += 1) {
+      var s = refState.strategies[i]
+      if (!s || typeof s.id !== 'string') continue
+      if (s.available === true) usable += 1
+      var o = el('option', null, String(s.label || s.id) + (s.available === false ? '（当前后端不可用）' : ''))
+      o.value = s.id
+      sel.appendChild(o)
+    }
+    sel.value = refState.preferred
+    query.value = String(refState.query || '')
+    btn.disabled = refState.busy === true
+
+    if (refState.hint !== '') {
+      status.textContent = refState.hint
+    } else if (!refState.available) {
+      status.textContent = '正在探测后端能力…（通用兜底不依赖探测结果，任何扩散模型都成立）'
+    } else if (refState.online) {
+      status.textContent = '后端已连接 · 自动选中「' + refState.selectedLabel + '」· 可用策略 '
+        + usable + ' 种（' + refState.mode + '）'
+    } else {
+      status.textContent = '后端未连接 · 能力清单暂查不到；通用兜底仍可用于任何扩散模型'
+    }
+    result.textContent = String(refState.note || '')
+    // ★ 只写文本，绝不渲染 <img src=...> —— 那会自动下载远程字节，越过同意门。
+    list.textContent = refState.candidates.length > 0
+      ? refState.candidates.slice(0, 6).join('\n')
+      : ''
+  }
+
   function scheduleSave() {
     if (saveTimer !== null) clearTimeout(saveTimer)
     saveTimer = setTimeout(save, 300)
@@ -572,6 +678,8 @@
         scheduleSave()
         // 切模式要重建 DOM：视频组的可用态依赖它（重建不动 state，不丢已拨的值）
         rebuild()
+        // 图片 / 视频两套策略清单不同，重新探一次，不拿旧模式的能力快照冒充新模式
+        loadReference()
       })
       tabEls[m.id] = b
       tabs.appendChild(b)
@@ -635,6 +743,95 @@
     library.appendChild(el('p', 'cp-hint cp-library-hint', ''))
     panel.appendChild(library)
 
+    // ★ 角色参考：独立卡片，刻意不用 .cp-field / checkbox —— 面板回归锁的是
+    //   「13 个 .cp-field + 6 个 disabled input」，新 UI 不能挤进那套计数里。
+    var reference = card('角色参考（模型无关）', 'cp-reference')
+    reference.appendChild(el('p', 'cp-hint',
+      '默认不启用 = 生成路径与升级前逐字节一致。启用后按后端 /object_info 的真实节点能力协商；'
+      + '协商不到需配套权重的专属适配器（IP-Adapter / ControlNet Reference 等）就自动落到只用基础节点的通用兜底。'))
+    reference.appendChild(el('div', 'cp-field-label', '参考策略（只存进程内存，重启回默认）'))
+    var refSel = el('select', 'cp-select cp-ref-select')
+    refSel.addEventListener('change', function () {
+      var v = String(refSel.value)
+      refState.preferred = v
+      // 只发一个策略 id：不发起任何外部请求，也不写配置 / 记忆。
+      fetch(REFERENCE_PREFER_PATH, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ strategy: v }),
+      })
+        .then(function (r) { return r.json() })
+        .then(function (j) {
+          if (j && j.ok === true) refState.preferred = typeof j.preferred === 'string' ? j.preferred : v
+          setStatus(j && j.ok === true
+            ? (refState.preferred === '' ? '角色参考已关闭（零漂移）' : '参考策略已生效：' + refState.preferred)
+            : '参考策略保存失败：' + ((j && j.reason) || '未知原因'))
+          paintReference()
+        })
+        .catch(function (err) { setStatus('参考策略保存失败：' + (err && err.message ? err.message : err)) })
+    })
+    reference.appendChild(refSel)
+    reference.appendChild(el('p', 'cp-hint cp-ref-status', ''))
+
+    reference.appendChild(el('div', 'cp-field-label', '联网参考图检索（默认拒绝 · 每次单独同意）'))
+    reference.appendChild(el('p', 'cp-hint',
+      '只把查询词发往你在配置里指定的外部 https 端点，出站字段仅 query / limit / media；'
+      + '不含提示词、seed、本机路径或凭据。只返回候选 URL，插件不下载远程图片字节。端点未配置时一律拒绝。'))
+    var refQuery = el('input', 'cp-ref-query')
+    refQuery.type = 'text'
+    refQuery.placeholder = '例：红发角色 三视图'
+    refQuery.addEventListener('input', function () { refState.query = String(refQuery.value) })
+    reference.appendChild(refQuery)
+    var refBtn = el('button', 'cp-ref-search', '仅本次同意并检索')
+    refBtn.type = 'button'
+    refBtn.addEventListener('click', function () {
+      var q = String(refState.query || '').trim()
+      if (q === '') {
+        refState.note = '先填查询词；未发起任何联网请求。'
+        paintReference()
+        return
+      }
+      if (refState.busy) return
+      refState.busy = true
+      refState.note = '本次已同意，正在检索…'
+      refState.candidates = []
+      paintReference()
+      // ★ 一次点击 = 一次显式同意；不写任何「记住同意」的开关或持久化状态。
+      fetch(REFERENCE_SEARCH_PATH, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: q, consent: true, limit: 6 }),
+      })
+        .then(function (r) { return r.json() })
+        .then(function (j) {
+          refState.busy = false
+          if (!j || j.ok !== true) {
+            refState.candidates = []
+            refState.note = '检索未成功：' + ((j && (j.reason || j.code)) || '未知原因') + '（本次同意已随请求结束）'
+          } else {
+            var urls = []
+            var arr = Array.isArray(j.candidates) ? j.candidates : []
+            for (var n = 0; n < arr.length; n += 1) {
+              if (arr[n] && typeof arr[n].url === 'string') urls.push(arr[n].url)
+            }
+            refState.candidates = urls
+            refState.note = urls.length > 0
+              ? '返回 ' + urls.length + ' 条候选（仅 URL，未下载图片）。选定后请自行保存并走本地参考图上传。'
+              : '本次没有可用候选（只返回 URL，不下载图片字节）。'
+          }
+          paintReference()
+        })
+        .catch(function (err) {
+          refState.busy = false
+          refState.note = '检索失败：' + (err && err.message ? err.message : err) + '（本次同意已随请求结束）'
+          paintReference()
+        })
+    })
+    reference.appendChild(refBtn)
+    reference.appendChild(el('p', 'cp-hint cp-ref-result', ''))
+    reference.appendChild(el('p', 'cp-hint cp-ref-candidates', ''))
+    panel.appendChild(reference)
+
     var adv = el('details', 'cp-card cp-adv')
     adv.appendChild(el('summary', null, '高级设置'))
     var body = el('div', 'cp-adv-body')
@@ -673,7 +870,8 @@
     panel.appendChild(foot)
 
     document.body.appendChild(panel)
-    nodes = { fab: fab, panel: panel, status: status, note: note, progress: progress, library: library }
+    nodes = { fab: fab, panel: panel, status: status, note: note, progress: progress, library: library, reference: reference }
+    paintReference()
     return nodes
   }
 
@@ -706,7 +904,7 @@
     if (!nodes) return
     var wasOpen = nodes.panel.hidden === false
     try { nodes.panel.parentNode.removeChild(nodes.panel) } catch (err) { /* 已离体 */ }
-    nodes = { fab: nodes.fab, panel: null, status: null, note: null, progress: null, library: null }
+    nodes = { fab: nodes.fab, panel: null, status: null, note: null, progress: null, library: null, reference: null }
     render()
     if (wasOpen) open()
   }
@@ -901,6 +1099,7 @@
         wire()
         refreshNote()
         loadLibrary()
+        loadReference()
         setStatus('就绪 · ' + describe(state))
         return nodes
       })
@@ -914,6 +1113,7 @@
     close: close,
     getState: function () { return state ? JSON.parse(JSON.stringify(state)) : null },
     getModes: function () { return JSON.parse(JSON.stringify(modeAvailability)) },
+    getReferenceState: function () { return JSON.parse(JSON.stringify(refState)) },
     api: {
       clampByDef: clampByDef,
       quantize: quantize,

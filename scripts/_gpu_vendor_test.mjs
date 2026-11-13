@@ -24,7 +24,11 @@ const cases = [
   ['NVIDIA A100-SXM4-80GB', 'nvidia'],
   ['Intel(R) Arc(TM) B580 Graphics', 'intel_battlemage'],
   ['Intel(R) Arc(TM) A770 Graphics', 'intel_alchemist'],
-  ['Intel(R) UHD Graphics 630', 'intel'],
+  // ★★★ 2026-11-12 变更：核显现在有自己的档（intel_igpu / sharedMemory）。
+  //   旧断言写的是 'intel' —— 那会把核显当成"普通 Intel 独显"处理，
+  //   既不标记共享显存、也不会自动 --lowvram。UHD Graphics 就是核显，判成 intel_igpu 才对。
+  ['Intel(R) UHD Graphics 630', 'intel_igpu'],
+  ['Intel(R) Iris Xe Graphics', 'intel_igpu'],
   ['AMD Radeon RX 7900 XT', 'amd_rdna3'],
   ['AMD Radeon RX 9070 XT', 'amd_rdna4'],
   ['AMD Radeon RX 6800 XT', 'amd_rdna2'],

@@ -1,0 +1,239 @@
+/* assets/cpu-accel.css —— CPU 指令集 / 加速档面板样式（全部 ca- 前缀）
+ *
+ * 颜色走项目既有的 --qp-* 变量（深/浅色主题各自定义），没有时用兜底值，
+ * 这样在 DSH 换主题时不会变成一片看不清的深底黑字。
+ */
+
+.ca-box {
+  margin: 10px 0 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--qp-line, rgba(127, 127, 127, 0.28));
+  border-radius: 12px;
+  background: var(--qp-card, rgba(127, 127, 127, 0.06));
+  box-sizing: border-box;
+}
+
+.ca-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ca-h-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--qp-fg, inherit);
+}
+
+.ca-mini {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  font-size: 11px;
+  line-height: 1.6;
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--qp-fg, inherit);
+  background: transparent;
+  border: 1px solid var(--qp-line, rgba(127, 127, 127, 0.35));
+}
+
+.ca-mini:hover {
+  border-color: var(--qp-accent, #2b6cb0);
+  color: var(--qp-accent, #2b6cb0);
+}
+
+/* ---- 头部：型号 / 论据 / 指令集徽章 ---- */
+
+.ca-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ca-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--qp-fg, inherit);
+  word-break: break-word;
+}
+
+.ca-ev {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  border: 1px solid currentColor;
+  opacity: 0.9;
+}
+
+/* 论据强度用颜色区分：实测=绿、推断=琥珀、未知=灰 */
+.ca-ev[data-ev="flags"] { color: #2f855a; }
+.ca-ev[data-ev="model"] { color: #b7791f; }
+.ca-ev[data-ev="unknown"] { color: #718096; }
+
+.ca-meta {
+  margin-top: 5px;
+  font-size: 11.5px;
+  opacity: 0.78;
+  color: var(--qp-fg, inherit);
+}
+
+.ca-isa-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ca-isa {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  border: 1px solid currentColor;
+  cursor: help;
+}
+
+/* 三态必须视觉可分：有=实心绿、没有=灰色描边、未知=虚线灰 */
+.ca-isa[data-state="yes"] { color: #2f855a; }
+.ca-isa[data-state="no"] { color: #a0aec0; }
+.ca-isa[data-state="unknown"] {
+  color: #718096;
+  border-style: dashed;
+}
+
+.ca-note {
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.6;
+  opacity: 0.75;
+  color: var(--qp-fg, inherit);
+}
+
+/* ---- 档位卡片 ---- */
+
+.ca-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.ca-mode {
+  display: block;
+  padding: 9px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--qp-line, rgba(127, 127, 127, 0.25));
+  background: var(--qp-bg, transparent);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.ca-mode:hover {
+  border-color: var(--qp-accent, #2b6cb0);
+}
+
+.ca-mode[data-selected="1"] {
+  border-color: var(--qp-accent, #2b6cb0);
+  box-shadow: inset 0 0 0 1px var(--qp-accent, #2b6cb0);
+}
+
+/* 风险色条：让"这档更激进"一眼可见，而不是靠读长句 */
+.ca-mode[data-risk="medium"] { border-left: 3px solid #b7791f; }
+.ca-mode[data-risk="high"] { border-left: 3px solid #c53030; }
+.ca-mode[data-risk="low"] { border-left: 3px solid #2f855a; }
+.ca-mode[data-risk="none"] { border-left: 3px solid rgba(127, 127, 127, 0.45); }
+
+.ca-mode-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.ca-radio {
+  flex: 0 0 auto;
+  margin: 0;
+  cursor: pointer;
+}
+
+.ca-mode-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--qp-fg, inherit);
+}
+
+.ca-deg {
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  color: #b7791f;
+  border: 1px solid currentColor;
+}
+
+.ca-mode-sum {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.55;
+  opacity: 0.78;
+  color: var(--qp-fg, inherit);
+}
+
+.ca-args {
+  display: block;
+  margin-top: 6px;
+  padding: 5px 7px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  line-height: 1.6;
+  word-break: break-all;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: rgba(127, 127, 127, 0.12);
+  color: var(--qp-fg, inherit);
+}
+
+.ca-args-empty {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.ca-env {
+  margin-top: 4px;
+  font-size: 10.5px;
+  opacity: 0.7;
+  word-break: break-all;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--qp-fg, inherit);
+}
+
+/* 工作流级覆盖：生效时机不同（不用重启），用左侧细线区分一下 */
+.ca-env-wf {
+  padding-left: 7px;
+  border-left: 2px solid var(--qp-accent, #2b6cb0);
+  opacity: 0.85;
+}
+
+.ca-skip {
+  margin-top: 5px;
+  padding-left: 8px;
+  border-left: 2px solid #b7791f;
+  font-size: 10.5px;
+  line-height: 1.55;
+  opacity: 0.85;
+  color: var(--qp-fg, inherit);
+}
+
+.ca-foot {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--qp-line, rgba(127, 127, 127, 0.3));
+}
+
+.ca-warn {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #b7791f;
+}
