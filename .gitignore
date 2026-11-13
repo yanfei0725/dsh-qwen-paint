@@ -25,6 +25,13 @@ _tome_probe/
 # DSH 插件运行时生成的脚本与日志
 .dshqp-*
 
+# ★ 生成历史的 SQLite 库（运行时产物，落在 <outputDir> 内）
+#   正常情况下出图目录不在仓库里，这条只是兜底：万一有人把 outputDir 指到仓库根，
+#   `git add .` 也不会把用户的历史记录（含提示词）提交上去。
+.qwen-paint-history.db
+.qwen-paint-history.db-wal
+.qwen-paint-history.db-shm
+
 # 密钥 / 本地配置（npm 令牌只走环境变量或用户级 ~/.npmrc，仓库内 .npmrc 一律忽略）
 .env
 .env.*

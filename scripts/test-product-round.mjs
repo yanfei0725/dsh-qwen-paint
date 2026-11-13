@@ -291,6 +291,9 @@ console.log('\n=== 6. host 接线静态锁 + 端点目录 ⊆ 真实注册 ===')
   const endpointFiles = [
     'lib/index.js', 'lib/integration-endpoints.js', 'lib/video-frames-endpoints.js',
     'lib/reference-endpoints.js', 'lib/ui-edit-endpoints.js', 'lib/file-route.js', 'lib/asset-route.js',
+    // ★ 2026-11-13 审计补：这两个模块也注册了对外端点，之前不在扫描范围里，
+    //   所以「目录缺 /history、/cpu-*」这件事两头都发现不了。
+    'lib/history-endpoints.js', 'lib/cpu-endpoints.js',
   ].map((f) => readSrc(f)).join('\n')
 
   ok('★ 端点处理器已挂到 host', idx.includes('makeIntegrationHandlers({') && idx.includes('registerIntegrationRoutes('))
@@ -318,8 +321,25 @@ console.log('\n=== 6. host 接线静态锁 + 端点目录 ⊆ 真实注册 ===')
   ok('★★ 上一版脚本的幽灵变量一个都没混进来', !idx.includes('status.lastOnline')
     && !idx.includes('registeredTools.map') && !idx.includes('readiness?.')
     && !idx.includes('version: pkg.version') && !idx.includes('setupGuideReady: false'))
-  ok('★ 端点目录 ⊆ 真实注册（防文档写了端点没挂）', INTEGRATION_ROUTES.every((r) => endpointFiles.includes(r.path)),
+  ok('★ 端点目录 ⊆ 真实注册（防「写了没挂」）', INTEGRATION_ROUTES.every((r) => endpointFiles.includes(r.path)),
     INTEGRATION_ROUTES.filter((r) => !endpointFiles.includes(r.path)).map((r) => r.path).join(','))
+  // ★★ 2026-11-13 审计（第一轮）：原来只查上面那一个方向，所以「真注册了但没写进目录」
+  //    完全抓不到 —— 实测漏了 10 条（library / skills / reference 四件套 / file /
+  //    memory/* / recent-images / repair）。补上反向断言，以后加端点忘了同步就红。
+  const cataloged = new Set(INTEGRATION_ROUTES.map((r) => r.path))
+  const registered = [...new Set([...endpointFiles
+    .matchAll(/['"](\/api\/(?:qwen-paint|comfy-pipeline)\/[A-Za-z0-9_./-]*)['"]/gu)]
+    .map((m) => m[1]))].sort()
+  ok('★★ 真实注册 ⊆ 端点目录（防「挂了没写」）',
+    registered.every((p) => cataloged.has(p)), registered.filter((p) => !cataloged.has(p)).join(','))
+  ok('端点目录条数与实际注册逐条相等', registered.length === INTEGRATION_ROUTES.length,
+    `目录 ${INTEGRATION_ROUTES.length} / 实际 ${registered.length}：`
+    + registered.filter((p) => !cataloged.has(p)).concat(
+      INTEGRATION_ROUTES.map((r) => r.path).filter((p) => !registered.includes(p))).join(','))
+  ok('端点目录里没有重复路径', cataloged.size === INTEGRATION_ROUTES.length)
+  ok('端点目录每条都有 method / access / desc', INTEGRATION_ROUTES.every((r) =>
+    typeof r.method === 'string' && r.method !== '' && r.access === 'local'
+    && typeof r.desc === 'string' && r.desc !== ''))
   ok('★ 体积红线：单文件 ≤ 262144 B', sizeOf('lib/index.js') <= 262144 && sizeOf('lib/client.js') <= 262144,
     'client.js=' + sizeOf('lib/client.js'))
   ok('★ lib 合计 ≤ 2097152 B', (() => {

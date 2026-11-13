@@ -1,12 +1,12 @@
 # dsh-qwen-paint
 
-> DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合，文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech），模型无关角色参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。QQ 交流群 454707710。
+> DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（QQ 交流群 454707710）。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合，文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech），模型无关角色参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。
 
 本站是 `dsh-qwen-paint` 的静态文档页，供搜索引擎与 AI Agent 抓取。插件本身是运行在用户本机的 DSH bundle（按本地目录安装），**不是 Web 服务**：本站没有 HTTP API、没有 OpenAPI 规范、没有 MCP server，也不收集或转发任何用户数据。因此本站不声明 `ai-plugin.json` / OpenAPI / MCP manifest —— 伪造这些信号会让 Agent 误以为存在可远程调用的服务。
 
 ## 是什么
 
-- 面向 DeepSeek Harness (DSH) 的本地**视频 / 生图 / TTS 全能**生成与编辑插件，版本 0.3.1，MIT 许可；三大能力并列主推，不是「只做生图」。
+- 面向 DeepSeek Harness (DSH) 的本地**视频 / 生图 / TTS 全能**生成与编辑插件，版本 0.31.1，MIT 许可；三大能力并列主推，不是「只做生图」。
 - 经本机 ComfyUI 调用 Qwen-Image 2.1 / 官方 Turbo 模型；结果落盘并在会话界面内直接呈现。
 - 工具：`draw_image`（文生图 / 1–16 张参考图编辑）、`inpaint_image`（局部重绘）、`remove_image`（元素移除）、`outpaint_image`（四向扩图）、`upscale_image`（高清放大）、`generate_video`（文生 / 图生视频）、`generate_speech`（独立 Qwen3-TTS 语音合成）、`generate_hybrid`（图→音→视频混合）。
 - 平台：Windows / Linux；NVIDIA / Intel Arc / AMD 显卡，以及核显 / 共享显存与 8 GB 低内存档位。

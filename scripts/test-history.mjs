@@ -73,8 +73,14 @@ const outDir = path.join(tmp, 'out')
   const store = createHistoryStore({ outputDir: outDir, log })
   eq(store.available, true, '★ 本机 Node 有 node:sqlite → available')
   eq(store.persistent, true, '持久化打开')
-  ok(store.db_file.endsWith(HISTORY_DB_NAME), 'DB 落在 <outputDir>/' + HISTORY_DB_NAME)
-  ok(fs.existsSync(store.db_file), 'DB 文件真的创建了')
+  // ★ 语义变更（2026-11-13 审计）：db_file 从「绝对路径」改成「只给文件名」。
+  //   /history 的响应会被浏览器、外部集成、代理日志三处消费，不该带本机目录结构。
+  eq(store.db_file, HISTORY_DB_NAME, '★ db_file 只给文件名（不再暴露本机绝对路径）')
+  ok(!store.db_file.includes(path.sep) && !store.db_file.includes('/') && !store.db_file.includes(':'),
+    '★★ db_file 不含任何路径分隔符 / 盘符')
+  ok(path.isAbsolute(store.db_path) && store.db_path.endsWith(HISTORY_DB_NAME),
+    '★ db_path 才是真实路径（内部 / 测试用，绝不进 HTTP 响应）')
+  ok(fs.existsSync(path.join(outDir, HISTORY_DB_NAME)), 'DB 文件真的创建在 outputDir 里')
 
   const absImg = path.join(outDir, '2026', 'cat.png')
   // 真建一个文件：软删除断言要证明「记录没了但文件还在」，不能用不存在的路径空转。
@@ -88,12 +94,31 @@ const outDir = path.join(tmp, 'out')
   eq(store.record({ file_path: path.join(outDir, 'voice.mp3'), prompt: '旁白', kind: 'audio' }), true, '音频可写入')
   eq(store.record({ file_path: path.join(outDir, 'note.txt'), prompt: '杂项' }), true, '未知扩展名可写入（kind 推断为 other）')
 
+  // ★★ 2026-11-13 第一轮审计抓到的**真漏洞**：
+  //   record() 此前只挡 `path.isAbsolute`，「不是绝对路径」就原样收下，
+  //   于是 `../outside.png` / `a/../../outside.png` 被判成合法相对路径入库，
+  //   之后 asRow() 用 path.join(outputDir, rel) 一拼就**逃出出图目录**，
+  //   再经 /api/qwen-paint/file?path= 就能读到目录外的文件。
+  //   下面每条都必须返回 false，且不能改变后面 total=4 的断言。
+  for (const bad of ['../outside.png', '..\\outside.png', 'a/../../outside.png',
+    'C:outside.png', 'C:outside/x.png', '..', '']) {
+    eq(store.record({ file_path: bad, prompt: '穿越尝试' }), false,
+      '★★ 越界路径拒绝入库：' + JSON.stringify(bad))
+  }
+
   const all = await store.query({})
   eq(all.total, 4, '★ 重复 file_path 被忽略：4 条不同文件 = 4 行')
   ok(all.items.every((x) => !path.isAbsolute(x.file_path)), '★★ DB 里只存相对路径（迁移目录不失效、不入库绝对路径）')
   ok(all.items.every((x) => typeof x.preview_url === 'string' && x.preview_url.startsWith('api/qwen-paint/file?path=')),
     '每条带本机预览 URL（相对路径，不写死主机）')
-  ok(all.items.every((x) => !String(x.preview_url).includes(tmp)), '★★ 预览 URL 里没有临时目录明文')
+  // preview_url 必须能让 /api/qwen-paint/file 读到文件，所以保留绝对路径。
+  // 真正要锁的是「解码后仍落在 outputDir 内」—— db 被篡改也不能把预览引到目录外。
+  // （此前那条「URL 里没有临时目录明文」是假安全：encodeURIComponent 早把
+  //   `C:\Users\…` 编成 `C%3A%5CUsers…`，明文当然搜不到，但路径照样在里面。）
+  ok(all.items.every((x) => {
+    const p = decodeURIComponent(String(x.preview_url).slice('api/qwen-paint/file?path='.length))
+    return path.resolve(p).startsWith(path.resolve(outDir) + path.sep)
+  }), '★★ 预览 URL 解码后仍落在 outputDir 内（越界读不到）')
   eq(all.items.find((x) => x.file_path.endsWith('cat.png'))?.kind, 'image', 'kind 自动推断 = image')
   eq(all.items.find((x) => x.file_path.endsWith('clip.mp4'))?.kind, 'video', 'kind 自动推断 = video')
 
@@ -132,7 +157,9 @@ const outDir = path.join(tmp, 'out')
   ok(String(readSrc('lib/history-store.js')).includes('绝不删用户磁盘上的图片'), '源码注释保留「绝不删用户磁盘文件」约束')
 
   const { DatabaseSync } = await import('node:sqlite')
-  const raw = new DatabaseSync(store.db_file)
+  // ⚠ 必须用 db_path（真实路径）；store.db_file 现在只是文件名，
+  //   拿它 new DatabaseSync 会在**当前目录**新建空库，然后报 no such table。
+  const raw = new DatabaseSync(store.db_path)
   const row = raw.prepare('SELECT deleted FROM images WHERE id = ?').get(target.id)
   eq(Number(row.deleted), 1, '★★ 软删除是 deleted=1，不是物理 DELETE')
   raw.close()

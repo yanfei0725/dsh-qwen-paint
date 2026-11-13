@@ -103,6 +103,29 @@ console.log('\n=== 3. 版本号：一处改、六处必须同时改 ===')
   ok('package.json 自身版本字段唯一', (pkgText.match(/"version":/gu) ?? []).length === 1)
   const currentTags = [...readme.matchAll(/\*\*当前版本\*\*：`([^`]+)`/gu)].map((m) => m[1])
   ok('README 里所有「当前版本」标记都等于 V', currentTags.length > 0 && currentTags.every((x) => x === V), currentTags.join(','))
+
+  // ★ 2026-11-13 审计（第二轮）补漏：上一轮 0.3.0→0.3.1 时漏掉了 README 里
+  //   「当前 `0.3.0`」那句安装引导 —— 因为它既不是「**当前版本**：」也不是更新说明标题，
+  //   两道判据都够不着。这里改成抓**任何**「当前 … `x.y.z`」的写法，漏一个就红。
+  const inlineCurrent = [...readme.matchAll(/当前[^`\n]{0,12}`(\d+\.\d+\.\d+)`/gu)].map((m) => m[1])
+  ok('★ README 里所有「当前 `x.y.z`」写法都等于 V（上一轮就是这里漏的）',
+    inlineCurrent.length > 0 && inlineCurrent.every((x) => x === V), inlineCurrent.join(','))
+
+  // 落地页 docs/index.html 三处版本号此前完全不在检查清单里 —— GitHub Pages 会一直
+  // 对外宣称旧版本，而 npm 上已经是新的。
+  const landing = read('docs/index.html')
+  ok('★ 落地页 JSON-LD 的 softwareVersion 与 V 一致',
+    landing.includes('"softwareVersion": "' + V + '"'))
+  ok('★ 落地页可见版本标签与 V 一致', landing.includes('版本 ' + V + '<'))
+  ok('★ 落地页安装说明里的当前版本与 V 一致', landing.includes('当前 <code>' + V + '</code>'))
+
+  // 反向：更新说明标题里不许出现比 V 更新的版本号（防手滑把未来版本写进历史）
+  const noteHeads = [...readme.matchAll(/^## (\d+)\.(\d+)\.(\d+) 更新说明/gu)]
+    .map((m) => [Number(m[1]), Number(m[2]), Number(m[3])])
+  const [V1, V2, V3] = V.split('.').map(Number)
+  const cmp = (a, b) => (a[0] - b[0]) || (a[1] - b[1]) || (a[2] - b[2])
+  ok('更新说明里没有比 V 更新的版本号', noteHeads.every((x) => cmp(x, [V1, V2, V3]) <= 0),
+    noteHeads.map((x) => x.join('.')).join(','))
 }
 
 console.log('\n=== 4. 三大能力在 README Features 表里都有工具行 ===')

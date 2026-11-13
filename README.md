@@ -1,6 +1,6 @@
 # dsh-qwen-paint · (绘图)千问（优化版）
 
-DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合，文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech），模型无关角色参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。QQ 交流群 454707710。
+DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（QQ 交流群 454707710）。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合，文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech），模型无关角色参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。
 
 ## Features
 
@@ -36,7 +36,7 @@ DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行。�
 dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 ```
 
-> 使用 `desktop` profile 时须**先完全退出 DSH**。本包**已发布到 npm**（`dsh-qwen-paint`，当前 `0.3.0`），可直接 `dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式仅用于开发或试用未发布改动。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
+> 使用 `desktop` profile 时须**先完全退出 DSH**。本包**已发布到 npm**（`dsh-qwen-paint`，当前 `0.31.1`），可直接 `dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式仅用于开发或试用未发布改动。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
 
 ## Usage
 
@@ -102,7 +102,7 @@ dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 
 > **QQ 交流群**：`454707710`　｜　**反馈 / 提问 / 提需求**都走这里，issue 也欢迎：<https://github.com/yanfei0725/dsh-qwen-paint/issues>
 
-> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：MIT　｜　**当前版本**：`0.3.1`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
+> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：MIT　｜　**当前版本**：`0.31.1`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
 
 ---
 
@@ -188,6 +188,18 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 | `< 22.5` | 降级：`available: false`、`persistent: false`，只能读既有 `.qwen-paint-memory.jsonl` 做内存过滤；界面与工具都会**明说「未持久化」**，不假装有数据 |
 
 刻意**不**把 `engines` 提到 `>=22.5`：那会把一批能正常出图的用户直接挡在门外，代价只是少一个可搜索的历史库。
+
+## 0.31.1 更新说明
+
+这一版是**审计修复版**，不加新功能，专门堵上一版留下的安全与一致性问题。
+
+- **修一个真漏洞：历史库路径穿越**。`record()` 此前只挡绝对路径，`../outside.png`、`a/../../outside.png` 会被判成「合法相对路径」直接入库，之后 `/api/qwen-paint/file?path=` 能读到出图目录**之外**的文件。现在相对 / 绝对两种输入走同一道净化（`sanitizeRelPath`）：越界、Windows 盘符相对路径（`C:x.png`）、规范化后仍含 `..` 段的一律拒绝。补了 6 组用例（含已复现过的三种穿越写法）。
+- **历史库不再泄漏本机绝对路径**。`/history` 响应里的 `db_file` 原本是完整路径，现在只给文件名 —— 浏览器面板与外部集成都不需要目录结构。
+- **多实例写库不再静默失败**。加 `PRAGMA busy_timeout = 3000`：两个 DSH 实例共用一个出图目录时不会立刻 `SQLITE_BUSY` 然后被吞成「写入失败」。刻意不开 WAL（单进程没收益，却会多出 `-wal` / `-shm` 两个容易被当成垃圾误删的文件）。
+- **SQLite 句柄会释放了**。插件卸载 / 重载时调 `close()`；此前全仓没有一处调用，Windows 上会一直锁着 `.qwen-paint-history.db`，换出图目录或想删掉它都会撞「文件正被另一个程序使用」。
+- **端点目录补齐 5 条**。`/history`、`/history/stats`、`/history/delete`、`/cpu-profile`、`/cpu-accel` 之前没登记进 `/api/qwen-paint/integration/routes`，外部集成照着目录调用会漏掉它们。
+- **发布护栏补漏**。`docs/index.html`（落地页 JSON-LD 的 `softwareVersion`、可见版本号、安装说明）此前不在版本号检查清单里；现在 README 中任何「当前 + 版本号」的写法都必须等于 `package.json` 的版本，漏改一处就红。
+- **版本号序列理顺**。npm 历史上有个 `0.19.2`，semver 上比 `0.3.x` 大，按版本号判新旧会误判。`0.31.1` 大于 `0.19.2`，从此单调递增。
 
 ## 0.3.1 更新说明
 
