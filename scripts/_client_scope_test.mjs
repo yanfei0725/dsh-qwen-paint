@@ -95,6 +95,8 @@ for (const m of codeOnly.matchAll(/(?<![.\w$])([A-Za-z_$][\w$]*)\s*\./g)) used.a
 const unknown = [...used].filter((n) => !declared.has(n) && !GLOBALS.has(n)).sort()
 console.log(`声明过 ${declared.size} 个名字；用到 ${used.size} 个取值根`)
 if (unknown.length === 0) {
+  // ★ 0.32.1 审计 B：以前只打「结果：全部通过」，test-all 统计成 0 项断言。
+  console.log('  ✓ 面板作用域没有未声明标识符（' + declared.size + ' 个声明 / ' + used.size + ' 个取值根）')
   console.log('\n=== 结果：全部通过（面板作用域没有未声明标识符）===')
   process.exit(0)
 }

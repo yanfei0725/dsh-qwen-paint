@@ -251,14 +251,18 @@ const stored = (() => {
   try { return JSON.parse(fs.readFileSync(FP_FILE, 'utf8')) } catch { return null }
 })()
 
-if (UPDATE || stored === null || !stored.fixtures) {
+// ★ 0.32.1 审计 A7：基准缺失 / 损坏时**绝不**用当前代码自动重建并算通过，
+//   否则「把图改坏 → 删基准 → 全绿」就能绕过整条护栏（当场成功 ≠ 最终留存）。
+if (UPDATE) {
   const payload = {
     _comment: 'A1：工作流图结构指纹（scripts/test-runtime-guards.mjs 维护）。图变了先看 diff 再 --update。',
     _why: '生图链/TTS 链分支多，暂不做运行时清单接管；用指纹锁住"图不会悄悄变"。',
     fixtures: current,
   }
   fs.writeFileSync(FP_FILE, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
-  ok(true, `${UPDATE ? '已重写' : '首次生成'}指纹文件 ${path.basename(FP_FILE)}`)
+  ok(true, `已显式重建指纹文件 ${path.basename(FP_FILE)}（请复核 diff 后重跑）`)
+} else if (stored === null || !stored.fixtures) {
+  ok(false, '★★ 指纹基准缺失或损坏：禁止自动重建，请显式 --update 并复核 diff')
 } else {
   for (const name of Object.keys(fixtures)) {
     const now = current[name]

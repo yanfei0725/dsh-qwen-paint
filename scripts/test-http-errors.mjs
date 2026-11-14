@@ -111,28 +111,27 @@ const readSrc = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
   //   ② 每个登记的文件在 assets/ 里**真的存在**（防"登记了但没建文件"⇒ 线上 404）。
   const EXPECT_FILES = [
     'cpu-accel.css', 'cpu-accel.js', 'draft.css', 'draft.js',
-    'history.css', 'history.js', 'loading.gif', 'loading.webp',
+    'history.css', 'history.js', 'loading.webp',
     'mask-fx.css', 'mask-fx.js', 'panel.css', 'panel.js', 'setup-guide.css', 'setup-guide.js',
   ]
   eq(ASSET_ROUTES.map(([, f]) => f).slice().sort().join(','), EXPECT_FILES.join(','),
     '★ 静态资源文件清单逐字一致（增减都要显式改这里）')
   // 登记了文件却没建 → 线上必定 404。这里做「存在性」核对。
-  // ⚠ 已知遗留：assets/loading.gif 早已不在仓库里（只剩 loading.webp），但路由表还留着
-  //   「gif 回退」那一条，且没有任何前端消费者 —— 它现在只会 404。
-  //   本轮不动它（删路由要连带改 selftest / test-product-round 三处断言，属于独立清理），
-  //   但把它**显式记账**：新增资源绝不允许再落进这个名单。
-  const KNOWN_MISSING = ['loading.gif']
+  // ★ 0.32.1 审计 B：删掉了 loading.gif 死路由（文件从来就不存在），
+  //   于是把原先「允许缺 1 个」的记账升级成**零容忍**：新增资源一律不许再缺。
+  const KNOWN_MISSING = []
   const missing = ASSET_ROUTES.map(([, f]) => f)
     .filter((f) => !fs.existsSync(path.join(ROOT, 'assets', f)))
   eq(missing.join(','), KNOWN_MISSING.join(','),
-    '★ 缺失的资源文件只有已知遗留的 loading.gif（新增资源不允许再缺）')
+    '★ 登记的静态资源文件零缺失（新增资源一律不许再缺）')
   ok(ASSET_ROUTES.length >= 12, '资源条数不少于 12', String(ASSET_ROUTES.length))
   ok(ASSET_ROUTES.every((r) => r.length === 3), '每条都是 [路径, 文件名, MIME] 三元组')
   ok(ASSET_ROUTES.every(([, name]) => !name.includes('/') && !name.includes('..')),
     '★★ 文件名全是常量、不含路径分隔符（没有穿越面）')
   ok(new Set(ASSET_ROUTES.map(([p]) => p)).size === ASSET_ROUTES.length, '★ 路径互不重复（重复注册会覆盖前一条）')
-  ok(ASSET_ROUTES.filter(([p]) => p.includes('/qwen-paint/loading')).length === 2,
-    'webp 主用 + gif 回退两条都在（selftest 的旧断言不失效）')
+  ok(ASSET_ROUTES.filter(([p]) => p.includes('/qwen-paint/loading')).length === 1
+    && ASSET_ROUTES.some(([p, f]) => p.includes('/qwen-paint/loading') && f === 'loading.webp'),
+    '★ 动画图片只剩 webp 一条（gif 死路由已删，selftest 断言已同步）')
   ok(['panel.js', 'setup-guide.js', 'mask-fx.js', 'cpu-accel.js', 'history.js']
     .every((n) => ASSET_ROUTES.some(([, f]) => f === n)), '五个后加的脚本都在表里')
   ok(ASSET_ROUTES.every(([p, , mime]) =>

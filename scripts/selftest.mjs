@@ -143,10 +143,22 @@ check('两个诊断工具都在（list_available_models / check_acceleration）'
 section('② 工具定义形状（register 的硬校验）')
 check('有 description', typeof tool.description === 'string' && tool.description.length > 20)
 check('output 是对象', typeof tool.output === 'object' && tool.output !== null)
-check('output.render 是函数（register 强校验）', typeof tool.output.render === 'function')
+// ★ 0.32.1 审计翻案：强校验 render 的是 registerNativeCapability 路径，
+//   插件走 ctx.tools.register（只校验 output.schema）。render 是展示层可选增强。
+check('draw_image 带自定义 render（展示层增强，非注册硬校验）', typeof tool.output.render === 'function')
 check('output.schema 存在', typeof tool.output.schema === 'object' && tool.output.schema !== null)
 check('execute 是函数', typeof tool.execute === 'function')
 check('timeoutMs 是正有限数', Number.isFinite(tool.timeoutMs) && tool.timeoutMs > 0, tool.timeoutMs)
+check('★ 13 个工具全部具备基础形状（description / output.schema / execute / timeoutMs）',
+  registered.length === 13 && registered.every((t) =>
+    typeof t.description === 'string' && t.description.length > 20
+    && t.output && typeof t.output.schema === 'object'
+    && typeof t.execute === 'function'
+    && Number.isFinite(t.timeoutMs) && t.timeoutMs > 0),
+  registered.filter((t) => !(typeof t.description === 'string' && t.description.length > 20
+    && t.output && typeof t.output.schema === 'object'
+    && typeof t.execute === 'function'
+    && Number.isFinite(t.timeoutMs) && t.timeoutMs > 0)).map((t) => t.name).join(','))
 check('有 presentationMeta（把图片路径带给客户端卡片）', typeof tool.output.presentationMeta === 'function')
 const metaProbe = typeof tool.output.presentationMeta === 'function' ? tool.output.presentationMeta({}, { path: '<本地路径>' }) : null
 check('presentationMeta 返回 {path}', metaProbe?.path === '<本地路径>', metaProbe)
@@ -643,7 +655,10 @@ check('注册了 2 条状态路由（/api/ 优先 + 根路径回退）', statusR
 // ★ 2026-10-08 新增：插件自己的动画图片路由。
 //   内核的 /api/file 只肯服务"被登记过的文件"，动图没登记 → 一律「图片无法预览」
 //   （GIF / WebP / 静态 PNG 三种都试过，与格式和文件名都无关）。所以由插件自己开路由吐字节。
-check('注册了动画图片路由（webp 主用 + gif 回退）', assetRoutes.length === 2, assetRoutes.map((r) => r.path))
+// ★ 0.32.1 审计 B：loading.gif 早已不在 assets/ 里，那条路由只会 500。
+//   删掉后这里从「2 条」改成「只剩 webp 一条」，并要求登记的每条都有真文件。
+check('注册了动画图片路由（webp；gif 死路由已删）', assetRoutes.length === 1
+  && assetRoutes[0].path.includes('loading.webp'), assetRoutes.map((r) => r.path))
 check('路由都是 exact 且带 handler', hostRoutes.every((r) => r.kind === 'exact' && typeof r.handler === 'function'))
 check('注册了空闲关停的 effect', hostEffects.some((e) => e.label === 'qwen-paint:idle-shutdown'), hostEffects.map((e) => e.label))
 check('局部 inject 等的是 webServer（名字拼错会永远等不到）', injectedExtra.some((s) => Array.isArray(s) && s.includes('webServer')), injectedExtra)

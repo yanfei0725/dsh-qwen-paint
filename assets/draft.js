@@ -31,17 +31,20 @@
     return n
   }
 
-  /** 宿主可能吞掉 click（见 client.js 的点按兜底），所以指针抬起也当作一次 tap。 */
+  /** ★ 0.32.1 审计 A3：与 assets/history.js 同口径的四事件源点按。
+   *  DSH 宿主会吞掉 click（pointerdown 被 preventDefault / 指针轻移 / 文字选中），
+   *  只绑 click + touchend 会重现用户报过两次的「点不动」。
+   *  冷却去重保证同一手势里四种事件只算一次。 */
+  var TAP_UP = ['click', 'pointerup', 'mouseup', 'touchend']
   function tap(node, fn) {
     var lastAt = 0
     function fire(ev) {
       var now = Date.now()
-      if (now - lastAt < 320) return
+      if (now - lastAt < 300) return
       lastAt = now
       fn(ev)
     }
-    node.addEventListener('click', fire)
-    node.addEventListener('touchend', function (ev) { fire(ev) })
+    for (var i = 0; i < TAP_UP.length; i += 1) node.addEventListener(TAP_UP[i], fire)
   }
 
   function injectCss() {
@@ -252,7 +255,7 @@
 
     ov.appendChild(box)
     // 点遮罩空白处退出 —— 与其它浮层一致（用户两次反馈"关不掉"）。
-    ov.addEventListener('click', function (ev) { if (ev.target === ov) close() })
+    tap(ov, function (ev) { if (ev.target === ov) close() })
     return ov
   }
 

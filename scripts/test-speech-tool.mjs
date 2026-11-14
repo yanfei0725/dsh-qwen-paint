@@ -58,7 +58,8 @@ console.log('=== 1. 工具描述集中层 ===')
   ok('speech 描述写明缺件给清单、不自动下载', describeSpeechTool().includes('不假装能出音频')
     && describeSpeechTool().includes('不会自动下载权重'))
   ok('speech 描述不承诺固定格式（写明由后端链决定）', describeSpeechTool().includes('格式由后端实际命中的兜底链决定'))
-  ok('TOOL_SUMMARIES 覆盖 10 个工具', Object.keys(TOOL_SUMMARIES).length === 10)
+  ok('★ TOOL_SUMMARIES 覆盖全部 13 个工具（0.32.1 补齐 3 个新工具）',
+    Object.keys(TOOL_SUMMARIES).length === 13)
   ok('TOOL_SUMMARIES 含 generate_speech', TOOL_SUMMARIES.generate_speech.includes('Qwen3-TTS'))
 }
 

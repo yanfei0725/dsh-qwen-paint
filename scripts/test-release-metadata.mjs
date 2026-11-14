@@ -110,6 +110,12 @@ console.log('\n=== 3. 版本号：一处改、六处必须同时改 ===')
   const inlineCurrent = [...readme.matchAll(/当前[^`\n]{0,12}`(\d+\.\d+\.\d+)`/gu)].map((m) => m[1])
   ok('★ README 里所有「当前 `x.y.z`」写法都等于 V（上一轮就是这里漏的）',
     inlineCurrent.length > 0 && inlineCurrent.every((x) => x === V), inlineCurrent.join(','))
+  // ★ 0.32.1 审计 A5：两份 llms 里的「当前 `x.y.z`」此前完全不在护栏里，
+  //   于是 0.3.0 的老版本号一路留到 0.32.0 都没人发现。补上，漏一个就红。
+  for (const [name, text] of [['llms.txt', llms], ['docs/llms.txt', docsLlms]]) {
+    const xs = [...text.matchAll(/当前[^`\n]{0,12}`(\d+\.\d+\.\d+)`/gu)].map((m) => m[1])
+    ok('★ ' + name + ' 里所有「当前 x.y.z」都等于 V', xs.length > 0 && xs.every((x) => x === V), xs.join(','))
+  }
 
   // 落地页 docs/index.html 三处版本号此前完全不在检查清单里 —— GitHub Pages 会一直
   // 对外宣称旧版本，而 npm 上已经是新的。

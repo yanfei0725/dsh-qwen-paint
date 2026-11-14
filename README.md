@@ -1,6 +1,6 @@
 # dsh-qwen-paint · (绘图)千问（优化版）
 
-DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（QQ 交流群 454707710）。视频链清单化 + 生图/TTS 契约对账（改图自动报差异）；生图/视频/混合三模式界面各不同；批量出图带幂等保护（重试不重出）；Qwen3-TTS 语音克隆与可接 ASR 自动字幕；本机实测秒数；会话级模型驻留、显存建议、参数来源表、预设绑定、加载器盘点等本机端点。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合、导入音频直接合进成片（音轨合成），文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech，参考音频可复刻音色），模型无关角色参考；草图台手绘参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。
+DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（QQ 交流群 454707710）。0.32.1 两轮审计加固：ASR 音频路径围栏（只认出图目录内文件）、按包名安装也能执行引导脚本、草图台四事件点按、错误响应消毒收口；视频链清单化 + 生图/TTS 契约对账（改图自动报差异）；生图/视频/混合三模式界面各不同；批量出图带幂等保护（重试不重出）；Qwen3-TTS 语音克隆与可接 ASR 自动字幕；本机实测秒数；会话级模型驻留、显存建议、参数来源表、预设绑定、加载器盘点等本机端点。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合、导入音频直接合进成片（音轨合成），文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech，参考音频可复刻音色），模型无关角色参考；草图台手绘参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。
 
 ## Features
 
@@ -36,7 +36,7 @@ DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（Q
 dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 ```
 
-> 使用 `desktop` profile 时须**先完全退出 DSH**。本包**已发布到 npm**（`dsh-qwen-paint`，当前 `0.32.0`），可直接 `dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式仅用于开发或试用未发布改动。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
+> 使用 `desktop` profile 时须**先完全退出 DSH**。本包**已发布到 npm**（`dsh-qwen-paint`，当前 `0.32.1`），可直接 `dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式仅用于开发或试用未发布改动。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
 
 ## Usage
 
@@ -102,7 +102,7 @@ dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 
 > **QQ 交流群**：`454707710`　｜　**反馈 / 提问 / 提需求**都走这里，issue 也欢迎：<https://github.com/yanfei0725/dsh-qwen-paint/issues>
 
-> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：MIT　｜　**当前版本**：`0.32.0`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
+> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：MIT　｜　**当前版本**：`0.32.1`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
 
 ---
 
@@ -188,6 +188,21 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 | `< 22.5` | 降级：`available: false`、`persistent: false`，只能读既有 `.qwen-paint-memory.jsonl` 做内存过滤；界面与工具都会**明说「未持久化」**，不假装有数据 |
 
 刻意**不**把 `engines` 提到 `>=22.5`：那会把一批能正常出图的用户直接挡在门外，代价只是少一个可搜索的历史库。
+
+## 0.32.1 更新说明
+
+这一版**不加新功能**，只把 0.32.0 发布后两轮审计查出来的问题一次性收干净（详见桌面《体检报告》第二十七节）。
+
+- **安全**：`/api/qwen-paint/config/subtitle?source=asr&audio=` 原先可越出出图目录读任意媒体文件并 POST 到自配 ASR 端点；现在 `asr-client.js::resolveAudioPath()` 做与文件字节路由同源的 `resolve` + 目录前缀包含检查，拒绝时连 POST 都不发。
+- **消毒**：清单 / 契约读取失败的 `errors[]` 与 `audit_skipped` 原会把含本机路径的 `error.message` 塞进 `ok:true` 响应（顶层消毒够不到嵌套字段）；现在细节只进插件日志，响应改固定文案 + `sanitizeReason()`。
+- **安装**：npm 发布物补进 `scripts/setup.mjs` 与 `scripts/video-model-catalog.mjs` —— 图形化引导里那些「复制就能跑」的命令，按包名安装的用户现在真的能跑。
+- **交互**：新增草图台 `assets/draft.js` 改回与历史浮层同口径的四事件源点按（`click / pointerup / mouseup / touchend` + 300ms 冷却），遮罩关闭一并覆盖，杜绝「点不动 / 关不掉」重演。
+- **发布一致性**：`llms.txt` / `docs/llms.txt` 的旧版本号、`docs/index.html` 与 `pyproject.toml` 的旧功能口径全部同步；版本护栏扩到两份 llms。
+- **测试纪律**：工作流指纹基准改为只读（缺失 / 损坏直接报红，不再用当前代码自动重建并算通过）；`selftest` 的形状检查从 1 个工具扩到全部 13 个；`TOOL_SUMMARIES` 补齐 3 个新工具；删掉 `loading.gif` 死路由；Markdown 导出转义提示词中的 `](`；`_client_scope_test` 补逐条断言标记。
+- **体积**：`lib/index.js` 只剩 19 B 余量，新增 `scripts/check-size.mjs` 并挂到 `prepack`，打包前就拦越界；`lib/client.js` 字节基线冻结在 261467 B。
+- 端点目录补上根别名 `/qwen-paint/status.json`，守卫正则同步放宽；对不存在的 `contract-audit.mjs` 提示改指真实脚本。
+
+**经复核不硬改**（改了会坏功能或撑爆体积红线）：`PREF_FILE` 双硬编码与第三份端点清单的合并（要给 `index.js` 加 import，但只剩 19 B）、三份 stable-hash helper 合并（会改指纹值、破坏既有基准）、26 个模块的顶层静态 import（无模块级 I/O，只是解析编译）、`client.js` 挂载清单外置（改用字节基线冻结）、`preview_url` / `/draft` 的绝对路径（前端契约）。
 
 ## 0.32.0 更新说明
 

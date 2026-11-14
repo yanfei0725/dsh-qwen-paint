@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>dsh-qwen-paint · 本地 ComfyUI 生图与图像编辑 DSH 插件</title>
-<meta name="description" content="DeepSeek Harness 插件：本地文生图 / 多参考图编辑、圈选重绘、元素移除、四向扩图、高清放大，文生视频 / 图生视频、Qwen3-TTS 语音合成与图→音→视频混合模式，模型无关角色参考。经本机 ComfyUI 调用 Qwen-Image 2.1 / 官方 Turbo、Wan 2.2 / XT-5B 与 Qwen3-TTS，数据仅走 127.0.0.1 回环，无需 API 密钥、零调用费用。">
+<meta name="description" content="DSH 插件：视频 / 生图 / TTS 全能 · 本机运行。0.32.1 两轮审计加固：ASR 音频路径围栏、按包名安装也能执行引导脚本、草图台四事件点按、错误响应消毒收口。工作流清单化 + 生图/TTS 契约对账、三模式界面差异化、批量出图幂等保护、Qwen3-TTS 语音克隆与可接 ASR 自动字幕、生成历史检索（SQLite 软删除）、CPU 指令集五档加速、1–16 张参考图编辑与圈选重绘 / 元素移除 / 四向扩图 / 高清放大。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环，无需 API 密钥、零调用费用。">
 <meta name="robots" content="index, follow, max-snippet:-1">
 <link rel="canonical" href="https://yanfei0725.github.io/dsh-qwen-paint/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="dsh-qwen-paint · 本地 ComfyUI 生图与图像编辑 DSH 插件">
-<meta property="og:description" content="本地 DSH 插件：文生图、图生图、局部重绘、元素移除、四向扩图、高清放大；仅走 127.0.0.1，免 API 密钥、零费用。">
+<meta property="og:description" content="本地 DSH 插件：视频 / 生图 / TTS 全能。0.32.1 两轮审计加固（ASR 路径围栏 / 引导脚本可执行 / 点按修复 / 消毒收口）；文生图、图生图、圈选重绘、元素移除、四向扩图、高清放大、生成历史检索；仅走 127.0.0.1，免 API 密钥、零费用。">
 <meta property="og:url" content="https://yanfei0725.github.io/dsh-qwen-paint/">
 <script type="application/ld+json">
 {
@@ -17,11 +17,11 @@
   "@type": "SoftwareApplication",
   "name": "dsh-qwen-paint",
   "alternateName": "(绘图)千问（优化版）",
-  "description": "DeepSeek Harness (DSH) 本地图像 / 视频 / 语音生成与编辑插件：文生图、多参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）、元素移除、四向扩图与高清放大，文生视频 / 图生视频、Qwen3-TTS 语音合成与图→音→视频混合模式，模型无关角色参考；支持 CPU 指令集识别（AVX2 / AVX512 / BF16）与五档加速（含 --cpu 纯 CPU）、按物理核钉线程、任务后可选卸载模型内存，安装入口为常驻图形化引导面板。经本机 ComfyUI 调用 Qwen-Image 2.1 / 官方 Turbo、Wan 2.2 / XT-5B 与 Qwen3-TTS，生成数据仅走 127.0.0.1 回环，无需 API 密钥、零调用费用。QQ 交流群 454707710。",
+  "description": "DeepSeek Harness (DSH) 本地视频 / 图像 / 语音生成与编辑插件。0.32.1 两轮审计加固：ASR 音频路径围栏、按包名安装也能执行引导脚本、草图台四事件点按、错误响应消毒收口。工作流清单化 + 契约对账、三模式界面差异化、批量出图幂等保护、Qwen3-TTS 语音克隆与可接 ASR 自动字幕、生成历史检索（SQLite 软删除）、CPU 指令集五档加速（含 --cpu 纯 CPU）、1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选）/ 元素移除 / 四向扩图 / 高清放大、模型无关角色参考；安装入口为常驻图形化引导面板。经本机 ComfyUI 调用，生成数据仅走 127.0.0.1 回环，无需 API 密钥、零调用费用。QQ 交流群 454707710。",
   "url": "https://yanfei0725.github.io/dsh-qwen-paint/",
   "codeRepository": "https://github.com/yanfei0725/dsh-qwen-paint",
   "downloadUrl": "https://github.com/yanfei0725/dsh-qwen-paint",
-  "softwareVersion": "0.32.0",
+  "softwareVersion": "0.32.1",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "Windows, Linux",
   "programmingLanguage": "JavaScript",
@@ -88,7 +88,7 @@
   <h1>dsh-qwen-paint</h1>
   <p class="sub">面向 DeepSeek Harness (DSH) 的本地图像 / 视频 / 语音生成与编辑插件 · (绘图)千问（优化版）</p>
   <div class="meta">
-    <span class="tag">版本 0.32.0</span>
+    <span class="tag">版本 0.32.1</span>
     <span class="tag">MIT</span>
     <span class="tag">Windows / Linux</span>
     <span class="tag">NVIDIA / Intel Arc / AMD / 核显</span>
@@ -120,7 +120,7 @@
   </table>
 
   <h2 id="install">怎么安装</h2>
-  <p>本包<strong>已发布到 npm</strong>（<code>dsh-qwen-paint</code>，当前 <code>0.32.0</code>），可直接按包名安装；开发调试时也可用本地目录形式：</p>
+  <p>本包<strong>已发布到 npm</strong>（<code>dsh-qwen-paint</code>，当前 <code>0.32.1</code>），可直接按包名安装；开发调试时也可用本地目录形式：</p>
   <pre><code>dsh plugin --profile desktop add dsh-qwen-paint
 # 或：dsh plugin --profile desktop add link:&lt;本插件目录的绝对路径&gt;</code></pre>
   <ul>

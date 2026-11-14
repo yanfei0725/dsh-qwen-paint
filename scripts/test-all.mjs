@@ -128,6 +128,7 @@ const SUITES = [
   { file: '_review_fixes_test.mjs', note: '0.17.6 那批修复的源码级回归' },
   { file: '_no_private_docs_test.mjs', note: '私人/开发文档不进公开仓库（源码目录 SKIP）' },
   { file: 'test-dsh-compat.mjs', note: 'COMPAT001 实测（无 dsh 环境时明确 SKIP）' },
+  { file: 'test-audit-0321.mjs', note: '0.32.1 两轮审计修复：ASR 路径围栏 / 发布物脚本 / 草图台点按 / 嵌套消毒 / 版本简介同步 / 指纹基准只读 / 端点目录别名 / 体积写入前守卫（全离线）' },
   // —— 最重的一套放最后 ——
   { file: 'selftest.mjs', note: '全量自测（392 项）', heavy: true },
 ]

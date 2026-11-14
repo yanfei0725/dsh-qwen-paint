@@ -54,7 +54,9 @@ console.log('=== 1. 图形化傻瓜式安装引导（纯数据 / 纯函数） ==
     && !s.network && s.hint.includes('不自动下载')))
   ok('★ 核显档位只列清单、不默认下载', SETUP_STEPS.some((s) => s.id === 'igpu'
     && !s.network && s.command.includes('--list-igpu')))
-  ok('命令里没有本机绝对路径（只有占位符）', !SETUP_STEPS.some((s) => /[A-Za-z]:[\\/]|Users[\\/]Administrator|K:[\\/]/u.test(s.command)))
+  // ★ 0.32.1 推前脱敏：改成「任意 Users 路径」模式，比精确匹配某个用户名更严，
+  //   也不再把本机用户名写进公开仓库。
+  ok('命令里没有本机绝对路径（只有占位符）', !SETUP_STEPS.some((s) => /[A-Za-z]:[\\/]|Users[\\/]|K:[\\/]/u.test(s.command)))
   ok('插件挂载步骤用占位符而不是写死路径', SETUP_STEPS.some((s) => s.id === 'plugin' && s.command.includes('<本插件目录的绝对路径>')))
   ok('publicSteps 不含 host 才有的 status 字段', publicSteps().every((s) => s.status === undefined))
   ok('publicSteps 字段集合稳定', Object.keys(publicSteps()[0]).sort().join(',')
@@ -151,14 +153,13 @@ console.log('\n=== 4. 外部集成状态：白名单脱敏 ===')
     maskFx: { feather: 44, edgeBlend: 12, grow: 9, invert: true, unloadMemory: true },
     imageBackend: 'hipfire', enabled: true, tier: 'gguf', speedTargetSec: 180,
     // 下面这些是**故意塞进来的脏数据**，一个都不许出现在输出里
-    homeDir: 'C:/Users/Administrator/secret/token.txt',
+    homeDir: 'C:/Users/TestUser/secret/token.txt',
     apiKey: 'sk-THIS-MUST-NOT-LEAK', dialog: '用户私人对话原文',
   }
   const s = buildIntegrationState(dirty)
   const text = JSON.stringify(s)
   ok('★ 绝对路径 / 用户名 / 凭据 / 对话内容一个都不进输出',
-    !text.includes('Administrator') && !text.includes('sk-THIS-MUST-NOT-LEAK')
-    && !text.includes('token.txt') && !text.includes('用户私人对话原文'))
+    !/C:[\\/]Users[\\/]|sk-THIS-MUST-NOT-LEAK|token\.txt|用户私人对话原文/u.test(text))
   ok('只留白名单工具名（非法名与超长名被过滤）', s.tools.count === 2
     && s.tools.registered.join(',') === 'draw_image,inpaint_image')
   ok('任务计数不为负', s.tasks.failed === 0 && s.tasks.active === 2 && s.tasks.queueRunning === 1)
@@ -262,12 +263,12 @@ console.log('\n=== 5. 四个新端点：围栏 / 参数 / 卸载（注入假 dep
   ok('★ snapshot 抛错 500，异常细节只进本地日志不进响应', await (async () => {
     const logs = []
     const d4 = makeDeps({
-      snapshot: async () => { throw new Error('C:/Users/Administrator/SECRET-STACK') },
+      snapshot: async () => { throw new Error('C:/Users/TestUser/SECRET-STACK') },
       log: (level, msg) => logs.push({ level, msg }),
     })
     const r = await run(makeIntegrationHandlers(d4.deps).integrationStateHandler, { method: 'GET' })
     return r.code === 500 && !JSON.stringify(r.body).includes('SECRET-STACK')
-      && !JSON.stringify(r.body).includes('Administrator')
+      && !/C:[\\/]Users[\\/]/u.test(JSON.stringify(r.body))
       && logs.some((x) => x.msg.includes('SECRET-STACK'))
   })())
   const rt = await run(h.integrationRoutesHandler, { method: 'GET' })
@@ -305,7 +306,7 @@ console.log('\n=== 6. host 接线静态锁 + 端点目录 ⊆ 真实注册 ===')
   const assetMod = readSrc('lib/asset-route.js')
   ok('★ 静态资源路由已外置成表驱动并由 host 注册',
     idx.includes('registerAssetRoutes(webCtx.webServer')
-    && ['loading.webp', 'loading.gif', 'panel.js', 'panel.css', 'setup-guide.js',
+    && ['loading.webp', 'panel.js', 'panel.css', 'setup-guide.js',
       'setup-guide.css', 'mask-fx.js', 'mask-fx.css', 'cpu-accel.js', 'cpu-accel.css']
       .every((n) => assetMod.includes(`'${n}'`)))
   ok('★ client.js 挂载两个新脚本', cli.includes('loadQpExtras()') && cli.includes('function loadQpExtras()')
@@ -331,7 +332,7 @@ console.log('\n=== 6. host 接线静态锁 + 端点目录 ⊆ 真实注册 ===')
   //    memory/* / recent-images / repair）。补上反向断言，以后加端点忘了同步就红。
   const cataloged = new Set(INTEGRATION_ROUTES.map((r) => r.path))
   const registered = [...new Set([...endpointFiles
-    .matchAll(/['"](\/api\/(?:qwen-paint|comfy-pipeline)\/[A-Za-z0-9_./-]*)['"]/gu)]
+    .matchAll(/['"](\/api\/(?:qwen-paint|comfy-pipeline)\/[A-Za-z0-9_./-]*|\/qwen-paint\/status\.json)['"]/gu)]
     .map((m) => m[1]))].sort()
   ok('★★ 真实注册 ⊆ 端点目录（防「挂了没写」）',
     registered.every((p) => cataloged.has(p)), registered.filter((p) => !cataloged.has(p)).join(','))
