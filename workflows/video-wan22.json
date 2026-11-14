@@ -1,0 +1,223 @@
+{
+  "_comment": "A1 第一步：本文件是 lib/video-workflow.js 里 buildVideoWorkflow() 的声明式同构迁移。改这张图必须同时跑 scripts/test-workflow-manifest.mjs —— 它会断言本清单产物与源码构建产物逐字节一致，防止两边漂移。",
+  "schemaVersion": 1,
+  "id": "video-wan22",
+  "label": "Wan 2.2 / Hummingbird-XT-5B DMD（视频）",
+  "kind": "video",
+  "authoritative": "runtime",
+  "requires": {
+    "_comment": "只列**无条件**必需节点。条件节点（如音轨用的 VHS_LoadAudio）写在对应 patch 的 requiresNodes 里，不混进来 —— 混进来会让从不用音轨的用户一直看到无关的缺件警报。",
+    "nodes": [
+      "CLIPLoader",
+      "UNETLoader",
+      "VAELoader",
+      "CLIPTextEncode",
+      "ModelSamplingSD3",
+      "Wan22ImageToVideoLatent",
+      "KSampler",
+      "VAEDecodeTiled",
+      "VHS_VideoCombine"
+    ]
+  },
+  "assets": {
+    "unet": "Hummingbird-XT-5B.safetensors",
+    "clip": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+    "clipType": "wan",
+    "vae": "Hummingbird-Wan2.2-VAE.pth"
+  },
+  "params": {
+    "prompt": {
+      "type": "string",
+      "required": true
+    },
+    "negative": {
+      "type": "string",
+      "default": "blurry, low quality, distorted, watermark"
+    },
+    "width": {
+      "type": "int",
+      "align": "edge"
+    },
+    "height": {
+      "type": "int",
+      "align": "edge"
+    },
+    "frames": {
+      "type": "int",
+      "align": "frames4n1"
+    },
+    "fps": {
+      "type": "int",
+      "default": 24
+    },
+    "seed": {
+      "type": "int"
+    },
+    "steps": {
+      "type": "int",
+      "default": 4
+    },
+    "startImage": {
+      "type": "string",
+      "default": ""
+    },
+    "audioTrack": {
+      "type": "string",
+      "default": ""
+    },
+    "prefix": {
+      "type": "string",
+      "default": "qwen-paint/video"
+    }
+  },
+  "consts": {
+    "cfg": 1.0,
+    "shift": 10.0,
+    "weightDtype": "default",
+    "sampler": "euler",
+    "scheduler": "simple",
+    "denoise": 1.0,
+    "batchSize": 1,
+    "tileSize": 512,
+    "tileOverlap": 64,
+    "temporalSize": 64,
+    "temporalOverlap": 8,
+    "loopCount": 0,
+    "format": "video/h264-mp4",
+    "pixFmt": "yuv420p",
+    "crf": 20,
+    "saveMetadata": true,
+    "pingpong": false,
+    "saveOutput": true
+  },
+  "graph": {
+    "1": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "$asset.clip",
+        "type": "$asset.clipType"
+      }
+    },
+    "2": {
+      "class_type": "UNETLoader",
+      "inputs": {
+        "unet_name": "$asset.unet",
+        "weight_dtype": "$const.weightDtype"
+      }
+    },
+    "3": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "$asset.vae"
+      }
+    },
+    "4": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": ["1", 0],
+        "text": "$param.prompt"
+      }
+    },
+    "5": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": ["1", 0],
+        "text": "$param.negative"
+      }
+    },
+    "6": {
+      "class_type": "ModelSamplingSD3",
+      "inputs": {
+        "model": ["2", 0],
+        "shift": "$const.shift"
+      }
+    },
+    "7": {
+      "class_type": "Wan22ImageToVideoLatent",
+      "inputs": {
+        "vae": ["3", 0],
+        "width": "$param.width",
+        "height": "$param.height",
+        "length": "$param.frames",
+        "batch_size": "$const.batchSize"
+      }
+    },
+    "8": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": ["6", 0],
+        "positive": ["4", 0],
+        "negative": ["5", 0],
+        "latent_image": ["7", 0],
+        "seed": "$param.seed",
+        "steps": "$param.steps",
+        "cfg": "$const.cfg",
+        "sampler_name": "$const.sampler",
+        "scheduler": "$const.scheduler",
+        "denoise": "$const.denoise"
+      }
+    },
+    "12": {
+      "class_type": "VAEDecodeTiled",
+      "inputs": {
+        "samples": ["8", 0],
+        "vae": ["3", 0],
+        "tile_size": "$const.tileSize",
+        "overlap": "$const.tileOverlap",
+        "temporal_size": "$const.temporalSize",
+        "temporal_overlap": "$const.temporalOverlap"
+      }
+    },
+    "10": {
+      "class_type": "VHS_VideoCombine",
+      "inputs": {
+        "frame_rate": "$param.fps",
+        "loop_count": "$const.loopCount",
+        "filename_prefix": "$param.prefix",
+        "format": "$const.format",
+        "pix_fmt": "$const.pixFmt",
+        "crf": "$const.crf",
+        "save_metadata": "$const.saveMetadata",
+        "pingpong": "$const.pingpong",
+        "save_output": "$const.saveOutput",
+        "images": ["12", 0]
+      }
+    }
+  },
+  "patches": [
+    {
+      "id": "i2v-start-image",
+      "when": {
+        "param": "startImage",
+        "nonEmpty": true
+      },
+      "set": {
+        "7": {
+          "start_image": "$param.startImage"
+        }
+      }
+    },
+    {
+      "id": "audio-track",
+      "_comment": "D22：只有给了音轨才新增 VHS_LoadAudio，并把它接到 VHS_VideoCombine 的 audio 可选槽。无条件挂一个空 audio_file 的加载节点会让整条链在运行时炸。",
+      "requiresNodes": ["VHS_LoadAudio"],
+      "when": {
+        "param": "audioTrack",
+        "nonEmpty": true
+      },
+      "add": {
+        "13": {
+          "class_type": "VHS_LoadAudio",
+          "inputs": {
+            "audio_file": "$param.audioTrack"
+          }
+        }
+      },
+      "set": {
+        "10": {
+          "audio": ["13", 0]
+        }
+      }
+    }
+  ]
+}

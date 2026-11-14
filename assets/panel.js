@@ -111,6 +111,15 @@
     return slot && Number.isFinite(slot.refs) ? slot.refs : null
   }
 
+  /**
+   * 当前模式的卡片计划（schema.modePlans，见 lib/mode-schema.js）。
+   * 旧 schema 没有这项 → 返回空对象，所有卡片照旧全显（向后兼容）。
+   */
+  function modePlan() {
+    var plans = schema && schema.modePlans
+    return (plans && plans[state && state.mode]) || {}
+  }
+
   function aspectTicks() {
     var def = defsByKey().aspect
     return def && Array.isArray(def.ticks) ? def.ticks : ['1:1']
@@ -640,6 +649,8 @@
 
     var panel = el('div', 'cp-panel')
     panel.hidden = true
+    // ★ 三模式差异化：根元素带 data-mode，CSS 按模式换强调色；计划驱动卡片取舍。
+    panel.setAttribute('data-mode', state.mode || 'image')
 
     var head = el('div', 'cp-head')
     head.appendChild(el('h4', null, '通用 Comfy 控制层'))
@@ -686,6 +697,10 @@
     })
     panel.appendChild(tabs)
 
+    // ★ 每个模式一句话定位（不再是三模式共用同一行空白 note）
+    var plan = modePlan()
+    if (plan.tagline) panel.appendChild(el('p', 'cp-tagline', plan.tagline))
+
     var note = el('p', 'cp-note', '')
     panel.appendChild(note)
 
@@ -706,9 +721,12 @@
     panel.appendChild(common)
 
     // ★ 视频参数组：帧数与帧率**真接** generate_video（见 lib/video-workflow.js）。
-    //   没切到视频模式时禁用，但仍展示——先看得见能拨什么，再决定切不切。
-    var videoOn = state.mode === 'video'
-    var vgroup = card('视频参数', 'cp-video-group')
+    //   ★ 差异化：生图模式**整卡不渲染**（挂着三个 disabled 滑块只会让人以为
+    //   「生图也有帧数」）；视频/混合模式启用。旧 schema（无 modePlans）照旧全显。
+    var videoOn = state.mode === 'video' || state.mode === 'hybrid'
+    var showVideo = !(plan.cards && plan.cards['video-group'] === false)
+    var vgroup = showVideo ? card('视频参数', 'cp-video-group') : null
+    if (showVideo) {
     vgroup.appendChild(field('帧数', 'frames', {
       disabled: !videoOn,
       hint: videoOn ? '' : '先切到视频模式。',
@@ -725,6 +743,20 @@
       hint: 'XT-5B 链没有运动幅度参数（只有提示词里写运镜）—— 不装能拨的假滑块。',
     }))
     panel.appendChild(vgroup)
+    }
+
+    // ★ 混合模式专属：三段链说明卡。旁白文本与音色由 Agent 按素材库风格包生成，
+    //   面板没有可调参数 —— 只讲清链路与边界，不装假滑块。
+    if (plan.cards && plan.cards.tts === true) {
+      var ttsCard = card('混合链：生图 → TTS → 视频', 'cp-tts-group')
+      ttsCard.appendChild(el('p', 'cp-hint',
+        '三段各自出活：先生成首帧图，Qwen3-TTS 合成旁白音频，Wan22 把图变成视频。'
+        + '音频与 mp4 不自动合流 —— 拿到两个文件后用剪辑工具拼接。'))
+      ttsCard.appendChild(el('p', 'cp-hint',
+        '旁白内容按素材库的「设计风格 + 用户指令」由 Agent 生成；分段拼接的重叠帧数'
+        + '见高级设置的「分块重叠」（混合链会读取本值）。'))
+      panel.appendChild(ttsCard)
+    }
 
     // ★ 素材库（用户定义：设计风格 + 用户指令 + 自行装载的 skill）
     var library = card('素材库', 'cp-library')
@@ -835,18 +867,27 @@
     var adv = el('details', 'cp-card cp-adv')
     adv.appendChild(el('summary', null, '高级设置'))
     var body = el('div', 'cp-adv-body')
-    body.appendChild(field('种子（-1 = 每次随机）', 'seed', { hint: '同提示词 + 同种子 = 同一张图；-1 每次都不一样。' }))
-    body.appendChild(field('采样步数', 'steps', {
-      hint: '仅在原生链路（textControl=native）真正按它采样；官方 Turbo 链固定 8/9 步蒸馏，会忽略本值。',
-      warn: true,
-    }))
-    body.appendChild(field('提示词引导 CFG', 'cfg', {
-      hint: '引导尺度。蒸馏链（Turbo）强制 1.0；原生链默认 2.5，可调。',
-    }))
-    body.appendChild(field('每轮张数', 'count', { hint: '同一次调用出多张只加载一次模型。' }))
-    body.appendChild(field('降噪 denoise', 'denoise', { disabled: true, hint: '编辑链的降噪由任务链内部按 LoRA 工作点定，暂不由面板接管。' }))
-    body.appendChild(field('VAE 分块 tileSize', 'tileSize', { disabled: true, hint: 'VAE 分块由优化开关接管，暂不走面板。' }))
-    body.appendChild(field('分块重叠 chunkOverlap', 'chunkOverlap', { disabled: true, hint: '混合链分段拼接会读取本值（默认 8 帧重叠），面板暂不开放调节。' }))
+    // ★ 差异化：高级项按 modePlans.advShow 过滤（生图模式没有视频向的分块/重叠，
+    //   挂着 disabled 假滑块只会添乱）。旧 schema（无 advShow）→ 全部照旧显示。
+    var advShow = plan.advShow || null
+    var advDefs = [
+      ['种子（-1 = 每次随机）', 'seed', { hint: '同提示词 + 同种子 = 同一张图；-1 每次都不一样。' }],
+      ['采样步数', 'steps', {
+        hint: '仅在原生链路（textControl=native）真正按它采样；官方 Turbo 链固定 8/9 步蒸馏，会忽略本值。',
+        warn: true,
+      }],
+      ['提示词引导 CFG', 'cfg', {
+        hint: '引导尺度。蒸馏链（Turbo）强制 1.0；原生链默认 2.5，可调。',
+      }],
+      ['每轮张数', 'count', { hint: '同一次调用出多张只加载一次模型。' }],
+      ['降噪 denoise', 'denoise', { disabled: true, hint: '编辑链的降噪由任务链内部按 LoRA 工作点定，暂不由面板接管。' }],
+      ['VAE 分块 tileSize', 'tileSize', { disabled: true, hint: 'VAE 分块由优化开关接管，暂不走面板。' }],
+      ['分块重叠 chunkOverlap', 'chunkOverlap', { disabled: true, hint: '混合链分段拼接会读取本值（默认 8 帧重叠），面板暂不开放调节。' }],
+    ]
+    advDefs.forEach(function (d) {
+      if (advShow && advShow.indexOf(d[1]) === -1) return
+      body.appendChild(field(d[0], d[1], d[2]))
+    })
     adv.appendChild(body)
     panel.appendChild(adv)
 

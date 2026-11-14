@@ -122,9 +122,19 @@ check('注册了 draw_image（apply 直接注册，不经 root.inject）', tool.
 //             + generate_hybrid（image→tts→video 三段串行）8 → 9
 // 2026-11-13：+ generate_speech（B3 独立 TTS 工具）9 → 10
 // 2026-11-13：+ list_generated_images（SQLite 生成历史查询）10 → 11
-//   ★ 这两次都是**有意的行为变更**（真的多注册了工具），不是改测试迁就 bug。
-check('注册了 11 个工具（draw + video + hybrid + speech + 2 诊断 + history + upscale + inpaint/remove/outpaint）', registered.length === 11,
-  registered.map((t) => t.name))
+// 2026-11-14：+ compose_prompt（F28 提示词模板）11 → 12
+// 2026-11-14：+ batch_draw（C11/C12 批量扫描 + 部分成功）12 → 13
+//   ★ 这些都是**有意的行为变更**（真的多注册了工具），不是改测试迁就 bug。
+//     为防止「加一个工具就把数字 +1」变成惯性操作，下面改成逐字比对集合：
+//     新增工具必须显式写进这份清单，等于强制过一次脑子（是工具还是误注册？）。
+const EXPECTED_TOOLS = [
+  'batch_draw', 'check_acceleration', 'compose_prompt', 'draw_image', 'generate_hybrid',
+  'generate_speech', 'generate_video', 'inpaint_image', 'list_available_models',
+  'list_generated_images', 'outpaint_image', 'remove_image', 'upscale_image',
+]
+check('注册的工具集合逐字等于预期（新增工具须显式登记）',
+  registered.map((t) => t.name).slice().sort().join(' , ') === EXPECTED_TOOLS.join(' , '),
+  registered.map((t) => t.name).sort().join(' , '))
 check('两个诊断工具都在（list_available_models / check_acceleration）',
   registered.some((t) => t.name === 'list_available_models')
   && registered.some((t) => t.name === 'check_acceleration'),

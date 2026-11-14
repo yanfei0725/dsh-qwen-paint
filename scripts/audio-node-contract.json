@@ -1,0 +1,546 @@
+{
+ "_comment": "D21/D22 音频节点的**真机槽位契约**（2026-11-14 从 ComfyUI 0.39.0 的 /object_info 抽取）。与 comfy-node-contract.json 互补：那份来自官方 comfy_extras 源码解析，覆盖不到 custom_nodes；这份专门覆盖 VideoHelperSuite 与 ComfyUI-Qwen-TTS。scripts/test-audio-workflows.mjs 用它做断言。",
+ "_source": {
+  "comfyuiVersion": "0.39.0",
+  "nodeCountInSnapshot": 1686,
+  "extractedAt": "2026-11-14",
+  "endpoint": "GET /object_info（全量 1686 节点）",
+  "note": "全量快照 3.39 MB 未入库（超单文件闸门）；需要复核时重拉 /object_info 再跑抽取。"
+ },
+ "_missing": [],
+ "nodes": {
+  "VHS_LoadAudio": {
+   "display": "Load Audio (Path)🎥🅥🅗🅢",
+   "category": "Video Helper Suite 🎥🅥🅗🅢/audio",
+   "output": [
+    "AUDIO",
+    "FLOAT"
+   ],
+   "required": [
+    "audio_file"
+   ],
+   "optional": [
+    "duration",
+    "seek_seconds"
+   ],
+   "detail": {
+    "audio_file": {
+     "default": "input/"
+    },
+    "seek_seconds": {
+     "default": 0
+    },
+    "duration": {
+     "default": 0
+    }
+   }
+  },
+  "VHS_VideoCombine": {
+   "display": "Video Combine 🎥🅥🅗🅢",
+   "category": "Video Helper Suite 🎥🅥🅗🅢",
+   "output": [
+    "VHS_FILENAMES"
+   ],
+   "required": [
+    "filename_prefix",
+    "format",
+    "frame_rate",
+    "images",
+    "loop_count",
+    "pingpong",
+    "save_output"
+   ],
+   "optional": [
+    "audio",
+    "meta_batch",
+    "vae"
+   ],
+   "detail": {
+    "frame_rate": {
+     "default": 8
+    },
+    "loop_count": {
+     "default": 0
+    },
+    "filename_prefix": {
+     "default": "AnimateDiff"
+    },
+    "format": {
+     "enum": [
+      "image/gif",
+      "image/webp",
+      "video/16bit-png",
+      "video/8bit-png",
+      "video/av1-webm",
+      "video/ffmpeg-gif",
+      "video/ffv1-mkv",
+      "video/h264-mp4",
+      "video/h265-mp4",
+      "video/nvenc_av1-mp4",
+      "video/nvenc_h264-mp4",
+      "video/nvenc_hevc-mp4",
+      "video/ProRes",
+      "video/webm"
+     ]
+    },
+    "pingpong": {
+     "default": false
+    },
+    "save_output": {
+     "default": true
+    }
+   }
+  },
+  "FB_Qwen3TTSVoiceClone": {
+   "display": "🎭 Qwen3-TTS VoiceClone",
+   "category": "Qwen3-TTS",
+   "output": [
+    "AUDIO"
+   ],
+   "required": [
+    "device",
+    "language",
+    "model_choice",
+    "precision",
+    "target_text"
+   ],
+   "optional": [
+    "attention",
+    "custom_model_path",
+    "instruct",
+    "max_new_tokens",
+    "ref_audio",
+    "ref_text",
+    "repetition_penalty",
+    "seed",
+    "temperature",
+    "top_k",
+    "top_p",
+    "unload_model_after_generate",
+    "voice_clone_prompt",
+    "x_vector_only"
+   ],
+   "detail": {
+    "target_text": {
+     "default": "Good one. Okay, fine, I'm just gonna leave this sock monkey here. Goodbye."
+    },
+    "model_choice": {
+     "default": "0.6B",
+     "enum": [
+      "0.6B",
+      "1.7B"
+     ]
+    },
+    "device": {
+     "default": "auto",
+     "enum": [
+      "auto",
+      "cuda",
+      "xpu",
+      "mps",
+      "cpu"
+     ]
+    },
+    "precision": {
+     "default": "bf16",
+     "enum": [
+      "bf16",
+      "fp32"
+     ]
+    },
+    "language": {
+     "default": "Auto",
+     "enum": [
+      "Auto",
+      "Chinese",
+      "English",
+      "Japanese",
+      "Korean",
+      "French",
+      "German",
+      "Spanish",
+      "Portuguese",
+      "Russian",
+      "Italian"
+     ]
+    },
+    "ref_text": {
+     "default": ""
+    },
+    "seed": {
+     "default": 0
+    },
+    "max_new_tokens": {
+     "default": 2048
+    },
+    "top_p": {
+     "default": 1.0
+    },
+    "top_k": {
+     "default": 50
+    },
+    "temperature": {
+     "default": 0.9
+    },
+    "repetition_penalty": {
+     "default": 1.05
+    },
+    "x_vector_only": {
+     "default": false
+    },
+    "instruct": {
+     "default": ""
+    },
+    "attention": {
+     "default": "auto",
+     "enum": [
+      "auto",
+      "sage_attn",
+      "flash_attn",
+      "sdpa",
+      "eager"
+     ]
+    },
+    "unload_model_after_generate": {
+     "default": false
+    },
+    "custom_model_path": {
+     "default": ""
+    }
+   }
+  },
+  "FB_Qwen3TTSVoiceClonePrompt": {
+   "display": "🎭 Qwen3-TTS VoiceClonePrompt",
+   "category": "Qwen3-TTS",
+   "output": [
+    "VOICE_CLONE_PROMPT"
+   ],
+   "required": [
+    "attention",
+    "device",
+    "model_choice",
+    "precision",
+    "ref_audio",
+    "ref_text"
+   ],
+   "optional": [
+    "unload_model_after_generate",
+    "x_vector_only"
+   ],
+   "detail": {
+    "ref_text": {
+     "default": ""
+    },
+    "model_choice": {
+     "default": "0.6B",
+     "enum": [
+      "0.6B",
+      "1.7B"
+     ]
+    },
+    "device": {
+     "default": "auto",
+     "enum": [
+      "auto",
+      "cuda",
+      "xpu",
+      "mps",
+      "cpu"
+     ]
+    },
+    "precision": {
+     "default": "bf16",
+     "enum": [
+      "bf16",
+      "fp32"
+     ]
+    },
+    "attention": {
+     "default": "auto",
+     "enum": [
+      "auto",
+      "sage_attn",
+      "flash_attn",
+      "sdpa",
+      "eager"
+     ]
+    },
+    "x_vector_only": {
+     "default": false
+    },
+    "unload_model_after_generate": {
+     "default": false
+    }
+   }
+  },
+  "FB_Qwen3TTSCustomVoice": {
+   "display": "🎵 Qwen3-TTS CustomVoice",
+   "category": "Qwen3-TTS",
+   "output": [
+    "AUDIO"
+   ],
+   "required": [
+    "device",
+    "language",
+    "model_choice",
+    "precision",
+    "speaker",
+    "text"
+   ],
+   "optional": [
+    "attention",
+    "custom_model_path",
+    "custom_speaker_name",
+    "instruct",
+    "max_new_tokens",
+    "repetition_penalty",
+    "seed",
+    "temperature",
+    "top_k",
+    "top_p",
+    "unload_model_after_generate"
+   ],
+   "detail": {
+    "text": {
+     "default": "Hello world"
+    },
+    "speaker": {
+     "default": "Ryan",
+     "enum": [
+      "Aiden",
+      "Dylan",
+      "Eric",
+      "Ono_anna",
+      "Ryan",
+      "Serena",
+      "Sohee",
+      "Uncle_fu",
+      "Vivian"
+     ]
+    },
+    "model_choice": {
+     "default": "1.7B",
+     "enum": [
+      "0.6B",
+      "1.7B"
+     ]
+    },
+    "device": {
+     "default": "auto",
+     "enum": [
+      "auto",
+      "cuda",
+      "xpu",
+      "mps",
+      "cpu"
+     ]
+    },
+    "precision": {
+     "default": "bf16",
+     "enum": [
+      "bf16",
+      "fp32"
+     ]
+    },
+    "language": {
+     "default": "Auto",
+     "enum": [
+      "Auto",
+      "Chinese",
+      "English",
+      "Japanese",
+      "Korean",
+      "French",
+      "German",
+      "Spanish",
+      "Portuguese",
+      "Russian",
+      "Italian"
+     ]
+    },
+    "seed": {
+     "default": 0
+    },
+    "instruct": {
+     "default": ""
+    },
+    "max_new_tokens": {
+     "default": 2048
+    },
+    "top_p": {
+     "default": 1.0
+    },
+    "top_k": {
+     "default": 50
+    },
+    "temperature": {
+     "default": 0.9
+    },
+    "repetition_penalty": {
+     "default": 1.05
+    },
+    "attention": {
+     "default": "auto",
+     "enum": [
+      "auto",
+      "sage_attn",
+      "flash_attn",
+      "sdpa",
+      "eager"
+     ]
+    },
+    "unload_model_after_generate": {
+     "default": false
+    },
+    "custom_model_path": {
+     "default": ""
+    },
+    "custom_speaker_name": {
+     "default": ""
+    }
+   }
+  },
+  "FB_Qwen3TTSVoiceDesign": {
+   "display": "🎨 Qwen3-TTS VoiceDesign",
+   "category": "Qwen3-TTS",
+   "output": [
+    "AUDIO"
+   ],
+   "required": [
+    "device",
+    "instruct",
+    "language",
+    "model_choice",
+    "precision",
+    "text"
+   ],
+   "optional": [
+    "attention",
+    "max_new_tokens",
+    "repetition_penalty",
+    "seed",
+    "temperature",
+    "top_k",
+    "top_p",
+    "unload_model_after_generate"
+   ],
+   "detail": {
+    "text": {
+     "default": "Hello world"
+    },
+    "instruct": {
+     "default": ""
+    },
+    "model_choice": {
+     "default": "1.7B",
+     "enum": [
+      "0.6B",
+      "1.7B"
+     ]
+    },
+    "device": {
+     "default": "auto",
+     "enum": [
+      "auto",
+      "cuda",
+      "xpu",
+      "mps",
+      "cpu"
+     ]
+    },
+    "precision": {
+     "default": "bf16",
+     "enum": [
+      "bf16",
+      "fp32"
+     ]
+    },
+    "language": {
+     "default": "Auto",
+     "enum": [
+      "Auto",
+      "Chinese",
+      "English",
+      "Japanese",
+      "Korean",
+      "French",
+      "German",
+      "Spanish",
+      "Portuguese",
+      "Russian",
+      "Italian"
+     ]
+    },
+    "seed": {
+     "default": 0
+    },
+    "max_new_tokens": {
+     "default": 2048
+    },
+    "top_p": {
+     "default": 1.0
+    },
+    "top_k": {
+     "default": 50
+    },
+    "temperature": {
+     "default": 0.9
+    },
+    "repetition_penalty": {
+     "default": 1.05
+    },
+    "attention": {
+     "default": "auto",
+     "enum": [
+      "auto",
+      "sage_attn",
+      "flash_attn",
+      "sdpa",
+      "eager"
+     ]
+    },
+    "unload_model_after_generate": {
+     "default": false
+    }
+   }
+  },
+  "SaveAudioMP3": {
+   "display": "Save Audio (MP3) (DEPRECATED)",
+   "category": "audio",
+   "output": [
+    "AUDIO"
+   ],
+   "required": [
+    "audio",
+    "filename_prefix",
+    "quality"
+   ],
+   "optional": [],
+   "detail": {
+    "filename_prefix": {
+     "default": "audio/ComfyUI"
+    },
+    "quality": {
+     "default": "V0"
+    }
+   }
+  },
+  "SaveAudio": {
+   "display": "Save Audio (FLAC) (DEPRECATED)",
+   "category": "audio",
+   "output": [
+    "AUDIO"
+   ],
+   "required": [
+    "audio",
+    "filename_prefix"
+   ],
+   "optional": [],
+   "detail": {
+    "filename_prefix": {
+     "default": "audio/ComfyUI"
+    }
+   }
+  }
+ }
+}

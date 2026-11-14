@@ -1,0 +1,153 @@
+/* assets/draft.css —— D25 草图台。类名统一 dshqp-dr- 前缀，避免与 panel/history 撞车。 */
+
+.dshqp-dr-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(10, 12, 16, 0.62);
+  backdrop-filter: blur(2px);
+}
+.dshqp-dr-mask[hidden] { display: none; }
+
+.dshqp-dr-box {
+  width: min(620px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #16181d;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  font: 13px/1.5 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+.dshqp-dr-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.dshqp-dr-title { font-size: 15px; font-weight: 600; }
+.dshqp-dr-x {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: #eef0f4;
+  color: #444a55;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.dshqp-dr-x:hover { background: #e2e6ee; }
+
+.dshqp-dr-tip {
+  color: #5b6270;
+  font-size: 12px;
+  background: #f6f7fa;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.dshqp-dr-canvaswrap {
+  display: flex;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 10px;
+  background: #f1f3f7;
+  border: 1px solid #e3e7ef;
+}
+.dshqp-dr-canvas {
+  width: 100%;
+  max-width: 512px;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.dshqp-dr-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dshqp-dr-btn {
+  padding: 6px 12px;
+  border: 1px solid #d8dde8;
+  border-radius: 8px;
+  background: #fff;
+  color: #24282f;
+  font-size: 12px;
+  cursor: pointer;
+}
+.dshqp-dr-btn:hover { background: #f4f6fa; }
+.dshqp-dr-btn:disabled { opacity: 0.55; cursor: default; }
+.dshqp-dr-on {
+  border-color: #2f6bff;
+  background: #eef3ff;
+  color: #1c4fd8;
+  font-weight: 600;
+}
+.dshqp-dr-primary {
+  border-color: #2f6bff;
+  background: #2f6bff;
+  color: #fff;
+  font-weight: 600;
+}
+.dshqp-dr-primary:hover { background: #2059ea; }
+
+.dshqp-dr-sel {
+  padding: 5px 8px;
+  border: 1px solid #d8dde8;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12px;
+}
+.dshqp-dr-range { width: 120px; }
+
+.dshqp-dr-status {
+  min-height: 18px;
+  font-size: 12px;
+  color: #4b5261;
+  word-break: break-all;
+}
+.dshqp-dr-bad { color: #c0392b; }
+
+.dshqp-dr-path {
+  font: 11px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color: #2b3140;
+  background: #f6f7fa;
+  border-radius: 8px;
+  padding: 8px 10px;
+  word-break: break-all;
+  min-height: 14px;
+  user-select: all;
+}
+.dshqp-dr-path:empty { display: none; }
+
+@media (prefers-color-scheme: dark) {
+  .dshqp-dr-box { background: #1b1e24; color: #e8ebf2; }
+  .dshqp-dr-tip { background: #24282f; color: #a8b0bf; }
+  .dshqp-dr-canvaswrap { background: #24282f; border-color: #333944; }
+  .dshqp-dr-x { background: #2b3038; color: #c7cedb; }
+  .dshqp-dr-x:hover { background: #343a44; }
+  .dshqp-dr-btn { background: #24282f; border-color: #39404c; color: #dfe4ee; }
+  .dshqp-dr-btn:hover { background: #2c323b; }
+  .dshqp-dr-on { background: #1e2c4d; border-color: #4b7bff; color: #b9cdff; }
+  .dshqp-dr-sel { background: #24282f; border-color: #39404c; color: #dfe4ee; }
+  .dshqp-dr-status { color: #aab2c1; }
+  .dshqp-dr-bad { color: #ff8b7d; }
+  .dshqp-dr-path { background: #24282f; color: #cfd6e3; }
+}

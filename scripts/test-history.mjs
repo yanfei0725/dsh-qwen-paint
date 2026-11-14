@@ -286,8 +286,20 @@ const jsonBody = (obj) => ({ headers: { 'content-type': 'application/json' }, bo
   ok(logs.some((l) => l.level === 'warn' && l.msg.includes('K:/secret')), '★ 诊断细节只进本机日志')
 
   const table = historyRouteTable(h)
-  eq(table.length, 3, '路由表 3 条')
+  // ★ 判据升级：不再断言「N 条」（增一条就得改数字，很容易变成"把数字改大"糊过去），
+  //   改成**集合逐字相等**。新增端点时必须显式登记到下表，等于强制过一次脑子。
+  const paths = table.map(([p]) => p).sort()
+  const expectPaths = [
+    // D25 草图台（data_url 落盘）与缩略图共用同一套三道闸，所以归在这张表里。
+    '/api/qwen-paint/draft',
+    '/api/qwen-paint/history',
+    '/api/qwen-paint/history/delete',
+    '/api/qwen-paint/history/stats',
+    '/api/qwen-paint/history/thumb',
+  ].sort()
+  eq(paths.join(' , '), expectPaths.join(' , '), '路由表逐字等于预期集合')
   ok(table.every(([p, fn]) => p.startsWith('/api/qwen-paint/') && typeof fn === 'function'), '路由路径与本机前缀一致')
+  ok(table.every(([, fn]) => typeof fn === 'function'), '每个路由都绑了可调用的 handler')
 }
 
 // ── 5. Agent 工具 ──────────────────────────────────────────────────────────

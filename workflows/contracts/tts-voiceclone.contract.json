@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "tts-voiceclone",
+  "kind": "tts",
+  "label": "Qwen3-TTS 语音克隆链（契约核对，非运行时提交）",
+  "_comment": "克隆链最容易出的错是「槽位存在 ≠ 克隆生效」：FB_Qwen3TTSVoiceClone 的 ref_audio 是**可选**输入，不连线也能跑，但那时是随机音色。所以契约必须核对 ①ref_audio 真的接到了加载器 ②没给转写时 x_vector_only=true（否则模型拿空 ref_text 对齐，音色会静默塌掉）。",
+  "outputs": ["SaveAudioMP3"],
+  "roles": {
+    "audio": {
+      "classes": ["VHS_LoadAudio"],
+      "label": "参考音频加载器（要 input/ 前缀，裸文件名会被 ComfyUI 拒）"
+    },
+    "clone": { "classes": ["FB_Qwen3TTSVoiceClone"], "label": "克隆生成节点" },
+    "save": { "classes": ["SaveAudioMP3"], "label": "音频保存" }
+  },
+  "params": {
+    "text": { "role": "clone", "slot": "target_text" },
+    "seed": { "role": "clone", "slot": "seed", "transform": "int" },
+    "referenceFile": {
+      "role": "audio",
+      "slot": "audio_file",
+      "check": "non-empty",
+      "_note": "源码会过 toComfyInputPath 加 input/ 前缀，所以只核对有值。"
+    }
+  }
+}

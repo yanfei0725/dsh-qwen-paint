@@ -288,13 +288,16 @@ console.log('\n=== 6. host 接线静态锁 + 端点目录 ⊆ 真实注册 ===')
   const idx = readSrc('lib/index.js')
   const cli = readSrc('lib/client.js')
   const runner = readSrc('lib/task-runner.js')
-  const endpointFiles = [
-    'lib/index.js', 'lib/integration-endpoints.js', 'lib/video-frames-endpoints.js',
-    'lib/reference-endpoints.js', 'lib/ui-edit-endpoints.js', 'lib/file-route.js', 'lib/asset-route.js',
-    // ★ 2026-11-13 审计补：这两个模块也注册了对外端点，之前不在扫描范围里，
-    //   所以「目录缺 /history、/cpu-*」这件事两头都发现不了。
-    'lib/history-endpoints.js', 'lib/cpu-endpoints.js',
-  ].map((f) => readSrc(f)).join('\n')
+  // ★★ 2026-11-14：改成**自动扫描 lib/ 下全部模块**，不再维护硬编码文件清单。
+  //   上一版的清单手工列了 9 个文件，本轮新增 lib/config-endpoints.js 注册了 3 个端点，
+  //   而它不在清单里 ⇒ 这条断言只看到 history/thumb 一条，「注册 ⊆ 目录」直接红。
+  //   这类"扫描范围本身就是漏点"的问题，靠往清单里再加一行治不好，只能改成自动发现。
+  //   （实测：自动扫描与硬编码清单算出的集合完全一致，只是多了新模块的端点，不误报注释里的路径。）
+  const endpointFiles = fs.readdirSync(path.join(ROOT, 'lib'))
+    .filter((f) => f.endsWith('.js'))
+    .sort()
+    .map((f) => readSrc('lib/' + f))
+    .join('\n')
 
   ok('★ 端点处理器已挂到 host', idx.includes('makeIntegrationHandlers({') && idx.includes('registerIntegrationRoutes('))
   // ★ 2026-11-13：assetRoute 已外置成 lib/asset-route.js 的表驱动注册（index.js 瘦身 4 KB）。

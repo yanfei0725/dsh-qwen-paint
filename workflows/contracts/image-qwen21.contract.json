@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "id": "image-qwen21",
+  "kind": "image",
+  "label": "Qwen-Image 2.1 生图链（契约核对，非运行时提交）",
+  "_comment": "生图链仍是代码构建：它按 caps 折 basic/full、按参考图/控制图/批量分裂十几条分支，节点 id 是硬编码 + delete undefined 的产物。整图清单化会变成半迁移（清单与代码两边都能跑、两边都会漂），所以这里改成**角色契约**：只锁「哪些角色必须在、参数必须流到哪」。图结构指纹（scripts/workflow-fingerprints.json）管「图变了没有」，本契约管「哪里变了」。",
+  "_width_note": "width/height 刻意**不做等值核对**：config.js 的 forceOptimizedSize 默认 true 时会把无参考图的尺寸锁成 cfg.optimizedSize（默认 1024），传 830 进去出来是 1024 —— 这不是 bug 是设计。等值比对会一路假红，所以只在 latent 角色存在性上把关。",
+  "outputs": [
+    "SaveImage"
+  ],
+  "roles": {
+    "unet": {
+      "classes": [
+        "UnetLoaderGGUF",
+        "UNETLoader"
+      ],
+      "label": "千问主模型加载器（GGUF 优先，缺了才回原生）"
+    },
+    "clip": {
+      "classes": [
+        "CLIPLoader"
+      ],
+      "label": "文本编码器"
+    },
+    "vae": {
+      "classes": [
+        "VAELoader"
+      ],
+      "label": "VAE"
+    },
+    "text": {
+      "classes": [
+        "TextEncodeQwenImage21"
+      ],
+      "label": "提示词编码"
+    },
+    "sampler": {
+      "classes": [
+        "KSampler"
+      ],
+      "label": "采样器"
+    },
+    "decode": {
+      "classes": [
+        "VAEDecode",
+        "VAEDecodeTiled"
+      ],
+      "label": "VAE 解码（大图走分块）"
+    },
+    "save": {
+      "classes": [
+        "SaveImage"
+      ],
+      "label": "出图"
+    },
+    "latent": {
+      "classes": [
+        "EmptyLatentImage",
+        "EmptySD3LatentImage"
+      ],
+      "label": "空 latent（仅文生图有；图生图由参考图给 latent）",
+      "required": false
+    },
+    "reference": {
+      "classes": [
+        "LoadImage"
+      ],
+      "label": "参考图 / 控制图加载",
+      "multi": true,
+      "required": false
+    }
+  },
+  "params": {
+    "prompt": {
+      "role": "text",
+      "slot": "prompt",
+      "check": "non-empty",
+      "_note": "源码会过 trimPrompt（清理 + 可选截断），全文比对必然假红，只核对有值。"
+    },
+    "negative": {
+      "role": "text",
+      "slot": "negative_prompt"
+    },
+    "steps": {
+      "role": "sampler",
+      "slot": "steps",
+      "min": 1,
+      "max": 60,
+      "_note": "源码是 Math.max(1, Math.min(60, effSteps))，所以契约也夹同一区间。两条 alternates 是**真的合法分支**，不是放水：turbo8 蒸馏 LoRA 在时必须 8 步（训练工作点），极速档由档位钉 4 步。精确性（无 turbo 时传 25 必须得 25）由 test-graph-contract 用具体 caps 逐档断言。",
+      "alternates": [
+        {
+          "whenClass": "LoraLoaderModelOnly",
+          "value": 8,
+          "reason": "turbo8 蒸馏 LoRA 在场：步数被强制钉成 8（TURBO8_STEPS），不是参数没生效"
+        },
+        {
+          "value": 4,
+          "reason": "极速档（useFast4）：步数由档位决定，忽略显式 steps"
+        }
+      ]
+    },
+    "seed": {
+      "role": "sampler",
+      "slot": "seed",
+      "_note": "不做 int 变换：源码就是原样写入，传小数就不该被悄悄圆整。"
+    },
+    "count": {
+      "role": "latent",
+      "slot": "batch_size",
+      "transform": "int",
+      "min": 1,
+      "max": 4
+    }
+  },
+  "forbid": {
+    "controlImage": [
+      "ControlNetLoader",
+      "ControlNetApplyAdvanced"
+    ],
+    "_note": "没传控制图时绝不能留 ControlNet 节点 —— 源码里 withCnet 三个条件缺一不可，这条防的是「面板开了、实际没生效」的反向版本。"
+  }
+}

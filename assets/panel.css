@@ -382,3 +382,37 @@
   }
   .cp-progress-fill.is-indeterminate::after { animation: none; width: 100%; opacity: .6; }
 }
+
+/* ====================================================== 三模式差异化（2026-11-14） ==
+ * 根元素带 data-mode，强调色按模式换：生图=蓝（默认 accent）、视频=青、混合=紫。
+ * 只换「颜色 + 标语 + 哪些卡片在」，不碰任何提交语义。 */
+
+/* 每个模式的强调色（覆盖 .cp-panel 里的 --cp-accent） */
+.cp-panel[data-mode="video"]  { --cp-accent: var(--color-teal, #3aa8a0); }
+.cp-panel[data-mode="hybrid"] { --cp-accent: var(--color-purple, #9a7bd4); }
+
+/* 模式标语：三个模式各一句话，替代过去共用的一行空白 */
+.cp-tagline {
+  margin: 0 0 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--cp-accent-line);
+  background: var(--cp-accent-wash);
+  color: var(--cp-text);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* 活动页签用模式强调色（视觉上「我在哪个模式」一眼可辨） */
+.cp-tab.is-on {
+  color: var(--cp-accent);
+  border-color: var(--cp-accent-line);
+}
+
+/* 混合链说明卡：链路感的左边线 + 轻强调底 */
+.cp-tts-group {
+  border-left: 2px solid var(--cp-accent);
+}
+.cp-tts-group .cp-hint:first-child {
+  color: var(--cp-text);
+}

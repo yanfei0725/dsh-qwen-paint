@@ -1,0 +1,70 @@
+# C15：把离线回归与真机冒烟接进 CI。
+#
+# ★ 三条口径（与项目硬规矩一致）：
+#   ① 只跑**离线**套件。CI 里没有 ComfyUI / 显卡 / ffmpeg，任何联网断言都会假红。
+#   ② 冒烟脚本 `scripts/smoke.mjs` 在离线时 SKIP 并退 0 —— 冒烟只做只读探测，
+#      默认**不生成任何图片/视频/音频**（--submit 才提交，且只用于人工验收）。
+#   ③ 不在 CI 里发布任何东西。npm / GitHub Release 一律走人工单独授权，
+#      这里连 NPM_TOKEN 都不读。
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: 离线回归 (node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: ['20', '22', '24']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: 语法预检（lib / assets / scripts）
+        shell: bash
+        run: |
+          set -e
+          n=0
+          for f in lib/*.js assets/*.js scripts/*.mjs scripts/*.js; do
+            [ -e "$f" ] || continue
+            node --check "$f" > /dev/null
+            n=$((n + 1))
+          done
+          echo "语法预检通过：$n 个文件"
+
+      - name: 离线全量回归
+        run: npm test
+
+      - name: 工具注册自检
+        run: npm run test:selftest
+
+      - name: 真机冒烟（离线自动 SKIP，不生成任何媒体）
+        run: node scripts/smoke.mjs
+
+  manifests:
+    name: 工作流清单一致性
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 清单校验 + 双轨逐字节一致
+        run: node scripts/test-workflow-manifest.mjs

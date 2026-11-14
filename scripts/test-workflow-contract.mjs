@@ -27,6 +27,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { listManifests, loadManifest } from '../lib/workflow-manifest.js'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '..')
@@ -139,8 +140,34 @@ for (const f of files) {
   const src = readFileSync(path.join(LIB, f), 'utf8')
   found.push(...extractNodes(src, f))
 }
+const fromSource = found.length
 
-console.log(`\n从 lib/ 提取到 ${found.length} 处工作流节点用法\n`)
+// ★★ 2026-11-14（A1 工作流 JSON 化）：拓扑开始搬进 `workflows/*.json`，
+//   源码里**扫不到了**。只扫 lib/ 会让覆盖静默缩水 —— 最坏情况是一条节点用法
+//   都不剩而测试仍然全绿（假绿）。所以把清单里的节点纳入**同一套检查**。
+//   JSON 本身就是结构化的，直接读键，不再跑正则解析。
+const manifests = listManifests()
+for (const id of manifests) {
+  const m = loadManifest(id)
+  const graph = m?.graph ?? {}
+  for (const nodeId of Object.keys(graph)) {
+    const node = graph[nodeId]
+    if (typeof node?.class_type !== 'string') continue
+    found.push({
+      name: node.class_type,
+      keys: Object.keys(node.inputs ?? {}),
+      file: `workflows/${id}.json#${nodeId}`,
+    })
+  }
+}
+const fromManifest = found.length - fromSource
+
+console.log(`\n从 lib/ 提取到 ${fromSource} 处工作流节点用法`)
+console.log(`从 workflows/ 提取到 ${fromManifest} 处（清单：${manifests.join(', ') || '无'}）`)
+if (fromManifest === 0 && manifests.length > 0) {
+  console.log('  ⚠ 有清单却一个节点都没提取到 —— 清单结构可能变了，检查 graph 字段')
+}
+console.log('')
 
 console.log('[1] 每个节点都必须带齐 ComfyUI 要求的**必需输入**')
 const unknown = new Set()

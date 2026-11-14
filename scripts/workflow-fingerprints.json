@@ -1,0 +1,75 @@
+{
+  "_comment": "A1：工作流图结构指纹（scripts/test-runtime-guards.mjs 维护）。图变了先看 diff 再 --update。",
+  "_why": "生图链/TTS 链分支多，暂不做运行时清单接管；用指纹锁住\"图不会悄悄变\"。",
+  "fixtures": {
+    "image-basic": {
+      "hash": "aba4d1fc9a745ca4ba1064509d1a1eb7",
+      "nodes": 8,
+      "types": [
+        "CLIPLoader",
+        "EmptyLatentImage",
+        "KSampler",
+        "SaveImage",
+        "TextEncodeQwenImage21",
+        "UNETLoader",
+        "VAEDecode",
+        "VAELoader"
+      ]
+    },
+    "image-full": {
+      "hash": "09619031b8fe82497e7f35f7f307f205",
+      "nodes": 10,
+      "types": [
+        "CLIPLoader",
+        "EmptyLatentImage",
+        "KSampler",
+        "LoraLoaderModelOnly",
+        "ModelSamplingFlux",
+        "SaveImage",
+        "TextEncodeQwenImage21",
+        "UNETLoader",
+        "VAEDecode",
+        "VAELoader"
+      ]
+    },
+    "image-img2img": {
+      "hash": "64ec2d2d4c17bbf299441f99d3362fb6",
+      "nodes": 8,
+      "types": [
+        "CLIPLoader",
+        "KSampler",
+        "LoadImage",
+        "SaveImage",
+        "TextEncodeQwenImage21",
+        "UNETLoader",
+        "VAEDecode",
+        "VAELoader"
+      ]
+    },
+    "video-dmd": {
+      "hash": "2b7e0a1ceca86ba2ad5317b9a08c4b72",
+      "nodes": 10,
+      "types": [
+        "CLIPLoader",
+        "CLIPTextEncode",
+        "CLIPTextEncode",
+        "KSampler",
+        "ModelSamplingSD3",
+        "UNETLoader",
+        "VAEDecodeTiled",
+        "VAELoader",
+        "VHS_VideoCombine",
+        "Wan22ImageToVideoLatent"
+      ]
+    },
+    "tts-custom-mp3": {
+      "hash": "fbce3284fe4b6a6be7c498d4ca350418",
+      "nodes": 3,
+      "types": [
+        "",
+        "",
+        ""
+      ]
+    }
+  }
+}

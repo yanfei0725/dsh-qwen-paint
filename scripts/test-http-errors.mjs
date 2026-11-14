@@ -110,7 +110,8 @@ const readSrc = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
   //   改成两条更硬的判据：① 文件名集合与清单逐字相等（增减都必须显式改清单）；
   //   ② 每个登记的文件在 assets/ 里**真的存在**（防"登记了但没建文件"⇒ 线上 404）。
   const EXPECT_FILES = [
-    'cpu-accel.css', 'cpu-accel.js', 'history.css', 'history.js', 'loading.gif', 'loading.webp',
+    'cpu-accel.css', 'cpu-accel.js', 'draft.css', 'draft.js',
+    'history.css', 'history.js', 'loading.gif', 'loading.webp',
     'mask-fx.css', 'mask-fx.js', 'panel.css', 'panel.js', 'setup-guide.css', 'setup-guide.js',
   ]
   eq(ASSET_ROUTES.map(([, f]) => f).slice().sort().join(','), EXPECT_FILES.join(','),

@@ -17,6 +17,8 @@ import path from 'node:path'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import vm from 'node:vm'
+// ★ 差异化测试注入**真实**的 MODE_PLANS（与 lib/mode-schema.js 同源，不复制一份防漂移）
+import { MODE_PLANS } from '../lib/mode-schema.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const SRC = readFileSync(path.join(ROOT, 'assets', 'panel.js'), 'utf8')
@@ -36,6 +38,10 @@ ok('面板自带防双挂载哨兵（__cp === true 直接 return）', SRC.includ
 // ---- 极简假 DOM（够 render() 跑完，不多做） ----
 function makeNode(tag) {
   const node = {
+    // ★ 差异化 UI 用 data-mode 挂根属性 ⇒ 假 DOM 也要会 set/getAttribute（真浏览器语义）
+    attrs: {},
+    setAttribute(name, value) { this.attrs[String(name)] = String(value) },
+    getAttribute(name) { return this.attrs[String(name)] ?? null },
     tagName: String(tag).toUpperCase(),
     className: '',
     id: '',
@@ -121,7 +127,8 @@ const fetch = (url, init) => {
       json: () => Promise.resolve({
         ok: true,
         schema: {
-          version: 1,
+          version: 2,
+          modePlans: MODE_PLANS,
           modes: [
             { id: 'image', label: '生图模式', backends: ['qwen21'], deliver: 'png' },
             { id: 'video', label: '视频模式', backends: ['wan22'], deliver: 'mp4' },
@@ -152,6 +159,20 @@ const fetch = (url, init) => {
           speedTiers: [25, 50, 75, 100],
           eta: { formula: 'baseMs(mode) × (speed/100) × (frames/49) × (h/720)²', label: '估算' },
         },
+      }),
+    })
+  }
+  if (String(url).includes('modes')) {
+    // ★ 三个模式全放行：差异化渲染的三模式都要能点进去（含混合）。
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({
+        ok: true,
+        modes: [
+          { id: 'image', available: true },
+          { id: 'video', available: true },
+          { id: 'hybrid', available: true },
+        ],
       }),
     })
   }
@@ -307,27 +328,42 @@ ok('★ 面板源码里零 checkbox（防止哪天又退回原生方块）',
 
 const tabs = panelEl.querySelectorAll('.cp-tab')
 ok('三个模式 tab 都在', tabs.length === 3, String(tabs.length))
-ok('★ 生图/视频 tab 可选；**只有混合**仍 disabled（链里缺 tts 段，本插件无 TTS 后端）',
-  tabs.filter((t) => t.disabled === true).length === 1
-  && tabs.find((t) => t.disabled === true).textContent.includes('混合'),
+// ★ 2026-11-14 三模式差异化：假 modes 端点放行三模式，tab 全部可点。
+ok('★ 三个模式 tab 全部可选（差异化渲染的前提是都能点进去）',
+  tabs.every((t) => t.disabled !== true),
   tabs.map((t) => `${t.textContent}:${t.disabled}`).join(','))
-ok('禁用原因写进了 note（不是静默禁用）',
-  String(panelEl.querySelector('.cp-note').textContent).includes('本插件没有的后端段'))
+
+// ---- ③b 生图模式：视频组整卡不渲染、视频向高级项隐藏、有自己的标语与强调色 ----
+ok('★ 生图模式根元素带 data-mode=image（CSS 换强调色的钩子）',
+  panelEl.getAttribute('data-mode') === 'image', String(panelEl.getAttribute('data-mode')))
+ok('★ 生图模式有专属标语（不再是三个模式共用一行空白）',
+  String(panelEl.querySelector('.cp-tagline').textContent).includes('千问 2.1'))
+ok('★★ 生图模式不渲染视频参数卡（挂 disabled 滑块只会让人以为生图也有帧数）',
+  panelEl.querySelectorAll('.cp-video-group').length === 0)
+ok('★ 生图模式不渲染混合链说明卡', panelEl.querySelectorAll('.cp-tts-group').length === 0)
 const fields = panelEl.querySelectorAll('.cp-field')
-ok('常用 3 + 视频 3 + 高级 7 = 13 项（含负面提示词 textarea 与 CFG 滑块）', fields.length === 13, String(fields.length))
+ok('★★ 生图模式 = 常用 3 + 高级 4（seed/steps/cfg/count）= 7 项（视频向的 denoise/tile/chunk 被藏掉）',
+  fields.length === 7, String(fields.length))
 const disabledInputs = panelEl.querySelectorAll('input').filter((i) => i.disabled === true)
-ok('★ 未切视频模式时：帧数/帧率禁用 + 运动幅度始终禁用 + denoise/tile/chunk 禁用 = 6',
-  disabledInputs.length === 6, String(disabledInputs.length))
-// 假 DOM 不会把子节点文本汇总到父节点 textContent，所以按 `.cp-label` / `.cp-hint` 直接查
-ok('★ 运动幅度确实渲染了', panelEl.querySelectorAll('.cp-label').some((l) => String(l.textContent).includes('运动幅度')))
-ok('★ 运动幅度写明了“XT-5B 链没有这个参数”（不装假滑块）',
-  panelEl.querySelectorAll('.cp-hint').some((h) => String(h.textContent).includes('XT-5B')))
+ok('★★ 生图模式零 disabled 输入件（看得见的每一件都能用）',
+  disabledInputs.length === 0, String(disabledInputs.length))
+ok('★ 生图模式看不见「运动幅度」（它在视频组里）',
+  !panelEl.querySelectorAll('.cp-label').some((l) => String(l.textContent).includes('运动幅度')))
 
 // ★ 切到视频模式：DOM 重建、帧数/帧率变可用、浮标不重复
 tabs.find((t) => t.textContent.includes('视频')).listeners.click.forEach((fn) => fn({ target: null }))
 const panelEl2 = body.querySelector('.cp-panel')
 const dis2 = panelEl2.querySelectorAll('input').filter((i) => i.disabled === true)
-ok('★★ 切视频模式后帧数/帧率变可用（禁用项 6 → 4）', dis2.length === 4, String(dis2.length))
+ok('★★ 切视频模式后：10 项 = 常用 3 + 视频 3 + 高级 4，视频组整卡回来了',
+  panelEl2.querySelectorAll('.cp-field').length === 10, String(panelEl2.querySelectorAll('.cp-field').length))
+ok('★ 视频组里帧数/帧率可用，只剩运动幅度禁用（disabled 0 → 1）', dis2.length === 1, String(dis2.length))
+ok('★ 视频模式有自己的标语（与生图不同）',
+  String(panelEl2.querySelector('.cp-tagline').textContent).includes('Wan22'))
+ok('★ 根元素 data-mode 切成 video', panelEl2.getAttribute('data-mode') === 'video')
+ok('★ 视频模式仍不渲染混合链说明卡', panelEl2.querySelectorAll('.cp-tts-group').length === 0)
+// 假 DOM 不会把子节点文本汇总到父节点 textContent，所以按 `.cp-hint` 直接查
+ok('★ 运动幅度渲染了，且写明“XT-5B 链没有这个参数”（不装假滑块）',
+  panelEl2.querySelectorAll('.cp-hint').some((h) => String(h.textContent).includes('XT-5B')))
 ok('★ 重建后浮标不会变成两个', body.querySelectorAll('.cp-fab').length === 1, String(body.querySelectorAll('.cp-fab').length))
 ok('★ 重建后参数面板只有一个', body.querySelectorAll('.cp-panel').length === 1, String(body.querySelectorAll('.cp-panel').length))
 await new Promise((r) => setTimeout(r, 460)) // scheduleSave 是 300ms 防抖
@@ -401,6 +437,32 @@ ok('★ 切策略只 POST strategy 到 /prefer，且不触发联网检索',
   && referenceSearchPosts.length === 1,
   JSON.stringify(referencePosts))
 ok('★ 导出 getReferenceState 便于回归核对状态', typeof panel.getReferenceState === 'function')
+
+// ---- ⑥ 混合模式：TTS 链说明卡出现、chunkOverlap 回到高级区、强调色换紫 ----
+const tabsEnd = panelEl.querySelectorAll('.cp-tab')
+tabsEnd.find((t) => t.textContent.includes('混合')).listeners.click.forEach((fn) => fn({ target: null }))
+const panelEl3 = body.querySelector('.cp-panel')
+ok('★ 混合模式根元素 data-mode=hybrid', panelEl3.getAttribute('data-mode') === 'hybrid')
+ok('★ 混合模式有专属标语（提到 TTS 与不合流边界）',
+  String(panelEl3.querySelector('.cp-tagline').textContent).includes('TTS')
+  && String(panelEl3.querySelector('.cp-tagline').textContent).includes('不自动合流'))
+ok('★★ 混合链说明卡出现（三段链：生图 → TTS → 视频；假 DOM 不汇总文本，按 hint 节点查）',
+  panelEl3.querySelectorAll('.cp-tts-group').length === 1
+  && panelEl3.querySelectorAll('.cp-hint').some((h) => String(h.textContent).includes('Wan22'))
+  && panelEl3.querySelectorAll('.cp-hint').some((h) => String(h.textContent).includes('不自动合流')))
+ok('★ 混合模式 = 11 项（常用 3 + 视频 3 + 高级 5，chunkOverlap 回来了）',
+  panelEl3.querySelectorAll('.cp-field').length === 11, String(panelEl3.querySelectorAll('.cp-field').length))
+const dis3 = panelEl3.querySelectorAll('input').filter((i) => i.disabled === true)
+ok('★ 混合模式 disabled = 2（运动幅度 + 面板暂不开放调节的分块重叠）',
+  dis3.length === 2, String(dis3.length))
+ok('★ 视频组在混合模式同样可用：3 个输入件里只有运动幅度是 disabled',
+  (function () {
+    // 假 DOM 的选择器不支持后代语法（'.a b'），先取卡片再在卡片内查
+    const card3 = panelEl3.querySelectorAll('.cp-video-group')[0]
+    if (!card3) return false
+    const inputs = card3.querySelectorAll('input')
+    return inputs.length === 3 && inputs.filter((i) => i.disabled === true).length === 1
+  })())
 
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项）`)
 process.exit(fail === 0 ? 0 : 1)

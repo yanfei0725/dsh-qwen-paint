@@ -16,6 +16,10 @@ const ok = (name, fn) => { fn(); n += 1; console.log('  ✓ ' + name) }
 
 function makeNode(tag) {
   const node = {
+    // 差异化 UI 用 data-mode 挂根属性 ⇒ 假 DOM 也要会 set/getAttribute（与真浏览器一致）
+    attrs: {},
+    setAttribute(name, value) { this.attrs[String(name)] = String(value) },
+    getAttribute(name) { return this.attrs[String(name)] ?? null },
     tagName: String(tag).toUpperCase(), className: '', id: '', textContent: '', value: '',
     type: '', min: '', max: '', step: '', title: '', hidden: false, disabled: false,
     style: {}, children: [], listeners: {},

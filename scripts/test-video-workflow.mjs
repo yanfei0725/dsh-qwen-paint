@@ -17,6 +17,8 @@ import {
   buildVideoWorkflow, videoParamsForSpeed, widthForAspect, alignFrames, alignEdge,
   WAN_ASSETS, DMD_STEPS, DMD_SHIFT, DEFAULT_NEGATIVE, REQUIRED_NODES,
   FRAME_MAX, FRAME_MIN,
+  VIDEO_SEED_OFFSET_MIN, VIDEO_SEED_OFFSET_MAX,
+  resetVideoSeed, getLastVideoSeed, resolveVideoParams,
 } from '../lib/video-workflow.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -141,6 +143,63 @@ ok('工具数仍是 8（selftest 那边同步过）', idxSrc.includes("name: 'ge
 // ★ 2026-11-13：工具描述集中到 lib/tool-descriptions.js，断言改读新文件（不是删/放宽）。
 ok('★ 工具描述如实写"短片段，做不了 60 秒长片"（不承诺做不到的事）',
   read('lib/tool-descriptions.js').includes('做不了 60 秒长片'))
+
+/* ---------------- B10：种子继承 ---------------- */
+// ⚠ 本文件用的是 ok(name, cond) —— 与 test-history.mjs 的 ok(cond, name) 相反。
+//   追加断言前先确认顺序，写反会变成「名字恒真」的假绿。
+console.log('— B10 视频种子继承')
+{
+  ok('偏移区间是 10–40', VIDEO_SEED_OFFSET_MIN === 10 && VIDEO_SEED_OFFSET_MAX === 40)
+
+  resetVideoSeed()
+  ok('reset 后基准为 null', getLastVideoSeed() === null)
+  const first = resolveVideoParams({ prompt: '第一段' })
+  ok('★ 没有基准时取随机种子（落在 32 位有符号正区间）',
+    Number.isInteger(first.seed) && first.seed >= 0 && first.seed < 2 ** 31, String(first.seed))
+  ok('第一次就把基准记下来了', getLastVideoSeed() === first.seed)
+
+  // 连续同场景：每次应在上一段 +10..+40
+  let prev = first.seed
+  let allInRange = true
+  let allDifferent = true
+  const deltas = []
+  for (let i = 0; i < 12; i += 1) {
+    const r = resolveVideoParams({ prompt: '接着拍' })
+    const d = r.seed - prev
+    deltas.push(d)
+    if (d < VIDEO_SEED_OFFSET_MIN || d > VIDEO_SEED_OFFSET_MAX) allInRange = false
+    if (r.seed === prev) allDifferent = false
+    prev = r.seed
+  }
+  ok('★★ 连续 12 段的种子偏移都落在 [10,40]',
+    allInRange, deltas.join(','))
+  ok('★★ 每段种子都不同（不会得到完全一样的构图）', allDifferent)
+  ok('★ 种子单调递增（分镜编号可预期，不用猜）', deltas.every((d) => d > 0))
+
+  // 显式传种子：用它，并成为新基准
+  resetVideoSeed()
+  const explicit = resolveVideoParams({ prompt: '换场景', seed: 999 })
+  ok('★★ 显式 seed 优先（不被继承逻辑干扰）', explicit.seed === 999, String(explicit.seed))
+  ok('★ 显式 seed 会成为新的继承基准', getLastVideoSeed() === 999)
+  const after = resolveVideoParams({ prompt: '从新基准接着拍' })
+  ok('★ 下一段在显式种子上继续偏移',
+    after.seed - 999 >= VIDEO_SEED_OFFSET_MIN && after.seed - 999 <= VIDEO_SEED_OFFSET_MAX,
+    String(after.seed - 999))
+
+  // 边界：接近上限时不能溢出成 2^31+
+  resetVideoSeed()
+  resolveVideoParams({ prompt: 'x', seed: 2 ** 31 - 1 })
+  const edge = resolveVideoParams({ prompt: 'y' })
+  ok('★★ 累加到上限时被夹在 2^31-1（不溢出成负数 seed）',
+    edge.seed >= 0 && edge.seed <= 2 ** 31 - 1, String(edge.seed))
+
+  // 显式 seed 为 0 也算"给了"（不能因为 0 是 falsy 就当没给）
+  resetVideoSeed()
+  const zero = resolveVideoParams({ prompt: 'x', seed: 0 })
+  ok('★★ seed=0 是合法值，不被当成"没给"而去继承', zero.seed === 0, String(zero.seed))
+
+  resetVideoSeed()
+}
 
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项）`)
 process.exit(fail === 0 ? 0 : 1)

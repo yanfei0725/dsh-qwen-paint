@@ -54,6 +54,10 @@
     reason: '',
     busy: false,
     note: '',
+    // C13 结果对比条：进入对比模式后每行出现勾选框，选中的条目在底部横向排列。
+    // picked 用 id 作键（同一页多条互不干扰，翻页也不丢已选的）。
+    compare: false,
+    picked: {},
   }
   var els = {}
   var previewEl = null
@@ -82,6 +86,134 @@
 
   function fileUrl(p) {
     return 'api/qwen-paint/file?path=' + encodeURIComponent(String(p || ''))
+  }
+
+  /**
+   * 统一的复制入口。
+   * ★ 为什么要有它：`navigator.clipboard` 在 iframe / 非安全上下文里会被禁用，
+   *   而这个面板正是嵌在 DSH 宿主里的。失败时必须退回「选中文本」而不是装作成功，
+   *   否则用户以为复制了、粘出来是空的。
+   */
+  function copyText(text, okMsg) {
+    var body = String(text == null ? '' : text)
+    if (body === '') { paintState('没有可复制的内容'); return }
+    var fallback = function () {
+      // 兜底：临时 textarea + execCommand，能被宿主允许就用，不行就如实告知。
+      try {
+        var ta = document.createElement('textarea')
+        ta.value = body
+        ta.style.position = 'fixed'
+        ta.style.left = '-9999px'
+        document.body.appendChild(ta)
+        ta.select()
+        var done = false
+        try { done = document.execCommand('copy') } catch (e) { done = false }
+        document.body.removeChild(ta)
+        paintState(done ? (okMsg || '已复制') : '这个环境不支持一键复制，请手动选中')
+        return done
+      } catch (e) { paintState('这个环境不支持一键复制'); return false }
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(body).then(function () { paintState(okMsg || '已复制') }, fallback)
+        return
+      }
+    } catch (e) { /* 落到兜底 */ }
+    fallback()
+  }
+
+  function pickedList() {
+    var arr = []
+    for (var i = 0; i < state.items.length; i += 1) {
+      var it = state.items[i]
+      if (state.picked[String(it.id)]) arr.push(it)
+    }
+    return arr
+  }
+
+  /* ------------------------------------------------------------------ G36 缩略图 ---- */
+
+  // 每条只尝试一次：失败（历史库只读、canvas 被禁）也不该在翻页时反复重试。
+  var thumbTried = {}
+  var THUMB_EDGE = 320
+
+  function postThumb(id, dataUrl) {
+    try {
+      fetch('api/qwen-paint/history/thumb', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id, data_url: dataUrl }),
+      }).then(function (r) { return r.json() }).then(function (j) {
+        if (!j || !j.ok) return
+        for (var i = 0; i < state.items.length; i += 1) {
+          if (String(state.items[i].id) === String(id)) {
+            state.items[i].thumb_url = 'api/qwen-paint/file?path='
+              + encodeURIComponent(joinOut(state.items[i], j.thumb))
+          }
+        }
+      }).catch(function () { /* 静默：缩略图是锦上添花，不该弹错 */ })
+    } catch (e) { /* fetch 不可用就算了 */ }
+  }
+
+  /**
+   * 后端给的是相对输出目录的 thumb 路径；这里没有 outputDir，
+   * 就跟着这条记录自己的 path 去掉文件名再拼 —— 两者都在同一个输出目录下。
+   */
+  function joinOut(it, thumb) {
+    var p = String((it && it.path) || '')
+    var cut = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'))
+    var dir = cut > 0 ? p.slice(0, cut) : ''
+    return dir ? dir + '/' + String(thumb || '') : String(thumb || '')
+  }
+
+  /**
+   * 让浏览器生成缩略图并回传（Node 侧没有零依赖的图像解码器，
+   * 引 sharp / canvas 会让安装变成编译噩梦 —— 换来的是"不打开面板就不生成"，
+   * 而缩略图本来只在这里用）。
+   *
+   * @param {object} it 历史条目
+   * @param {HTMLImageElement} [imgEl] 已经加载过的 <img>，传进来可以省一次解码
+   */
+  function ensureThumb(it, imgEl) {
+    if (!it || it.kind !== 'image' || it.thumb_url) return
+    var key = String(it.id)
+    if (thumbTried[key]) return
+    thumbTried[key] = 1
+
+    var work = function (im) {
+      try {
+        var w = im.naturalWidth || 0
+        var h = im.naturalHeight || 0
+        // 本来就比缩略图还小的图，缩了是负收益（还多占一份磁盘）。
+        if (w < THUMB_EDGE * 1.5 || h < THUMB_EDGE * 1.5) return
+        var scale = Math.min(1, THUMB_EDGE / Math.max(w, h))
+        var cw = Math.max(1, Math.round(w * scale))
+        var ch = Math.max(1, Math.round(h * scale))
+        var cv = document.createElement('canvas')
+        cv.width = cw
+        cv.height = ch
+        var ctx = cv.getContext('2d')
+        if (!ctx) return
+        ctx.drawImage(im, 0, 0, cw, ch)
+        var send = function (blob) {
+          if (!blob) return
+          var fr = new FileReader()
+          fr.onload = function () { postThumb(it.id, String(fr.result || '')) }
+          fr.readAsDataURL(blob)
+        }
+        if (typeof cv.toBlob === 'function') cv.toBlob(send, 'image/webp', 0.82)
+      } catch (e) { /* canvas 被宿主禁用时静默跳过 */ }
+    }
+
+    if (imgEl) {
+      if (imgEl.complete && (imgEl.naturalWidth || 0) > 0) { work(imgEl); return }
+      imgEl.addEventListener('load', function () { work(imgEl) })
+      imgEl.addEventListener('error', function () { /* 加载不到就不做 */ })
+      return
+    }
+    var im = new Image()
+    im.onload = function () { work(im) }
+    im.src = it.preview_url || fileUrl(it.path)
   }
 
   function fmtTime(iso) {
@@ -202,26 +334,46 @@
         : '没有匹配的记录。试试清空关键词或放宽日期范围。')
       els.list.appendChild(empty)
       paintPager()
+      paintCompare()
       return
     }
 
     for (var i = 0; i < state.items.length; i += 1) els.list.appendChild(rowEl(state.items[i]))
     paintPager()
+    paintCompare()
   }
 
   function rowEl(it) {
     var kind = String(it.kind || 'other')
     var row = el('div', 'hs-row')
     row.setAttribute('data-kind', kind)
+    var idKey = String(it.id)
+
+    if (state.compare) {
+      var box = el('input', 'hs-pick')
+      box.type = 'checkbox'
+      box.checked = !!state.picked[idKey]
+      box.title = '勾选后可加入底部对比条'
+      box.addEventListener('change', function () {
+        if (box.checked) state.picked[idKey] = it
+        else delete state.picked[idKey]
+        paintCompare()
+      })
+      row.appendChild(box)
+    }
 
     var thumb = el('div', 'hs-thumb')
     var abs = it.path
     if (kind === 'image') {
       var img = el('img')
       img.loading = 'lazy'
-      img.alt = ''
-      img.src = it.preview_url || fileUrl(abs)
+      // F30：alt 用后端给的**结构化摘要**（类型·尺寸·提示词前 80 字·风格卡），
+      // 不是「一只猫在跑」那种编造出来的描述 —— 没视觉模型就不装懂。
+      img.alt = (it.alt && it.alt.text) ? String(it.alt.text) : ''
+      // G36：有缩略图就用缩略图，原图只在点开预览时才解析。
+      img.src = it.thumb_url ? String(it.thumb_url) : (it.preview_url || fileUrl(abs))
       thumb.appendChild(img)
+      ensureThumb(it, img)
     } else {
       thumb.appendChild(badge(kind))
     }
@@ -260,6 +412,27 @@
     })
     acts.appendChild(bCopy)
 
+    // G32：Markdown 引用由后端拼好（history-export.js），前端只负责搬运，
+    // 保证「面板里点一下」与「外部集成调 /history」拿到的是同一份文本。
+    if (it.markdown) {
+      var bMd = el('button', 'hs-btn', '复制 MD')
+      bMd.type = 'button'
+      bMd.title = '复制成 Markdown 引用（图片 + 时间/模型/尺寸/种子/提示词），可直接贴进笔记或文档'
+      tap(bMd, function () { copyText(it.markdown, 'Markdown 已复制') })
+      acts.appendChild(bMd)
+    }
+
+    // G33：继续编辑。面板里没有「下一条指令」的输入框，所以给的是
+    // **可直接粘贴给 Agent 的完整指令**（已带好绝对路径与推荐工具）。
+    var hints = it.continue_hints || []
+    if (hints.length) {
+      var bMore = el('button', 'hs-btn hs-btn-accent', '继续编辑')
+      bMore.type = 'button'
+      bMore.title = hints.map(function (h) { return h.label }).join(' / ')
+      tap(bMore, function () { showHints(it, hints) })
+      acts.appendChild(bMore)
+    }
+
     var bDel = el('button', 'hs-btn hs-btn-danger', '移除')
     bDel.type = 'button'
     bDel.title = '只从历史列表移除，不会删除磁盘上的文件'
@@ -287,6 +460,150 @@
     els.pager.appendChild(prev)
     els.pager.appendChild(info)
     els.pager.appendChild(next)
+  }
+
+  /* ------------------------------------------------- G33 继续编辑 / C13 对比条 ---- */
+
+  var hintEl = null
+
+  function closeHints() {
+    if (!hintEl) return
+    try { if (hintEl.parentNode) hintEl.parentNode.removeChild(hintEl) } catch (e) { /* 已移除 */ }
+    hintEl = null
+  }
+
+  /**
+   * 把「下一步能做什么」摊开成可复制的完整指令。
+   * ★ 不假装能一键执行：面板没有会话输入框，能给到的最强形态就是
+   *   「复制好带路径的整句，切回对话粘贴」。
+   */
+  function showHints(it, hints) {
+    closeHints()
+    var ov = el('div', 'hs-preview')
+    tap(ov, function (ev) { if (ev.target === ov) closeHints() })
+    var card = el('div', 'hs-hints-card')
+    var name = (it.alt && it.alt.file_name) ? it.alt.file_name : '这条记录'
+    card.appendChild(el('div', 'hs-hints-title', '继续编辑：' + name))
+    card.appendChild(el('div', 'hs-hints-sub',
+      '点一下就复制成完整指令，切回对话粘贴即可 —— 路径已经带好，不用再手抄。'))
+
+    for (var i = 0; i < hints.length; i += 1) {
+      (function (h) {
+        var row = el('div', 'hs-hint-row')
+        row.appendChild(el('div', 'hs-hint-label', h.label))
+        var b = el('button', 'hs-btn hs-btn-accent', '复制指令')
+        b.type = 'button'
+        tap(b, function () { copyText(h.text, '「' + h.label + '」指令已复制') })
+        row.appendChild(b)
+        card.appendChild(row)
+      }(hints[i]))
+    }
+
+    var closeBtn = el('button', 'hs-btn', '关闭（Esc）')
+    closeBtn.type = 'button'
+    tap(closeBtn, closeHints)
+    card.appendChild(closeBtn)
+    ov.appendChild(card)
+    document.body.appendChild(ov)
+    hintEl = ov
+  }
+
+  /**
+   * C13 结果对比条：把勾选的条目横向摊开，肉眼比一比再决定留下哪张。
+   *
+   * 这里的「保留 / 丢弃」只是**视觉标记**，既不删磁盘文件也不写库 ——
+   * 一次误点就毁掉记录是不可接受的；真要移除，用行上的「移除」（软删除）。
+   */
+  function paintCompare() {
+    if (!els.compare) return
+    var picked = pickedList()
+    while (els.compare.firstChild) els.compare.removeChild(els.compare.firstChild)
+
+    if (!state.compare) { els.compare.style.display = 'none'; return }
+    els.compare.style.display = ''
+
+    var bar = el('div', 'hs-cmp-bar')
+    var head = el('div', 'hs-cmp-head')
+    head.appendChild(el('span', '', '对比条：已选 ' + picked.length + ' 条'))
+    var tips = el('span', 'hs-cmp-tip', '「保留 / 丢弃」只是标记，不会删文件')
+    head.appendChild(tips)
+    var clr = el('button', 'hs-btn', '清空选择')
+    clr.type = 'button'
+    tap(clr, function () { state.picked = {}; paintList() })
+    head.appendChild(clr)
+    bar.appendChild(head)
+
+    if (!picked.length) {
+      bar.appendChild(el('div', 'hs-cmp-empty', '在列表里勾选 2 条以上就能并排比较。'))
+      els.compare.appendChild(bar)
+      return
+    }
+
+    var strip = el('div', 'hs-cmp-strip')
+    for (var i = 0; i < picked.length; i += 1) strip.appendChild(compareCell(picked[i]))
+    bar.appendChild(strip)
+    els.compare.appendChild(bar)
+  }
+
+  function compareCell(it) {
+    var kind = String(it.kind || 'other')
+    var cell = el('div', 'hs-cmp-cell')
+    var idKey = String(it.id)
+
+    var box = el('div', 'hs-cmp-thumb')
+    if (kind === 'image') {
+      var img = el('img')
+      img.loading = 'lazy'
+      img.alt = (it.alt && it.alt.text) ? String(it.alt.text) : ''
+      img.src = it.thumb_url ? String(it.thumb_url) : (it.preview_url || fileUrl(it.path))
+      tap(img, function () { openPreview(it) })
+      box.appendChild(img)
+    } else {
+      box.appendChild(badge(kind))
+    }
+    cell.appendChild(box)
+
+    var name = (it.alt && it.alt.file_name) ? it.alt.file_name : ('#' + it.id)
+    cell.appendChild(el('div', 'hs-cmp-name', name))
+    var meta = (it.alt && it.alt.size) ? it.alt.size : ''
+    if (it.seed !== null && it.seed !== undefined) meta += (meta ? ' · ' : '') + '种子 ' + it.seed
+    cell.appendChild(el('div', 'hs-cmp-meta', meta || fmtTime(it.created_at)))
+
+    var marks = el('div', 'hs-cmp-marks')
+    var keep = el('button', 'hs-btn hs-btn-mark', '保留')
+    keep.type = 'button'
+    keep.setAttribute('data-mark', 'keep')
+    tap(keep, function () {
+      cell.setAttribute('data-mark', cell.getAttribute('data-mark') === 'keep' ? '' : 'keep')
+    })
+    marks.appendChild(keep)
+
+    var drop = el('button', 'hs-btn hs-btn-mark', '丢弃')
+    drop.type = 'button'
+    tap(drop, function () {
+      cell.setAttribute('data-mark', cell.getAttribute('data-mark') === 'drop' ? '' : 'drop')
+    })
+    marks.appendChild(drop)
+    cell.appendChild(marks)
+
+    var next = el('div', 'hs-cmp-next')
+    var hints = it.continue_hints || []
+    var render = function (h) {
+      var b = el('button', 'hs-btn hs-btn-accent', h.label)
+      b.type = 'button'
+      tap(b, function () { showHints(it, hints) })
+      next.appendChild(b)
+    }
+    // 对比条上只放最常用的两个动作，避免每格挤满按钮。
+    for (var k = 0; k < hints.length && k < 2; k += 1) render(hints[k])
+    if (next.firstChild) cell.appendChild(next)
+
+    var off = el('button', 'hs-btn', '移出对比')
+    off.type = 'button'
+    tap(off, function () { delete state.picked[idKey]; paintList() })
+    cell.appendChild(off)
+
+    return cell
   }
 
   /* ---------------------------------------------------------------- 大图预览 ---- */
@@ -413,6 +730,19 @@
       load()
     })
     filters.appendChild(reset)
+
+    // C13：对比模式开关。默认关闭 —— 平时列表要紧凑，勾选框是额外噪声。
+    var cmpBtn = el('button', 'hs-btn', '对比')
+    cmpBtn.type = 'button'
+    cmpBtn.title = '勾选多条后并排比较，标记保留 / 丢弃'
+    tap(cmpBtn, function () {
+      state.compare = !state.compare
+      if (!state.compare) state.picked = {}
+      cmpBtn.textContent = state.compare ? '退出对比' : '对比'
+      cmpBtn.setAttribute('data-on', state.compare ? '1' : '')
+      paintList()
+    })
+    filters.appendChild(cmpBtn)
     card.appendChild(filters)
 
     els.state = el('div', 'hs-state', '正在读取历史…')
@@ -423,6 +753,10 @@
 
     els.pager = el('div', 'hs-pager')
     card.appendChild(els.pager)
+
+    els.compare = el('div', 'hs-compare')
+    els.compare.style.display = 'none'
+    card.appendChild(els.compare)
 
     return ov
   }
@@ -453,6 +787,7 @@
   }
 
   function close() {
+    closeHints()
     closePreview()
     if (els.overlay) els.overlay.hidden = true
   }
@@ -488,6 +823,8 @@
     //   预览开着就先关预览，否则关面板 —— 与 client.js 各浮层的口径一致。
     document.addEventListener('keydown', function (ev) {
       if (String(ev && ev.key) !== 'Escape') return
+      // 三层浮层由内到外退：继续编辑 → 大图 → 面板。
+      if (hintEl) { closeHints(); return }
       if (previewEl) { closePreview(); return }
       close()
     })

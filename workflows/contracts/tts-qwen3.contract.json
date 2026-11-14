@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "tts-qwen3",
+  "kind": "tts",
+  "label": "Qwen3-TTS 普通合成链（契约核对，非运行时提交）",
+  "_comment": "普通 TTS 链只有两个节点（生成 → 保存），图极小，但**类名是三条链互斥可选的**（FB_Qwen3TTSCustomVoice / FB_Qwen3TTSVoiceDesign，保存节点 SaveAudioMP3 / SaveAudio）。真正的风险不在图长错，而在「探测放行了一条构造不出来的链」——所以契约同时锁类名集合与保存节点必须接在生成节点的 audio 槽上。",
+  "outputs": ["SaveAudioMP3", "SaveAudio"],
+  "roles": {
+    "generate": {
+      "classes": ["FB_Qwen3TTSCustomVoice", "FB_Qwen3TTSVoiceDesign"],
+      "label": "TTS 生成节点（自定义音色 / 音色设计）"
+    },
+    "save": {
+      "classes": ["SaveAudioMP3", "SaveAudio"],
+      "label": "音频保存节点（MP3 带 quality，FLAC 不带）"
+    }
+  },
+  "params": {
+    "text": { "role": "generate", "slot": "text" },
+    "seed": { "role": "generate", "slot": "seed", "transform": "int" },
+    "prefix": { "role": "save", "slot": "filename_prefix" }
+  },
+  "forbid": {
+    "_note": "普通链不该出现参考音频加载器 —— 那是克隆链独有的。出现就说明走错了分支。",
+    "referenceFile": ["VHS_LoadAudio", "LoadAudio", "FB_Qwen3TTSVoiceClone"]
+  }
+}

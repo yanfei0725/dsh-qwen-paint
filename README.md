@@ -1,6 +1,6 @@
 # dsh-qwen-paint · (绘图)千问（优化版）
 
-DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（QQ 交流群 454707710）。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合，文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech），模型无关角色参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。
+DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（QQ 交流群 454707710）。视频链清单化 + 生图/TTS 契约对账（改图自动报差异）；生图/视频/混合三模式界面各不同；批量出图带幂等保护（重试不重出）；Qwen3-TTS 语音克隆与可接 ASR 自动字幕；本机实测秒数；会话级模型驻留、显存建议、参数来源表、预设绑定、加载器盘点等本机端点。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合、导入音频直接合进成片（音轨合成），文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech，参考音频可复刻音色），模型无关角色参考；草图台手绘参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。
 
 ## Features
 
@@ -36,7 +36,7 @@ DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（Q
 dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 ```
 
-> 使用 `desktop` profile 时须**先完全退出 DSH**。本包**已发布到 npm**（`dsh-qwen-paint`，当前 `0.31.1`），可直接 `dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式仅用于开发或试用未发布改动。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
+> 使用 `desktop` profile 时须**先完全退出 DSH**。本包**已发布到 npm**（`dsh-qwen-paint`，当前 `0.32.0`），可直接 `dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式仅用于开发或试用未发布改动。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
 
 ## Usage
 
@@ -102,7 +102,7 @@ dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 
 > **QQ 交流群**：`454707710`　｜　**反馈 / 提问 / 提需求**都走这里，issue 也欢迎：<https://github.com/yanfei0725/dsh-qwen-paint/issues>
 
-> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：MIT　｜　**当前版本**：`0.31.1`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
+> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：MIT　｜　**当前版本**：`0.32.0`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
 
 ---
 
@@ -188,6 +188,46 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 | `< 22.5` | 降级：`available: false`、`persistent: false`，只能读既有 `.qwen-paint-memory.jsonl` 做内存过滤；界面与工具都会**明说「未持久化」**，不假装有数据 |
 
 刻意**不**把 `engines` 提到 `>=22.5`：那会把一批能正常出图的用户直接挡在门外，代价只是少一个可搜索的历史库。
+
+## 0.32.0 更新说明
+
+这一版把「生图 / 视频 / 语音」三条链的**可验证性**和**界面差异化**补齐，并补了一大批顺手能力。
+
+### 工作流：清单化 + 契约对账（A1）
+- **视频链已接管生产**：`workflows/video-wan22.json` 用通用加载器 + 条件补丁（`add` 加节点 / `set` 改槽位）声明 10 个节点；`generate_video` / `generate_hybrid` / 面板预览三处都改走清单，损坏时**自动回落**硬编码构建。
+- **生图 / TTS 链契约对账**：`lib/graph-audit.js` + `workflows/contracts/` 三份契约，构建后逐槽位核对，diff **点名到具体字段**（如 `8.steps`）；turbo 蒸馏链 8 步走 `alternates` 合规分支不误报。图仍由代码构建，契约是构建后核对。
+- 端点：`GET /api/qwen-paint/workflows`（清单总览）、`/contracts?id=&build=1`（真机对账）。
+
+### 三模式界面各不同（用户点名要差异化）
+- `MODE_PLANS`（schema v2）驱动：生图模式隐藏视频组（7 项、零 disabled）、视频模式启用帧数/帧率（10 项）、混合模式新增「生图→TTS→视频」三段链说明卡（11 项）；每模式专属标语 + 强调色。旧 schema 回退全显。
+
+### 批量与幂等（C11/C12/C16）
+- `batch_draw`：种子×尺寸笛卡尔积、单张失败不中断整批、失败后队列轻量复位、错误可操作化诊断。
+- **幂等保护**：同参数 2 分钟内重复提交复用结果，并发请求合并成一次；失败不记账。
+
+### 语音：克隆 + 转写真通路（D21/D19）
+- 语音克隆：`FB_Qwen3TTSVoiceClone` 链，参考音频复刻音色（`reference_audio` 可选）。
+- 字幕：`source=script` 出 SRT/VTT（时间戳均分、`aligned:false`）；`source=asr` 配了 `cfg.asrUrl`（OpenAI 兼容端点）就**真转写**，segments 时间戳对齐；无 segments 按句均分并标 `aligned:false`。未配置只给缺件清单。
+
+### 本机实测秒数（E27）
+- `lib/eta-calibrate.js` 从 ComfyUI `/history` 的真实执行时间戳按「类型+像素档+步数档」取中位数，≥3 样本去首跑；没样本仍 `null`、绝不跨档借用。端点 `GET /api/qwen-paint/eta`。
+
+### 模型驻留与显存（B5/B4）
+- **会话级模型驻留全覆盖**：生图 / 视频 / TTS / 超分四类构建入口都记账，切换链时告诉用户首张是否要重载主模型。
+- 显存建议只建议不改配置（档位是启动参数）；性能档位 / 缓存档位语义化，缓存摘要口径标 `comfy-node-cache` 不冒充 block 级。
+
+### 参数透明（D23/A3/D26）
+- `GET /params?chain=` 逐行标来源（你指定 / 默认值 / 已对齐 / 链路固定 / 未填）。
+- 预设绑定 manifest：链不匹配直接拒；未清单化的预设单列 `preset_unverified` 不假装通过。
+- 加载器静态盘点：主图必载 vs 条件补丁按需，明说运行时跳过节点做不到（`ExecutionBlocker` 本机不存在）。
+
+### 创作与顺手（D18/D20/D25/F28/F29/F30/F31/G32–G36）
+- 产出短引用（`#1`=最新）、时间轴骨架；草图台（Canvas 手绘参考图）；提示词模板 6 套；色调提取；历史导出 Markdown / 结构化 alt / 继续编辑候选；隐私摘要（external 是算出来的）。
+
+### 两个必须写出来的真机事实
+
+- `VHS_LoadAudio.audio_file` 收的是**相对 ComfyUI 根目录**的路径（`input/a.wav`），传裸文件名 `a.wav` 会被 `custom_validation_failed` 直接拒。上传返回的裸 `name` 现在统一规范成 `input/...` 再进工作流。
+- `VoiceClone` / `VoiceClonePrompt` 这两个**裸名字在本机并不存在**，真名是 `FB_Qwen3TTSVoiceClone` / `FB_Qwen3TTSVoiceClonePrompt`。同理用户常提到的 `Video Audio Merger` / `Mux Audio` 也不存在，实际能用的合并路径是 `VHS_VideoCombine.audio`（已实测存在并有 `AUDIO` 输入）。
 
 ## 0.31.1 更新说明
 

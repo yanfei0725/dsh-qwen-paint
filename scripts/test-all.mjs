@@ -53,12 +53,14 @@ const SUITES = [
   // ★ v3 §15.4 第 2 步：控制项落地层（clamp / 速度%语义 / 落盘往返 / 优先级）
   { file: 'test-pipeline-controls.mjs', note: '控制项持久化与生效映射（pipeline-controls）' },
   // ★ v3 §15.4 第 3 步前端竖切：面板真渲染一遍（vm + 假 DOM，专抓"静态绿、一渲染就炸"）
-  { file: 'test-pipeline-panel.mjs', note: '控制面板行为回归（渲染 / 请求 / 禁用项）' },
   { file: 'test-fab-drag.mjs', note: '浮标拖动 / tap-drag 分离 / rebuild 后开关不卡死（vm + Pointer Events 假 DOM）' },
   // ★ v3 §13.4 / §14.3 代码级修正四件：两层缓存 / pick(installed) / 结构化水位 / runPasses 深拷
   { file: 'test-pipeline-core.mjs', note: '控制层内核四件（缓存/加速档/水位/pass 管线）' },
   // ★ 视频链：Wan 2.2 / XT-5B 工作流图 + generate_video 接线
   { file: 'test-video-workflow.mjs', note: '视频链工作流契约（节点/参数/对齐/接线）' },
+  { file: 'test-audio-workflows.mjs', note: '语音克隆 + 音轨合成（真机节点契约/上传/降级）' },
+  // ★ 2026-11-14 A1：工作流 JSON 化第一步 —— 清单 / 双轨一致性 / 校验器 / 发布物完整性
+  { file: 'test-workflow-manifest.mjs', note: '工作流声明式清单（双轨逐字节一致 / 校验器真抓错 / files 白名单）' },
   // ★ 生成进度：队列位置 + 家自实测 ETA（不编数字）
   { file: 'test-progress.mjs', note: '生成进度与 ETA（队列/EWMA/百分比封顶）' },
   { file: 'test-style-library.mjs', note: '素材库（风格/指令/skill）+ 视频加速档面板项' },
@@ -96,6 +98,16 @@ const SUITES = [
   { file: 'test-cpu-profile.mjs', note: 'CPU 加速档：型号/指令集三态 / 五档真实参数 / --cpu 摘显存与GPU内核 / 互斥组后者胜出 / QwenImage21Cache 覆盖 / 端点围栏与脱敏（全离线）' },
   // ★ 2026-11-13 生成历史：真跑 node:sqlite（库在系统临时目录、跑完即删）+ 端点围栏 + 降级口径
   { file: 'test-history.mjs', note: '生成历史：相对路径入库 / 重复忽略 / 软删除不动磁盘文件 / SQL 注入不破表 / 无 sqlite 如实降级 / 端点围栏与脱敏 / 前端无 innerHTML 与外部 URL（全离线）' },
+  { file: 'test-history-export.mjs', note: '历史可带走形态：结构化 alt（F30）/ Markdown 引用不泄漏绝对路径（G32）/ 继续编辑候选（G33）/ 缩略图 data_url 三道闸与落盘回滚（G36）' },
+  // ★ 2026-11-14 第四/五批：创作编排、运行期护栏、批量守卫
+  { file: 'test-batch-guard.mjs', note: '批量出图守卫：种子×尺寸笛卡尔积 / 单张失败不中断整批 / 失败后队列复位 / 错误可操作化诊断（注入假 runOne，零出图）' },
+  { file: 'test-creative-chain.mjs', note: '创作编排：产出短引用 #1 最新（D18）/ 时间轴骨架与末段夹取（D20）/ 资源需求三档且不给秒数（E27）/ 数据流摘要 external 是算出来的（F31）/ 色调提取 HSL 与全灰不硬造色相（F29）' },
+  { file: 'test-compose-tools.mjs', note: '字幕编排：脚本字幕 SRT/VTT + 语音转写缺件清单（D19）/ 参数来源逐行标注（D23）/ 入口别名只指已注册工具（D24）/ 懒加载盘点如实说做不到运行时跳过（D26）/ 视频后处理层（A2）/ 预设绑定链（A3）' },
+  { file: 'test-runtime-guards.mjs', note: '运行期护栏：显存建议只建议不改配置（B4）/ 会话级模型驻留（B5）/ 幂等保护含并发合并与失败不记账（C16）/ 工作流图结构指纹（A1）/ 草图台端点三道闸（D25）' },
+  // ★ 2026-11-14 第五批续：五条「诚实边界」收口（A1 契约 / D19 ASR 真通路 / E27 自校准 / B5 全覆盖 / 三模式差异化）
+  { file: 'test-contract-asr-eta.mjs', note: '边界收口：契约对账全 diff.kind 与真 buildWorkflow 过契约含 turbo alternates（A1）/ ASR 真通路全分支（D19）/ 本机秒数自校准与不跨档借用（E27）/ 三模式差异化计划一致性（UI）' },
+  { file: 'test-pipeline-panel.mjs', note: '控制面板行为回归（渲染 / 请求 / 禁用项 / 三模式差异化：生图隐藏视频组、混合出 TTS 卡）' },
+  { file: 'test-perf-config.mjs', note: '提示词模板（F28 渲染无残渣/无重复后缀）/ 显存与缓存档位语义（B7/B8）/ 缓存命中摘要口径（B9）/ 进度分级日志过滤（G35）/ 一键恢复默认改名不删（G34）' },
   // —— 契约 / 面板 / 步骤 ——
   { file: '_tool_contract_test.mjs', note: '工具契约' },
   { file: '_step4_dry_test.mjs', note: '4 步干跑' },

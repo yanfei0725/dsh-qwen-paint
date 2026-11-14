@@ -22,7 +22,7 @@
 name = "dsh-qwen-paint"
 # 语义化版本 X.Y.Z；每次发布必须递增，且旧版本号不可复用。
 # ⚠ 与 package.json 的 version 保持**同一个数**，避免两处版本号打架。
-version = "0.31.1"
+version = "0.32.0"
 description = "⚠ DSH（DeepSeek Harness）插件，不是 ComfyUI 节点：通过 HTTP 调用你本机的 ComfyUI，提供视频 / 生图 / TTS 全能能力（文生视频 / 图生视频、官方 Qwen-Image 2.1 Turbo 出图与编辑、Qwen3-TTS 语音合成），含生成历史检索、CPU 指令集五档加速（--cpu 纯 CPU / BF16）、蒙版羽化与反选、可选卸载内存模式，含可选、默认关闭的视频模型自动下载包 --video-models。装进 ComfyUI 的 custom_nodes 不会生效 —— 它需要 DSH 宿主。QQ 交流群 454707710。"
 readme = "README.md"
 license = { file = "LICENSE" }
