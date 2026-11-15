@@ -73,3 +73,13 @@
 .sg-json { max-height: 210px; overflow: auto; padding: 9px; border-radius: 8px; font: 11px/1.4 ui-monospace, monospace;
   background: rgba(0,0,0,.26); border: 1px solid rgba(127,127,127,.22); }
 .sg-foot { display: flex; gap: 7px; margin-top: 12px; }
+
+/* ---- 防横向溢出（2026-11-15）：引导里的进度条 / 卡片 / 长命令框 ---- */
+.sg-barwrap, .sg-bar, .sg-progress, .sg-card, .sg-card-head,
+.sg-cmdrow, .sg-choices, .sg-list, .sg-foot, .sg-json,
+.sg-safety, .sg-pack, .sg-hint, .sg-extra {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+.sg-bar { max-width: 100%; }

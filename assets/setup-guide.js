@@ -283,6 +283,8 @@
     close() // 先收起（hidden + display 双保险），再整体摘除
     try { localStorage.setItem(HIDE_KEY, '1') } catch (e) { /* 隐私模式忽略 */ }
     try { localStorage.setItem(STORE_KEY, '1') } catch (e) { /* 忽略 */ }
+    // ★ 关闭引导也算「问过了」：可选模型下载只问这一次，之后不再打扰。
+    try { if (!localStorage.getItem('dshqp.audioModels.asked')) localStorage.setItem('dshqp.audioModels.asked', 'later') } catch (e) { /* 忽略 */ }
     dismissed = true
     removeNode(els.panel)
     removeNode(els.fab)
@@ -400,6 +402,59 @@
     var cpuSlot = el('div', 'sg-cpu-slot')
     cpuSlot.id = 'dshqp-cpu-accel-slot'
     panel.appendChild(cpuSlot)
+
+    /* ★ 2026-11-15：新增语音 / 音乐模型的下载**询问**，跟安装引导做一块，
+     *  只在第一次装插件时问一次（与视频 / 图片模型同一套做法）。
+     *  ★ 硬红线：只询问 + 展示 / 复制命令，绝不强制下载、绝不从网页触发任何本机进程。
+     *  用户选「以后再说 / 不需要」或关掉引导，都写 asked 偏好，以后不再问。 */
+    var MODEL_ASK_KEY = 'dshqp.audioModels.asked'
+    var askBox = el('div', 'sg-models')
+    askBox.appendChild(el('div', 'sg-models-title', '可选：新增语音 / 音乐模型（不下载也完全能用插件）'))
+    askBox.appendChild(el('p', 'sg-models-hint',
+      'GPT-SoVITS v5 原版 dev / 蒸馏版 turbo、IndexTTS2、ACE-Step 1.5、YuE2，以及 SageAttention / Comfy-WaveSpeed 加速后端。'
+      + ' 这些是可选能力：默认不下载、不安装、不改依赖；需要你自己决定装不装、装到哪。'
+      + ' 下载脚本会先列出档位让你选，多下载源轮询 + 断点续传 + 以服务器权威大小校验完整性。'))
+    var askRow = el('div', 'sg-models-row')
+    var askYes = el('button', 'sg-btn', '我想下载（给我命令）')
+    var askLater = el('button', 'sg-btn sg-btn-ghost', '以后再说')
+    var askNo = el('button', 'sg-btn sg-btn-ghost', '不需要')
+    askYes.type = 'button'; askLater.type = 'button'; askNo.type = 'button'
+    var askOut = el('pre', 'sg-models-cmd')
+    askOut.hidden = true
+    function rememberAsk(choice) {
+      try { localStorage.setItem(MODEL_ASK_KEY, choice) } catch (e) { /* 隐私模式忽略 */ }
+    }
+    function copyCmd(text) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); return }
+      } catch (e) { /* 忽略 */ }
+      try {
+        var ta = document.createElement('textarea')
+        ta.value = text
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+      } catch (e) { /* 忽略 */ }
+    }
+    onTap(askYes, function () {
+      rememberAsk('yes')
+      var cmd = 'node scripts/setup-audio-models.mjs --list\n'
+        + 'node scripts/setup-audio-models.mjs --refresh --group=gpt_sovits_v5\n'
+        + 'node scripts/setup-audio-models.mjs --download --group=gpt_sovits_v5 --variant=dev --file=<上面列出的文件名> --dir=<你指定的相对目录>'
+      askOut.textContent = cmd
+      askOut.hidden = false
+      copyCmd(cmd)
+    })
+    onTap(askLater, function () { rememberAsk('later'); askBox.hidden = true })
+    onTap(askNo, function () { rememberAsk('no'); askBox.hidden = true })
+    askRow.appendChild(askYes)
+    askRow.appendChild(askLater)
+    askRow.appendChild(askNo)
+    askBox.appendChild(askRow)
+    askBox.appendChild(askOut)
+    try { if (localStorage.getItem(MODEL_ASK_KEY)) askBox.hidden = true } catch (e) { /* 忽略 */ }
+    panel.appendChild(askBox)
 
     var safety = el('div', 'sg-safety',
       '这个引导只展示和复制命令，绝不会从网页偷偷在你电脑上跑安装。所有联网下载都要你在终端里亲自执行。'

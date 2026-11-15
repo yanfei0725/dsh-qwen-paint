@@ -1,6 +1,6 @@
 # dsh-qwen-paint · (绘图)千问（优化版）
 
-DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（QQ 交流群 454707710）。★ 0.33.0 起许可改为 BSL 1.1（BUSL-1.1，非 OSI 开源许可）：除托管/代管服务与直接竞品捆绑两类「竞争性使用」外免费生产使用，2030-11-15 转 Apache-2.0；0.32.1 及更早仍 MIT、不追溯。0.33.0 新增媒体格式转换（图片 JPG/PNG/WebP、视频 MP4/MKV/MOV/WebM、音频 MP3/AAC/WAV/FLAC，生成物可指定输出格式、动图转视频、自有素材转换，Agent 可直接调用 convert_media）与加速链全景（生图/视频缓存后端 + TTS 加速 + 显存预算 + 配置裁决 + 结构化日志，只列探测到的、未实测不写倍率）、本机能力功能区内嵌进 Comfy 控制面板（展开页恒在悬浮球正上方、边框对齐 DSH 右边框、四事件点按兜底）、GIF 转换 / 运行期自诊断 / 优先级任务队列 / 单图迭代优化 / 自适应 DAG 编排 / 生成历史可删改与冷热分离等本机工具与端点；0.32.1 两轮审计加固：ASR 音频路径围栏（只认出图目录内文件）、按包名安装也能执行引导脚本、草图台四事件点按、错误响应消毒收口；视频链清单化 + 生图/TTS 契约对账（改图自动报差异）；生图/视频/混合三模式界面各不同；批量出图带幂等保护（重试不重出）；Qwen3-TTS 语音克隆与可接 ASR 自动字幕；本机实测秒数；会话级模型驻留、显存建议、参数来源表、预设绑定、加载器盘点等本机端点。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合、导入音频直接合进成片（音轨合成），文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech，参考音频可复刻音色），模型无关角色参考；草图台手绘参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。
+DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（QQ 交流群 454707710）。★ 0.34.0：SageAttention / Comfy-WaveSpeed 并入加速链并按真实 /object_info 探测、卡片常驻显示；GPT-SoVITS v5 / IndexTTS2 可选 TTS、拖音频零样本克隆、ACE-Step 1.5 / YuE2 音乐 BGM、手动超分、Worker 热温冷保活。★ 0.33.0 起许可改为 BSL 1.1（BUSL-1.1，非 OSI 开源许可）：除托管/代管服务与直接竞品捆绑两类「竞争性使用」外免费生产使用，2030-11-15 转 Apache-2.0；0.32.1 及更早仍 MIT、不追溯。0.33.0 新增媒体格式转换（图片 JPG/PNG/WebP、视频 MP4/MKV/MOV/WebM、音频 MP3/AAC/WAV/FLAC，生成物可指定输出格式、动图转视频、自有素材转换，Agent 可直接调用 convert_media）与加速链全景（生图/视频缓存后端 + TTS 加速 + 显存预算 + 配置裁决 + 结构化日志，只列探测到的、未实测不写倍率）、本机能力功能区内嵌进 Comfy 控制面板（展开页恒在悬浮球正上方、边框对齐 DSH 右边框、四事件点按兜底）、GIF 转换 / 运行期自诊断 / 优先级任务队列 / 单图迭代优化 / 自适应 DAG 编排 / 生成历史可删改与冷热分离等本机工具与端点；0.32.1 两轮审计加固：ASR 音频路径围栏（只认出图目录内文件）、按包名安装也能执行引导脚本、草图台四事件点按、错误响应消毒收口；视频链清单化 + 生图/TTS 契约对账（改图自动报差异）；生图/视频/混合三模式界面各不同；批量出图带幂等保护（重试不重出）；Qwen3-TTS 语音克隆与可接 ASR 自动字幕；本机实测秒数；会话级模型驻留、显存建议、参数来源表、预设绑定、加载器盘点等本机端点。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合、导入音频直接合进成片（音轨合成），文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech，参考音频可复刻音色），模型无关角色参考；草图台手绘参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。
 
 ## Features
 
@@ -36,7 +36,7 @@ DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（Q
 dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 ```
 
-> 使用 `desktop` profile 时须**先完全退出 DSH**。本包在 npm 的包名为 `dsh-qwen-paint`（仓库当前 `0.33.0`），可直接 `dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式仅用于开发或试用未发布改动。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
+> 使用 `desktop` profile 时须**先完全退出 DSH**。本包在 npm 的包名为 `dsh-qwen-paint`（仓库当前 `0.34.0`），可直接 `dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式仅用于开发或试用未发布改动。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
 
 ## Usage
 
@@ -102,7 +102,7 @@ dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 
 > **QQ 交流群**：`454707710`　｜　**反馈 / 提问 / 提需求**都走这里，issue 也欢迎：<https://github.com/yanfei0725/dsh-qwen-paint/issues>
 
-> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：BSL 1.1（BUSL-1.1）　｜　**当前版本**：`0.33.0`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
+> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：BSL 1.1（BUSL-1.1）　｜　**当前版本**：`0.34.0`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
 
 ---
 
@@ -189,6 +189,46 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 
 刻意**不**把 `engines` 提到 `>=22.5`：那会把一批能正常出图的用户直接挡在门外，代价只是少一个可搜索的历史库。
 
+## 0.34.0 更新说明
+
+> 本版是 0.33.0 之后的**累积版**：把上一批未发布的语音 / 音乐 / Worker / 下载脚本能力，与本轮「加速后端真接线 + 溢出修复」一起发布。0.33.0 的全部变更仍然有效，下面按主题汇总。
+
+### 许可证
+- 自 **0.33.0 起**许可为 **BSL 1.1**（`BUSL-1.1`，非 OSI 开源许可）：除托管 / 代管服务与直接竞品捆绑两类「竞争性使用」外免费生产使用；**Change Date 2030-11-15** 自动转 **Apache-2.0**。**0.32.1 及更早版本仍按 MIT 授权，永久、不可撤销、不追溯**。
+
+### 新工具与端点
+- 语音：`list_tts_backends`（Qwen3-TTS / GPT-SoVITS v5 原版 dev / 蒸馏版 turbo / IndexTTS2）；`generate_speech` 新增 `backend` 与 `voice_sample`（拖入音频做**零样本音色克隆，不训练、不微调、不产出权重**）。
+- 音乐：`generate_music`（ACE-Step 1.5 / YuE2）；图像：`manual_upscale`（4 引擎 / 6 档倍率 / 降噪锐化分块）；进程：`manage_workers`（热 / 温 / 冷分级保活、LRU 驱逐、显存预算准入、优雅终止）。
+- 新增 9 条本机端点：`/tts/backends`、`/audio/samples`、`/music/models`、`/music/generate`、`/upscale/manual[/capabilities]`、`/workers[/vram]`、`/accel/backends`（`GET, POST`）。首次安装引导里**只问一次**是否下载音频模型，只展示 / 复制命令，网页绝不触发下载。
+
+### 加速链全景
+- **SageAttention（8-bit 注意力）与 Comfy-WaveSpeed（First Block Cache + torch.compile）正式并入加速链**：`accel_chain` 新增 `attention` 段，`all` 为缓存 / TTS / 注意力三段拼接；`check_acceleration` 报告新增 `attentionBackends`。
+- **真接线**：`config.js` 与 `turbo-workflow.js` 两条真实工作流构造路径都会把探测到的节点接到模型链末端（节点 id 40）；默认不启用时生成链**逐字节不变**。
+- **真实探测**：节点类名只来自本机回环 `/object_info` 全量节点表（60s 缓存 / 2s 超时 / 禁重定向），不再拿插件内部能力名冒充；失败如实标 `probe.source=unavailable` 并降级。真机 1686 节点实测：SageAttention 命中 `QwenImage21SageAttentionT8`，WaveSpeed 无 First Block Cache 节点。
+- **防误报**：通用 `TorchCompileModel*` 与 Wavespeed 超分节点不算 WaveSpeed；候选按专用节点优先排序。节点输入槽位仍未核实（`needsSlotMapping`），启用后若节点拒收需按 `/object_info` 补映射。
+
+### 工作流清单层
+- 承接 0.33.0：视频链清单化 + 生图 / TTS 契约对账，改图自动报差异；`chain-manifest` 与 `workflow-fingerprint` 继续为每次提交留指纹。
+
+### 结构化运行日志
+- 承接 0.33.0：`event-log` 落盘 + 生成完成钩子；本版把加速链快照与 `attention` 段一并记入，仍**不含倍率与未实测耗时**。
+
+### UI 与交互
+- 承接 0.33.0：本机能力功能区**内嵌**进 Comfy 控制面板（展开页恒在悬浮球**正上方**、**边框对齐** DSH 右边框、小屏**不变形**、四事件点按 + `pointerdown` 兜底）。
+- 本版：加速链卡片新增**常驻状态行**（两个后端 + 当前启用项 + 节点表探测来源）与「启用 SageAttention / 启用 WaveSpeed / 恢复默认」三个按钮。
+- 本版修复**横向溢出**：面板 / 滑块 / 进度条 / 卡片统一 `box-sizing` + `min-width:0` + `max-width:100%`，面板收掉 `overflow-x`。
+
+### 媒体格式转换
+- 承接 0.33.0：图片 JPG/PNG/WebP、视频 MP4/MKV/MOV/WebM、音频 MP3/AAC/WAV/FLAC 互转，动图转视频，生成物可按预设自动后转码，Agent 可调 `convert_media`。
+
+### 联动护栏与回归
+- 全量 **81 套 / 0 失败 / 逐项断言全绿**（6,046 项）；发布护栏 68/0；体积守卫 **112 个 `lib/*.js` / 1,935,128 B**；`lib/index.js` 258,398 B，余量 **3,746 B**。
+- 新增 `test-overflow.mjs`（28 项）与 `test-attention-wiring.mjs`（50 项），均登记 `SUITES`，都带「改坏变红」反向核查。
+- 诚实边界：音频权重不自动下载、缺件给清单；插件不 `pip install`、不建 venv / conda / Docker、不拉镜像；第三方节点类名与槽位未核实一律降级。
+
+### 文档
+- README / 两份 `llms.txt` / `docs/index.html` / `INSTALL.md` / `pyproject.toml` 同步本版变更；端点目录写明 `accel/backends` 为 `GET, POST` 且已并入加速链。
+
 ## 0.33.0 更新说明
 
 这一版把 0.32.1 之后的**能力扩展批次、媒体格式转换、四轮 UI 纠正、许可证更换**一次性收口，并按「单个功能完成 ≠ 最终完成」的纪律做了全面联动审查与孤儿扫描。**本版为本地完成、尚未推送到 npm / GitHub 的开发版本**，线上 `latest` 目前仍是 `0.32.1`。
@@ -203,7 +243,7 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 
 ### 新工具与端点（全部走外置注册层，lib/index.js 零增长）
 - 新增 6 个工具：`convert_to_gif`（图片序列 / 视频转 GIF）、`manage_jobs`（优先级任务队列管理）、`iterate_image`（单图多轮迭代优化）、`query_history`（生成历史可删改 / 冷热分离 / 参数化查询）、`doctor`（运行期自诊断）、`run_dag`（自适应 DAG 编排，默认 `dry_run`）；本轮再补第 7 个 `convert_media`（见下一节）。
-- 0.33.0 新增模块全部独立落在 `lib/` 与 `assets/`（`lib/*.js` 现 103 个 / 合计 1,829,983 B），经 `lib/tool-registry.js::createExtras()` / `registerExtras()` 注册；`lib/index.js` 只留一行接线。注释外置到 `docs/index-design-notes.md` 后，体积余量由 105 B 放宽到 **3,746 B**（258,398 B / 上限 262,144 B）。
+- 0.33.0 新增模块全部独立落在 `lib/` 与 `assets/`（当前 **112 个 `lib/*.js`** / 合计 1,935,128 B，含 0.33 之后未发布的语音 / 音乐 / Worker / 加速后端批次；0.33.0 发布时为 103 个 / 1,829,983 B），经 `lib/tool-registry.js::createExtras()` / `registerExtras()` 注册；`lib/index.js` 只留一行接线。注释外置到 `docs/index-design-notes.md` 后，体积余量由 105 B 放宽到 **3,746 B**（258,398 B / 上限 262,144 B）。
 - 新增端点含 `/api/qwen-paint/accel/chain`、`/media/gif`、`/doctor`、`/history/query`、`/events`、`/vram-budget`、`/config/conflicts`、`/contracts`、`/eta`；`lib/integration-state.js` 端点目录同步登记。
 
 ### 媒体格式转换（生成物指定格式 / 自有素材 / 动图转视频）
@@ -238,7 +278,7 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 ### 联动护栏与回归
 - `scripts/test-accel-chain.mjs` 锁「TTS 加速进链 / 5 个原孤儿模块真实参与 / 端点·工具报告·UI 三处消费 / 16 模块孤儿扫描」；`scripts/test-capability-audit.mjs` 锁 3 个新端点在注册层→端点目录→Agent 指引→UI→回归五处联动。
 - 新增登记 `test-chain-manifest.mjs`(31) / `test-generation-log.mjs`(29) / `test-draft-pointer.mjs`(30) / `test-license-bsl.mjs`(83) / `test-ui-tap.mjs`(39)；`test-fab-clamp.mjs` 71 项锁 UI 几何，`test-fab-drag.mjs` 30 项真 DOM 仿真锁点按与 rebuild。
-- **全量回归 78 套 / 0 失败 / 逐项断言全绿**（连跑 3 轮一致）；发布护栏 `test-release-metadata.mjs` 全项通过；体积守卫 103 个 `lib/*.js` / 1,829,983 B。回归套数、`lib/` 文件数与体积均由真实值推导/校验，不写死「过一天就过期」的断言数，避免每加一套测试或一个模块就要改文档。关键护栏都做过「故意改坏 → 确认变红 → 逐字恢复」的反向核查。
+- **全量回归 81 套 / 0 失败 / 逐项断言全绿**（连跑 3 轮一致）；发布护栏 `test-release-metadata.mjs` 全项通过；体积守卫 112 个 `lib/*.js` / 1,935,128 B。回归套数、`lib/` 文件数与体积均由真实值推导/校验，不写死「过一天就过期」的断言数，避免每加一套测试或一个模块就要改文档。关键护栏都做过「故意改坏 → 确认变红 → 逐字恢复」的反向核查。
 - 修掉两个真 bug：显存预算 MB→GB 档位错配（`budgetCapFromVramMb`）、`/agent-guide` 端点目录恒空（`deps.routes || INTEGRATION_ROUTES`）。
 
 ### 文档

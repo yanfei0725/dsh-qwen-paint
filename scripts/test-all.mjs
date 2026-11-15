@@ -152,6 +152,13 @@ const SUITES = [
   { file: 'test-ui-tap.mjs', note: 'UI 点按专项：四事件假 DOM 真派发 / 300ms 冷却 / 拖动抑制 / 叉叉 render 内重绑 / fab 补绑 click 与宿主合成 click 联动 / UI_BUILD 自证' },
   // ★ 2026-11-15 媒体格式转换批次（图片/视频/音频 11 种 + 动图转视频 + 生成物预设后转码 + Agent 调用）
   { file: 'test-media-convert.mjs', note: '媒体格式转换：11 种格式唯一真相源 / 同类互转与跨类拒绝 / ffmpeg 参数纯构建 / 输入输出双围栏 / ffmpeg 探测与诚实降级 / 生成完成钩子自动后转码（组合不覆盖日志）/ 端点预设 / 七处联动与孤儿扫描（全离线）' },
+  // ★ 2026-11-15 本地能力批次（未发布）：TTS 后端 / 音频样本 / 统一协议 / 音乐 BGM /
+  //   手动超分 / Worker 分级保活 / 模型下载源 / 七处接线与孤儿扫描（全离线）
+  { file: 'test-creative-models.mjs', note: '本地能力批次：GPT-SoVITS v5 dev/turbo 与 IndexTTS2 / 拖入音频样本 / 统一输入输出协议 / ACE-Step 1.5 与 YuE2 / 手动超分 / Worker 热温冷分级保活 / 下载源权威值校验与断点续传 / 七处联动与孤儿扫描（全离线）' },
+  // ★ 2026-11-15：进度条 / 滑块 / 卡片横向溢出加固，纯 CSS 盒模型收口 + 改坏变红反向核查
+  { file: 'test-overflow.mjs', note: '横向溢出加固：面板 content-box / 滑块 width:100% / flex 子项 min-width:auto 三层收口，三份 CSS 护栏 + 改坏变红反向核查（全离线）' },
+  // ★ 2026-11-15：SageAttention / WaveSpeed 真接线（加速链 / 工作流 / 卡片 / 真实节点表探测）
+  { file: 'test-attention-wiring.mjs', note: '注意力与编译后端真接线：并入加速链 / 两条工作流构造路径 / 卡片常驻显示 / 本机 /object_info 真实探测 / check_acceleration 报告 / 改坏变红反向核查（全离线）' },
   // —— 最重的一套放最后 ——
   { file: 'selftest.mjs', note: '全量自测（392 项）', heavy: true },
 ]

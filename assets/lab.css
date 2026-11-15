@@ -104,3 +104,19 @@
 [data-dshqp-lab-theme="dark"] .dshqp-lab-doctor-line,
 [data-dshqp-lab-theme="dark"] .dshqp-lab-result { background: rgba(255, 255, 255, 0.07); }
 [data-dshqp-lab-theme="dark"] .dshqp-lab-head { border-bottom-color: rgba(255, 255, 255, 0.16); }
+
+/* ---- 防横向溢出（2026-11-15）：功能区已内嵌进 cp-panel，宽度必须跟着插槽收缩 ----
+ * .dshqp-lab-sections 是 flex column，子项默认 min-width:auto 不肯收缩；
+ * 结果框里的长 JSON、输入行的 min-width:140px 会把整张卡顶出面板。
+ * 统一收口，仍然是「宽度 100% 由插槽决定」，不引入 fixed / 自定义宽度。
+ */
+.dshqp-lab-slot, .dshqp-lab-sections, .dshqp-lab-sec, .dshqp-lab-head,
+.dshqp-lab-body, .dshqp-lab-row, .dshqp-lab-result, .dshqp-lab-input,
+.dshqp-lab-label, .dshqp-lab-doctor-line, .dshqp-lab-doctor-detail, .dshqp-lab-btn {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+.dshqp-lab-result { overflow-wrap: anywhere; }
+/* 加速链卡片的常驻状态行会带安装提示，长文本必须能断行，不能把卡片顶宽。 */
+.dshqp-lab-line { overflow-wrap: anywhere; }

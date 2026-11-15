@@ -132,9 +132,9 @@ check('注册了 draw_image（apply 直接注册，不经 root.inject）', tool.
 // 2026-11-15：+ convert_media（媒体格式转换）19 → 20；同样走外置注册，index.js 零增长。
 const EXPECTED_TOOLS = [
   'batch_draw', 'check_acceleration', 'compose_prompt', 'convert_media', 'convert_to_gif', 'doctor', 'draw_image',
-  'generate_hybrid', 'generate_speech', 'generate_video', 'inpaint_image', 'iterate_image',
-  'list_available_models', 'list_generated_images', 'manage_jobs', 'outpaint_image',
-  'query_history', 'remove_image', 'run_dag', 'upscale_image',
+  'generate_hybrid', 'generate_music', 'generate_speech', 'generate_video', 'inpaint_image', 'iterate_image',
+  'list_available_models', 'list_generated_images', 'list_tts_backends', 'manage_jobs', 'manage_workers',
+  'manual_upscale', 'outpaint_image', 'query_history', 'remove_image', 'run_dag', 'upscale_image',
 ]
 check('注册的工具集合逐字等于预期（新增工具须显式登记）',
   registered.map((t) => t.name).slice().sort().join(' , ') === EXPECTED_TOOLS.join(' , '),

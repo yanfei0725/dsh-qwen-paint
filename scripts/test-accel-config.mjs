@@ -171,6 +171,12 @@ console.log('=== 5. 外置接线与体积红线 ===')
     '/api/qwen-paint/agent-guide', '/api/qwen-paint/accel/chain',
     '/api/qwen-paint/events', '/api/qwen-paint/vram-budget',
     '/api/qwen-paint/config/conflicts',
+    // ★ 2026-11-15 本地能力批次（未发布）：TTS 后端 / 音频样本 / 音乐 BGM / 手动超分 / Worker
+    '/api/qwen-paint/tts/backends', '/api/qwen-paint/audio/samples',
+    '/api/qwen-paint/music/models', '/api/qwen-paint/music/generate',
+    '/api/qwen-paint/upscale/manual/capabilities', '/api/qwen-paint/upscale/manual',
+    '/api/qwen-paint/workers', '/api/qwen-paint/workers/vram',
+    '/api/qwen-paint/accel/backends',
   ]
   ok('★ 端点集合逐字等于白名单（新增端点必须显式登记）',
     extras.routes.map((r) => r.path).sort().join(',') === [...NEW_ROUTE_PATHS].sort().join(','),

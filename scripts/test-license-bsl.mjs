@@ -238,7 +238,15 @@ console.log('=== 3. 已发布版本不追溯（法律硬边界） ===')
   ok(readme.includes('从 `0.33.0` 起才适用 BSL 1.1'), '★ README 写明生效起点是 0.33.0')
   ok(llms.includes('0.32.1 及更早版本仍按 MIT 授权、不受换证影响'),
     '★ llms.txt 同步写明旧版本仍 MIT')
-  ok(pkg.version === '0.33.0', '★ 当前（未发布）版本正是换证起点 0.33.0')
+  // ★ 2026-11-15 修正（升 0.34.0 时暴露）：原来写死 pkg.version === '0.33.0'，
+  //   版本一往前走就假红，属于「测试过期」而不是真 bug。真正要守的是
+  //   「换证起点已生效且从未回退」——当前版本 >= 0.33.0，且元数据仍标 BUSL-1.1。
+  const CHANGE_START = [0, 33, 0]
+  const curVer = pkg.version.split('.').map(Number)
+  const notBefore = (((curVer[0] - CHANGE_START[0]) || (curVer[1] - CHANGE_START[1])
+    || (curVer[2] - CHANGE_START[2])) >= 0)
+  ok(notBefore && pkg.license === 'BUSL-1.1',
+    '★ 当前版本 ' + pkg.version + ' 已越过换证起点 0.33.0 且仍为 BSL 1.1')
   ok(!LICENSE.includes('Version 0.32.1 is hereby re-licensed'),
     '★ 没有任何「追溯重授权」措辞')
 }
@@ -262,7 +270,7 @@ console.log('=== 4. 元数据 + 8 处文档口径一致 ===')
     ['README 许可章节标题', readme, '**BSL 1.1（Business Source License 1.1，SPDX `BUSL-1.1`）**'],
     ['llms.txt 版本行', llms, '许可协议 BSL 1.1（BUSL-1.1，非 OSI 开源许可）'],
     ['llms.txt LICENSE 行', llms, '：BSL 1.1（BUSL-1.1）'],
-    ['docs/llms.txt 是什么', docsLlms, '版本 0.33.0，BSL 1.1（BUSL-1.1，非 OSI 开源许可）许可'],
+    ['docs/llms.txt 是什么', docsLlms, '版本 ' + pkg.version + '，BSL 1.1（BUSL-1.1，非 OSI 开源许可）许可'],
     ['docs/llms.txt LICENSE 行', docsLlms, ': BSL 1.1 (BUSL-1.1)'],
     ['落地页标签', landing, '<span class="tag">BSL 1.1</span>'],
     ['落地页 LICENSE 链接', landing, 'LICENSE（BSL 1.1）'],

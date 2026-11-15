@@ -257,11 +257,22 @@ console.log('\n=== 6. ★ 2026-11-15 发布前审计补漏：时态 / 许可 / �
   //   Agent 根本不知道能调，等于功能没接线。工具名从 tool-registry 动态取，不硬编码。
   const extraBlock = read('lib/tool-registry.js')
     .match(/EXTRA_TOOL_NAMES = Object\.freeze\(\[([\s\S]*?)\]\)/u)
-  const extraTools = extraBlock
-    ? (extraBlock[1].match(/'[a-z0-9_]+'/gu) ?? []).map((s) => s.slice(1, -1))
+  // ★★ 2026-11-15 反向核查抓到的**真护栏盲区**：EXTRA_TOOL_NAMES 里用了
+  //    `...CREATIVE_TOOL_NAMES` 展开常量，源码正则只抠得到字面量 ⇒ 新增的
+  //    4 个工具完全没进护栏视野，把 llms 里的反引号删掉竟然不红。
+  //    ⇒ 把展开常量指向的定义也解析进来，并加一条「展开项必须可解析」自检。
+  const creativeBlock = read('lib/creative-extras.js')
+    .match(/CREATIVE_TOOL_NAMES = Object\.freeze\(\[([\s\S]*?)\]\)/u)
+  const namesFrom = (block) => block
+    ? (block[1].match(/'[a-z0-9_]+'/gu) ?? []).map((s) => s.slice(1, -1))
     : []
+  const spreadRefs = extraBlock?.[1].match(/\.\.\.[A-Z_]+/gu) ?? []
+  ok('★ 展开常量里的工具名也能被护栏解析（防止新增工具绕过清单检查）',
+    spreadRefs.length === 0 || (creativeBlock !== null && namesFrom(creativeBlock).length >= 4),
+    '展开项=' + spreadRefs.join(','))
+  const extraTools = [...namesFrom(extraBlock), ...namesFrom(creativeBlock)]
   ok('★ 两份 llms 的能力清单以代码字体点名全部外置工具（新增工具漏写就红）',
-    extraTools.length >= 7 && ['llms.txt', 'docs/llms.txt'].every((f) => {
+    extraTools.length >= 11 && ['llms.txt', 'docs/llms.txt'].every((f) => {
       const s = read(f)
       // 必须写成 `工具名`（反引号包裹）：单纯 includes 会被前缀 / 相似串骗过
       //（反向核查实测：把 convert_to_gif 改成 convert_to_gif_DISABLED 仍能骗过 includes）。

@@ -428,3 +428,31 @@
 .cp-tts-group .cp-hint:first-child {
   color: var(--cp-text);
 }
+
+/* ====================================================== 防横向溢出（2026-11-15） ==
+ * 症状：生成进度条轨道、参数滑块外框、卡片边框被顶出面板右侧。
+ * 根因（三层叠加）：
+ *   ① .cp-panel 的 width:min(392px,100vw) 是 content-box，再加 padding 18px
+ *      + border 1px 多撑出 38px，视口 421–430px 时左边界直接跑出屏幕；
+ *   ② 滑块 width:100% 叠加原生盒模型，读数方钮 white-space:nowrap 在 flex
+ *      行里不肯收缩；
+ *   ③ flex 子项默认 min-width:auto，内容一宽就不收缩，把边框顶出容器。
+ * 修法：统一 box-sizing + min-width:0 + max-width:100%，面板收掉横向溢出。
+ * 只动布局盒模型，不动任何颜色 / 动效 / 提交语义。
+ * ============================================================================ */
+.cp-panel,
+.cp-card, .cp-adv, .cp-field, .cp-field-top, .cp-ticks,
+.cp-progress, .cp-progress-track, .cp-progress-fill, .cp-progress-note,
+.cp-skills, .cp-ref-select, .cp-select, .cp-textarea,
+.cp-field input[type="number"],
+.cp-field input[type="range"] {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+.cp-panel { overflow-x: hidden; }
+.cp-progress-track { width: 100%; }
+.cp-progress-note, .cp-label, .cp-hint, .cp-ticks span, .cp-skill-desc {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

@@ -233,12 +233,59 @@
     doctor.row.appendChild(button('刷新简略', true, function () { loadDoctorBrief() }))
     box.appendChild(doctor.sec)
 
-    /* ---- 加速链：生图/视频缓存后端 + TTS 加速后端（用户点名「TTS 不在加速链里」） ---- */
-    var accel = makeSection('加速链 · 生图/视频缓存 + TTS 加速')
+    /* ---- 加速链：缓存 + TTS + 注意力/编译后端（★ 卡片常驻显示两个后端，不再藏在按钮后面） ---- */
+    var accel = makeSection('加速链 · 缓存 / TTS / SageAttention / WaveSpeed')
+    var accelLine = el('div', 'dshqp-lab-line dshqp-lab-empty', '正在读取加速链…')
+    accel.body.appendChild(accelLine)
+    function paintAccelLine(j) {
+      var ab = j && j.attention_backends
+      if (!ab) {
+        accelLine.textContent = '加速链暂不可用（本机未返回后端状态）'
+        accelLine.className = 'dshqp-lab-line'
+        return
+      }
+      var rows = (ab.available || []).map(function (b) {
+        return (b.label || b.id) + '：' + (b.available ? '已探测到节点' : '未探测到节点')
+      })
+      var probeText = j.probe && j.probe.source === 'object_info'
+        ? '已真实探测 ' + j.probe.nodeCount + ' 个节点'
+        : '未做真实探测（' + ((j.probe && j.probe.reason) || '本机未返回节点表') + '）'
+      accelLine.textContent = rows.join(' ｜ ')
+        + ' ｜ 当前启用：' + (ab.enabled || '无（默认不启用，生成链不变）')
+        + ' ｜ 节点表：' + probeText
+        + (ab.needsSlotMapping ? ' ｜ 节点槽位未核实' : '')
+      accelLine.className = 'dshqp-lab-line'
+    }
+    function refreshAccelLine() {
+      request('accel/chain').then(paintAccelLine)
+    }
+    refreshAccelLine()
+
     accel.row.appendChild(button('查看加速链', false, function () {
       emptyResult(accel.result, '正在读取加速链…')
-      request('accel/chain').then(function (j) { renderResult(accel.result, j) })
+      request('accel/chain').then(function (j) {
+        renderResult(accel.result, j)
+        paintAccelLine(j)
+      })
     }))
+    accel.row.appendChild(button('后端详情 / 工作流补丁', true, function () {
+      emptyResult(accel.result, '正在探测 SageAttention / Comfy-WaveSpeed…')
+      request('accel/backends').then(function (j) { renderResult(accel.result, j) })
+    }))
+    function setAttention(id) {
+      emptyResult(accel.result, '正在切换加速后端…')
+      request('accel/backends', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: id })
+      }).then(function (j) {
+        renderResult(accel.result, j)
+        refreshAccelLine()
+      })
+    }
+    accel.row.appendChild(button('启用 SageAttention', true, function () { setAttention('sage_attention') }))
+    accel.row.appendChild(button('启用 WaveSpeed', true, function () { setAttention('wavespeed') }))
+    accel.row.appendChild(button('恢复默认（不启用）', true, function () { setAttention('') }))
     box.appendChild(accel.sec)
 
     /* ---- GIF 转换 ---- */
@@ -398,6 +445,171 @@
       request('workflows').then(function (j) { renderResult(dag.result, j) })
     }))
     box.appendChild(dag.sec)
+
+    /* ---- 语音后端：用户选模型（第三方节点只探测，不假装已装） ---- */
+    var ttsB = makeSection('语音后端 · Qwen3-TTS / GPT-SoVITS v5 / IndexTTS2')
+    ttsB.body.appendChild(el('div', 'dshqp-lab-note',
+      'GPT-SoVITS v5 分「原版 dev」与「蒸馏版 turbo」；第三方节点需自行安装。未探测到会明确标不可用，插件不自动下载权重。'))
+    ttsB.row.appendChild(button('查看后端与探测状态', false, function () {
+      emptyResult(ttsB.result, '正在读取后端清单…')
+      request('tts/backends').then(function (j) { renderResult(ttsB.result, j) })
+    }))
+    box.appendChild(ttsB.sec)
+
+    /* ---- 音色样本：拖入 MP3 等音频 → 零样本参考克隆（不训练权重） ---- */
+    var vs = makeSection('音色样本 · 拖入音频做新音色')
+    vs.body.appendChild(el('div', 'dshqp-lab-note',
+      '拖入 MP3 / WAV / FLAC 等音频作为参考样本，交给 TTS 复刻音色。这是零样本参考克隆，不训练、不微调、不产出权重文件；样本只落在出图目录内。'))
+    var vsDrop = el('div', 'dshqp-lab-drop', '把音频拖到这里，或点「选择文件」')
+    var vsFile = el('input', 'dshqp-lab-file')
+    try {
+      vsFile.setAttribute('type', 'file')
+      vsFile.setAttribute('accept', '.mp3,.wav,.flac,.ogg,.m4a,.aac,.opus,.webm,.mp4,.aiff')
+    } catch (err) { /* 忽略 */ }
+    var vsId = labeledInput('样本 id（删除时填）', 'vs-...')
+    vs.body.appendChild(vsDrop)
+    vs.body.appendChild(vsFile)
+    vs.body.appendChild(vsId.wrap)
+    function loadSamples() {
+      request('audio/samples').then(function (j) { renderResult(vs.result, j) })
+    }
+    function uploadSample(file) {
+      if (!file) return
+      try {
+        var reader = new FileReader()
+        reader.onload = function () {
+          var dataUrl = String(reader.result || '')
+          var b64 = dataUrl.indexOf(',') >= 0 ? dataUrl.split(',')[1] : ''
+          emptyResult(vs.result, '正在登记音频样本…')
+          request('audio/samples', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ action: 'register', name: file.name, size: file.size, data_base64: b64 }),
+          }).then(function (j) { renderResult(vs.result, j); loadSamples() })
+        }
+        reader.readAsDataURL(file)
+      } catch (err) { emptyResult(vs.result, '读取音频失败（详见插件日志）') }
+    }
+    try {
+      ;['dragenter', 'dragover'].forEach(function (evt) {
+        vsDrop.addEventListener(evt, function (e) { try { e.preventDefault() } catch (err) { /* 忽略 */ } })
+      })
+      vsDrop.addEventListener('drop', function (e) {
+        try { e.preventDefault() } catch (err) { /* 忽略 */ }
+        var f = e && e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files[0] : null
+        uploadSample(f)
+      })
+      vsFile.addEventListener('change', function () { uploadSample(vsFile.files && vsFile.files[0]) })
+    } catch (err) { /* 忽略 */ }
+    vs.row.appendChild(button('列出样本', true, loadSamples))
+    vs.row.appendChild(button('删除样本', true, function () {
+      var id = String(vsId.input.value || '').trim()
+      if (!id) { emptyResult(vs.result, '请先填样本 id'); return }
+      emptyResult(vs.result, '正在删除样本…')
+      request('audio/samples', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'remove', id: id }),
+      }).then(function (j) { renderResult(vs.result, j); loadSamples() })
+    }))
+    box.appendChild(vs.sec)
+
+    /* ---- 音乐 BGM：ACE-Step 1.5 / YuE2 ---- */
+    var bgm = makeSection('音乐 BGM · ACE-Step 1.5 / YuE2')
+    bgm.body.appendChild(el('div', 'dshqp-lab-note',
+      '统一输入 prompt + 时长 + 歌词 / 风格，默认只回可审阅的参数计划；不真生成音频、不自动下载权重。'))
+    var bgmModel = labeledInput('model（ace_step_15 / yue2）', 'ace_step_15')
+    var bgmPrompt = labeledInput('prompt（音乐描述）', '轻快的钢琴与弦乐，适合开场')
+    var bgmDur = labeledInput('duration_sec（5-600）', '60')
+    var bgmStyle = labeledInput('style / preset（可留空）', 'upbeat')
+    bgm.body.appendChild(bgmModel.wrap)
+    bgm.body.appendChild(bgmPrompt.wrap)
+    bgm.body.appendChild(bgmDur.wrap)
+    bgm.body.appendChild(bgmStyle.wrap)
+    bgm.row.appendChild(button('查看模型与预设', true, function () {
+      emptyResult(bgm.result, '正在读取音乐模型…')
+      request('music/models').then(function (j) { renderResult(bgm.result, j) })
+    }))
+    bgm.row.appendChild(button('生成参数计划', false, function () {
+      emptyResult(bgm.result, '正在生成计划…')
+      request('music/generate', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          model: String(bgmModel.input.value || '').trim(),
+          prompt: String(bgmPrompt.input.value || '').trim(),
+          duration_sec: Number(bgmDur.input.value || 60),
+          preset: String(bgmStyle.input.value || '').trim(),
+        }),
+      }).then(function (j) { renderResult(bgm.result, j) })
+    }))
+    box.appendChild(bgm.sec)
+
+    /* ---- 手动超分：全部参数由用户显式给出 ---- */
+    var mu = makeSection('手动超分 · 引擎 / 倍率 / 降噪 / 锐化')
+    var muSrc = labeledInput('source（出图目录内的图片）', 'a.png')
+    var muTgt = labeledInput('target（输出文件名）', 'a_upscaled.png')
+    var muEngine = labeledInput('engine（auto/vosr2/realesrgan/custom）', 'auto')
+    var muScale = labeledInput('scale（2/3/4/6/8/16）', '4')
+    var muDenoise = labeledInput('denoise（0-1）', '0')
+    var muSharpen = labeledInput('sharpen（0-1）', '0')
+    mu.body.appendChild(muSrc.wrap)
+    mu.body.appendChild(muTgt.wrap)
+    mu.body.appendChild(muEngine.wrap)
+    mu.body.appendChild(muScale.wrap)
+    mu.body.appendChild(muDenoise.wrap)
+    mu.body.appendChild(muSharpen.wrap)
+    mu.row.appendChild(button('查看能力', true, function () {
+      emptyResult(mu.result, '正在读取超分能力…')
+      request('upscale/manual/capabilities').then(function (j) { renderResult(mu.result, j) })
+    }))
+    mu.row.appendChild(button('生成草案', false, function () {
+      emptyResult(mu.result, '正在构建参数草案…')
+      request('upscale/manual', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          source: String(muSrc.input.value || '').trim(),
+          target: String(muTgt.input.value || '').trim(),
+          engine: String(muEngine.input.value || '').trim(),
+          scale: Number(muScale.input.value || 4),
+          denoise: Number(muDenoise.input.value || 0),
+          sharpen: Number(muSharpen.input.value || 0),
+        }),
+      }).then(function (j) { renderResult(mu.result, j) })
+    }))
+    box.appendChild(mu.sec)
+
+    /* ---- Worker：环境隔离 / 启停 / 空闲回收 / 显存预检 ---- */
+    var wk = makeSection('独立 Worker · 环境隔离 / 显存预检')
+    wk.body.appendChild(el('div', 'dshqp-lab-note',
+      '每个模型一个独立 Worker，本机 127.0.0.1 回环通信。venv / conda / Docker 只给配置位：插件不 pip install、不拉镜像、不下载权重。空闲自动终止释放显存；显存数字只来自注入探针，未注入就标未检测。'))
+    var wkId = labeledInput('id（gpt_sovits_v5 / indextts2 / ace_step_15 / yue2）', 'ace_step_15')
+    var wkAction = labeledInput('action（list/preflight/start/stop/configure/sweep/protocol）', 'preflight')
+    var wkCmd = labeledInput('command（启动命令，用户自备）', '')
+    var wkEnv = labeledInput('env_path（venv / conda 路径，用户自备）', '')
+    wk.body.appendChild(wkId.wrap)
+    wk.body.appendChild(wkAction.wrap)
+    wk.body.appendChild(wkCmd.wrap)
+    wk.body.appendChild(wkEnv.wrap)
+    wk.row.appendChild(button('Worker 清单 / 协议', true, function () {
+      emptyResult(wk.result, '正在读取 Worker 清单…')
+      request('workers').then(function (j) { renderResult(wk.result, j) })
+    }))
+    wk.row.appendChild(button('显存预检', true, function () {
+      emptyResult(wk.result, '正在读取显存探针…')
+      request('workers/vram').then(function (j) { renderResult(wk.result, j) })
+    }))
+    wk.row.appendChild(button('执行动作', false, function () {
+      emptyResult(wk.result, '正在执行 Worker 动作…')
+      request('workers', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          action: String(wkAction.input.value || 'list').trim(),
+          id: String(wkId.input.value || '').trim(),
+          command: String(wkCmd.input.value || '').trim(),
+          env_path: String(wkEnv.input.value || '').trim(),
+        }),
+      }).then(function (j) { renderResult(wk.result, j) })
+    }))
+    box.appendChild(wk.sec)
 
     return box
   }

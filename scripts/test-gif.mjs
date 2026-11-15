@@ -260,11 +260,16 @@ console.log('=== 6. 实验室前端纪律（源码断言，零 DOM / 零联网�
   //   配置矛盾四个入口，端点必须显式登记进白名单（集合逐字相等，漏一个就红）。
   // ★ 2026-11-15 媒体格式转换批次：新增 media/formats（GET 能力表 / POST 预设）与
   //   media/convert（POST 转换）两个入口，必须显式登记进白名单（集合逐字相等，漏一个就红）。
+  // ★ 2026-11-15 本地能力批次：TTS 后端 / 拖入音频样本 / 音乐 BGM / 手动超分 / Worker
+  //   五张新卡片共 8 个入口，必须显式登记（集合逐字相等，漏一个就红）。
   const ALLOWED = ['media/gif', 'media/gif/capabilities', 'media/formats', 'media/convert',
     'health', 'wizard', 'integration/state',
     'status.json', 'capabilities', 'workflows', 'accel/chain',
     'doctor?detail=1', 'vram-budget', 'events', 'config/conflicts',
-    'contracts', 'contracts?build=1&id=image-qwen21', 'eta']
+    'contracts', 'contracts?build=1&id=image-qwen21', 'eta',
+    'tts/backends', 'audio/samples', 'music/models', 'music/generate',
+    'upscale/manual/capabilities', 'upscale/manual', 'workers', 'workers/vram',
+    'accel/backends']
   ok('lab.js 的 request 路径全是相对本机端点（无 / 或 http 开头）',
     reqPaths.length >= 18 && reqPaths.every((p) => !p.startsWith('/') && !p.startsWith('http')), reqPaths.join(','))
   ok('lab.js 端点全落在 /api/qwen-paint/ 白名单内',
