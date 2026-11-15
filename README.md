@@ -213,7 +213,7 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 
 ### ★ 工作流清单层：承接 0.34.0
 
-- 承接 0.34.0：`chain-manifest` 与 `workflow-fingerprint` 继续为每次提交留指纹。本版新增的工具**都不改生成链**，默认路径逐字节不变。
+- 承接 0.34.0：`chain-manifest`（运行时清单目录）与图结构指纹基准（回归期逐槽位对账，`workflow-fingerprint.js` + `scripts/workflow-fingerprints.json`）继续生效，后者**只在回归里跑、不参与运行时构图**。本版新增的工具**都不改生成链**，默认路径逐字节不变。
 
 ### ★ 结构化运行日志：承接 0.34.0
 
@@ -231,16 +231,19 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 
 ### ★ 联动护栏与回归
 
-- 新增 `scripts/test-orphan-wiring.mjs`（116 项）：一律从 `createExtras()` 拿**真实工具与真实端点**断言，不接受"函数本身对"当作"接上了"；含像素上限、写守卫、异常不外泄、`undocumented` 为空、UI 入口存在等判据。
+- 新增 `scripts/test-orphan-wiring.mjs`（120 项）：一律从 `createExtras()` 拿**真实工具与真实端点**断言，不接受"函数本身对"当作"接上了"；含像素上限、写守卫、异常不外泄、`undocumented` 为空、UI 入口存在等判据。
+- **全量审计补上的两道真护栏**：
+  - **lib 全量可达性扫描**（替代原来手写的 `NEW_MODULES` 白名单）：从 `lib/index.js` 出发做真实 import 图遍历，任何 `lib/*.js` 要么可达、要么进白名单并写明理由；白名单还有「已接上却忘了删」「指向已改名的文件」两条反向断言。旧写法列表外的模块永远不被检查 —— `workflow-fingerprint.js` 就是这样一路没人发现只被测试 import。
+  - **9 套从未进过回归的历史测试重新登记**（`_abort_fix_test` / `_adapt_test` / `_init_abort_test` / `_wrapper_policy_test` / `_vram_patch_test` / `_toggle_field_check` / `_draw_smoke_test` / `_intent_test` / `_cordis_proxy_test`）：全部纯 JS、零联网、零子进程，各自锁着真实修过的 bug。它们一直绿、但**从没被 `npm test` 跑到过** —— 即用户说的"不在回归清单里的测试 = 等于没有测试"。
 - 发布护栏的展开常量解析改成**通用**：`lib/` 里任何 `X_TOOL_NAMES = Object.freeze([...])` 都能解析，解不出来直接判红 —— 否则新模块会重演 0.34.0 那个「展开常量绕过清单检查」的盲区。
 - 三处「新增入口必须显式登记」的白名单（selftest 工具集 / lab.js 端点 / 外置端点表）同步登记 5 个工具与 3 条端点。
-- 全量回归 **82 套，各套项全绿**（断言总数刻意不在此写死，避免每加一条测试就要改文档）；`lib/index.js` 仍是 **258,398 B / 上限 262,144 B，余量 3,746 B**（本版零增长，全部走外置注册层）。
+- 全量回归 **91 套，各套项全绿**（断言总数刻意不在此写死，避免每加一条测试就要改文档）；`lib/index.js` 仍是 **258,398 B / 上限 262,144 B，余量 3,746 B**（本版零增长，全部走外置注册层）。
 
 ### 文档
 
 - `package.json` / `meta.description` / README 首段 / 两份 llms 首段 / `pyproject.toml` / `docs/index.html` / `给DSH安装的话.md` 全部同步到 0.35.0，`scripts/test-release-metadata.mjs` 一处改、多处一起校验。
 - 两份 llms 以代码字体点名全部 5 个新工具与 3 条新端点；`TOOL_SUMMARIES` / `agent-guide` / 端点目录同步补齐。
-- 当前 **113 个 `lib/*.js`** / 合计 **1,956,699 B**。
+- 当前 **113 个 `lib/*.js`** / 合计 **1,960,661 B**。
 
 ## 0.34.0 更新说明
 
@@ -261,7 +264,7 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 - **防误报**：通用 `TorchCompileModel*` 与 Wavespeed 超分节点不算 WaveSpeed；候选按专用节点优先排序。节点输入槽位仍未核实（`needsSlotMapping`），启用后若节点拒收需按 `/object_info` 补映射。
 
 ### 工作流清单层
-- 承接 0.33.0：视频链清单化 + 生图 / TTS 契约对账，改图自动报差异；`chain-manifest` 与 `workflow-fingerprint` 继续为每次提交留指纹。
+- 承接 0.33.0：视频链清单化 + 生图 / TTS 契约对账，改图自动报差异；`chain-manifest`（运行时清单目录）与图结构指纹基准（回归期逐槽位对账，不参与运行时）继续生效。
 
 ### 结构化运行日志
 - 承接 0.33.0：`event-log` 落盘 + 生成完成钩子；本版把加速链快照与 `attention` 段一并记入，仍**不含倍率与未实测耗时**。

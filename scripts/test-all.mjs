@@ -161,8 +161,19 @@ const SUITES = [
   { file: 'test-attention-wiring.mjs', note: '注意力与编译后端真接线：并入加速链 / 两条工作流构造路径 / 卡片常驻显示 / 本机 /object_info 真实探测 / check_acceleration 报告 / 改坏变红反向核查（全离线）' },
   // ★ 2026-11-15 收尾：三个孤儿模块（entry-alias / color-tone / creative-chain）真接进主链路
   { file: 'test-orphan-wiring.mjs', note: '孤儿模块接线：口语入口别名 / 参考图色调端点（像素上限与方法守卫）/ 时间轴·资源·数据流·产出短引用四工具 / 清单与 UI 入口同步 / 拆掉接线变红反向核查（全离线）' },
+  // ★ 2026-11-16 全量审计：六套一直没进回归清单的历史测试（纯 JS / 零联网 / 零子进程，全部真绿）
+  //   教训原话：「不在回归清单里的测试 = 等于没有测试」。它们各自锁着真实修过的 bug。
+  { file: '_abort_fix_test.mjs', note: '取消原因规范化：非 Error 对象不再泄漏成 [object Object]（toError / cancelReason）' },
+  { file: '_adapt_test.mjs', note: '三厂商自适应 + 生图链路自适应（纯函数断言，不联网）' },
+  { file: '_init_abort_test.mjs', note: '初始化链路：宿主 API 不全 / 可选服务缺失时不掐死 + 状态端点真注册' },
+  { file: '_wrapper_policy_test.mjs', note: '互斥 wrapper 按尺寸自动选（小尺寸 TE-Speed / 大尺寸 BlockCache T8）' },
+  { file: '_vram_patch_test.mjs', note: 'detectGpuProfile 真拿得到显存（锁「vramGB 恒为 0 / 驻留参数静默失效」）' },
+  { file: '_toggle_field_check.mjs', note: 'BlockCache T8 项必须带 toggle 字段（前端靠它渲染开关）' },
+  { file: '_draw_smoke_test.mjs', note: '生图链路 smoke：comfyUrl 指向必然连不上的端口，验降级路径不假装成功' },
+  { file: '_intent_test.mjs', note: '生图意图判定四档语义差异 + 未知值安全回落 auto + 插件总开关' },
+  { file: '_cordis_proxy_test.mjs', note: 'cordis ctx Proxy 裸读未声明服务属性（静态扫描；有 _vendor 时升级为真机加载）' },
   // —— 最重的一套放最后 ——
-  { file: 'selftest.mjs', note: '全量自测（392 项）', heavy: true },
+  { file: 'selftest.mjs', note: '全量自测（最重，项数最多）', heavy: true },
 ]
 
 const argv = process.argv.slice(2)

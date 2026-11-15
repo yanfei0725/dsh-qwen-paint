@@ -44,8 +44,35 @@ console.log('=== 1. 纯函数：默认零节点、类名只来自真实节点表
   const on = buildAttentionWorkflowPatch({ installed: NODES, kind: 'image', enabled: 'sage_attention' })
   ok('★ 启用且探测到节点才插入', on.nodes.length === 1)
   ok('★ 类名来自 /object_info 候选，不是硬编码', on.nodes[0].class_type === 'SageAttentionPatch')
-  ok('槽位未声明时只标 needsSlotMapping，不塞参数',
-    on.needsSlotMapping === true && Object.keys(on.nodes[0].inputs).length === 0)
+  // ★★ 2026-11-16 行为变更（有真机证据，不是放宽）：
+  //   原先"槽位一个都没声明 ⇒ needsSlotMapping:true 且不塞参数"。真机装完
+  //   Comfy-WaveSpeed 后发现这个策略会造出**静默无效**的节点（见下条），
+  //   所以改成：宿主声明优先；没声明就回退到注册表里**经 /object_info 核实过**
+  //   的槽位，并标 slotsVerified:true。needsSlotMapping 只在连核实过的槽位都没有时才为真。
+  ok('★ 槽位已核实：不标 needsSlotMapping，且只写后端声明的槽位（model 由插入时填）',
+    on.needsSlotMapping === false && on.slotsVerified === true
+      && Object.keys(on.nodes[0].inputs).length === 0,
+    JSON.stringify({ nsm: on.needsSlotMapping, sv: on.slotsVerified, inp: on.nodes[0].inputs }))
+  // ★★ 真机陷阱：ApplyFBCacheOnModel 的 residual_diff_threshold 默认 0.0，而节点自己的
+  //   tooltip 明写「Setting this to 0 disables the FBCache effect」⇒ 只写 model 会插进一个
+  //   静默无效的节点（用户以为开了加速，其实什么都没变）。必须给 >0 的保守值。
+  const wsDefault = buildAttentionWorkflowPatch({ installed: NODES, kind: 'image', enabled: 'wavespeed' })
+  ok('★ WaveSpeed 启用时 residual_diff_threshold 必须 > 0（默认 0 等于关闭缓存）',
+    Number(wsDefault.nodes[0]?.inputs?.residual_diff_threshold) > 0,
+    JSON.stringify(wsDefault.nodes[0]?.inputs))
+  // ★ 真机节点名是 ApplyFBCacheOnModel —— 既不含 FirstBlockCache 也不含 WaveSpeed，
+  //   旧模式命中 0 个 ⇒ 装了也报"未安装"。夹具必须覆盖这个真名。
+  const realName = buildAttentionWorkflowPatch({
+    installed: ['ApplyFBCacheOnModel', 'KSampler'], kind: 'image', enabled: 'wavespeed',
+  })
+  ok('★ 认得出真机节点名 ApplyFBCacheOnModel（旧模式在这里命中 0 个）',
+    realName.nodes[0]?.class_type === 'ApplyFBCacheOnModel', realName.nodes[0]?.class_type)
+  // ★ 反向：两条后端都必须自带「已核实槽位 + 证据」，否则 needsSlotMapping 的
+  //   静默降级路径会悄悄复活（这是本轮真机核实留下的契约）。
+  const listed = off.available
+  ok('★ 每条后端都声明 slotsVerified 与真机证据（防"未核实"路径静默复活）',
+    listed.every((b) => b.slotsVerified === true && String(b.slotsEvidence).length > 20),
+    JSON.stringify(listed.map((b) => [b.id, b.slotsVerified])))
   const withSlots = buildAttentionWorkflowPatch({
     installed: NODES, kind: 'image', enabled: 'wavespeed',
     acceptedInputs: ['model', 'cache_mode'], extraInputs: { cache_mode: 'fbcache', injected: 1 },

@@ -376,6 +376,60 @@ console.log('\n=== 7. 反向核查：把接线拆掉，护栏必须变红 ===')
     '★ 反向：去掉反引号后点名断言会红（不接受裸字符串）')
 }
 
+/* ------------------- 8. 全量可达性扫描（不再靠手写白名单） ------------------- */
+
+console.log('\n=== 8. 全量可达性：lib/*.js 要么从 index.js 可达，要么在显式白名单里 ===')
+{
+  // 背景：旧护栏是「手写一个 NEW_MODULES 列表逐个查」，列表外的模块永远不被检查
+  //       —— workflow-fingerprint.js 就是这样一路没人发现只被测试 import。
+  // 改法：从 lib/index.js 出发做真实 import 图可达性，白名单必须逐条给理由。
+  const libDir = path.join(ROOT, 'lib')
+  const libFiles = readdirSync(libDir).filter((f) => f.endsWith('.js'))
+  const srcOf = new Map(libFiles.map((f) => [f, read('lib/' + f)]))
+
+  const IMPORT_RE = /(?:from\s*|import\s*\(\s*|require\s*\(\s*)'\.\/([A-Za-z0-9_.-]+\.js)'/gu
+  const edges = new Map()
+  for (const [f, src] of srcOf) {
+    edges.set(f, [...new Set([...src.matchAll(IMPORT_RE)].map((m) => m[1]))])
+  }
+
+  const reachable = new Set()
+  const queue = ['index.js']
+  while (queue.length > 0) {
+    const cur = queue.pop()
+    if (reachable.has(cur) || !srcOf.has(cur)) continue
+    reachable.add(cur)
+    for (const next of edges.get(cur) ?? []) queue.push(next)
+  }
+
+  // 白名单：**不在后端 import 图里**但确实合法的模块，必须写清理由。
+  const ALLOWED_UNREACHABLE = {
+    'client.js': '前端包：由 DSH 直接加载到浏览器侧，不经后端 import',
+    'workflow-fingerprint.js': '回归期图结构指纹工具：只被 scripts/* 引用，不参与运行时构图',
+  }
+
+  const orphans = libFiles.filter((f) => !reachable.has(f) && !(f in ALLOWED_UNREACHABLE))
+  ok(orphans.length === 0,
+    '★ lib/ 里没有未登记的真孤儿（每个文件都从 index.js 可达，或在白名单里写明理由）',
+    orphans.join(',') || 'NONE')
+
+  // 反向：白名单不许「已经接上了却忘了删」——否则白名单会越来越假
+  const staleAllowed = Object.keys(ALLOWED_UNREACHABLE).filter((f) => reachable.has(f))
+  ok(staleAllowed.length === 0,
+    '★ 白名单没有过期项（模块一旦接进主链路就必须从白名单删掉）',
+    staleAllowed.join(',') || 'NONE')
+
+  // 反向：白名单里的文件必须真的存在，防止改名后白名单变成空挂
+  const ghostAllowed = Object.keys(ALLOWED_UNREACHABLE).filter((f) => !libFiles.includes(f))
+  ok(ghostAllowed.length === 0,
+    '★ 白名单指向的文件都存在（改名 / 删除后必须同步）',
+    ghostAllowed.join(',') || 'NONE')
+
+  ok(reachable.size >= libFiles.length - Object.keys(ALLOWED_UNREACHABLE).length,
+    '★ 可达性扫描本身没瞎（可达数 + 白名单数 == 总文件数）',
+    `可达 ${reachable.size} + 白名单 ${Object.keys(ALLOWED_UNREACHABLE).length} vs 总 ${libFiles.length}`)
+}
+
 /* --------------------------------- 汇总 --------------------------------- */
 
 console.log(`\n=== test-orphan-wiring：${pass} 项通过，${fail} 项失败 ===`)
