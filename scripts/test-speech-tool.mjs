@@ -22,6 +22,7 @@ import {
   slimResult, withDeclaredOutput, makeDeclaredOutputSchema,
 } from '../lib/tool-contracts.js'
 import { makeSpeechTool, makeSpeechRunner, SPEECH_OUTPUT_SCHEMA } from '../lib/speech-tool.js'
+import { EXTRA_TOOL_NAMES } from '../lib/tool-registry.js'
 
 let pass = 0, fail = 0
 const ok = (name, cond, extra) => {
@@ -58,8 +59,11 @@ console.log('=== 1. 工具描述集中层 ===')
   ok('speech 描述写明缺件给清单、不自动下载', describeSpeechTool().includes('不假装能出音频')
     && describeSpeechTool().includes('不会自动下载权重'))
   ok('speech 描述不承诺固定格式（写明由后端链决定）', describeSpeechTool().includes('格式由后端实际命中的兜底链决定'))
-  ok('★ TOOL_SUMMARIES 覆盖全部 13 个工具（0.32.1 补齐 3 个新工具）',
-    Object.keys(TOOL_SUMMARIES).length === 13)
+  // ★ 0.32.1 之后新增 6 个外置注册工具：覆盖判据改为「外置清单逐个在册 + 总数自适应」，
+  //   不再硬编码 13；漏补任一新工具的摘要就红。
+  ok('★ TOOL_SUMMARIES 覆盖全部工具（内置 + 外置注册）',
+    EXTRA_TOOL_NAMES.every((k) => k in TOOL_SUMMARIES)
+    && Object.keys(TOOL_SUMMARIES).length === 13 + EXTRA_TOOL_NAMES.length)
   ok('TOOL_SUMMARIES 含 generate_speech', TOOL_SUMMARIES.generate_speech.includes('Qwen3-TTS'))
 }
 

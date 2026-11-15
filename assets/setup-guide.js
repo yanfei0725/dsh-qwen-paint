@@ -80,9 +80,12 @@
     return String((node && node.className) || '').split(/\s+/u).indexOf(cls) >= 0
   }
 
-  /** 只在插件自己的浮层里生效；最多往上爬 12 层，绝不碰宿主 / React 消息树。 */
+  /** 只在插件自己的浮层里生效；最多往上爬 12 层，绝不碰宿主 / React 消息树。
+   * ★ 2026-11-14 全面排查：cp-fab 是 Comfy 控制面板的悬浮按钮，它没有 cp-panel 祖先，
+   *   且在「无 Pointer Events」的宿主回退分支里只绑 click。漏了它，点不动的毛病就会
+   *   从面板按钮转移到浮标本身，所以与 cp-panel 一起进白名单。 */
   function inPluginScope(node) {
-    var SCOPE = ['sg-panel', 'sg-fab', 'cp-panel', 'dshqp-mask-overlay',
+    var SCOPE = ['sg-panel', 'sg-fab', 'cp-panel', 'cp-fab', 'dshqp-mask-overlay',
       'dshqp-mask-card', 'qwen-paint-opt-panel', 'qwen-paint-opt-menu', 'mf-box', 'ca-box']
     var n = node
     for (var i = 0; n && i < 12; i += 1) {

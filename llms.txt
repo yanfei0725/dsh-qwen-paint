@@ -1,8 +1,8 @@
 # dsh-qwen-paint
 
-> DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（QQ 交流群 454707710）。0.32.1 两轮审计加固：ASR 音频路径围栏（只认出图目录内文件）、按包名安装也能执行引导脚本、草图台四事件点按、错误响应消毒收口；视频链清单化 + 生图/TTS 契约对账（改图自动报差异）；生图/视频/混合三模式界面各不同；批量出图带幂等保护（重试不重出）；Qwen3-TTS 语音克隆与可接 ASR 自动字幕；本机实测秒数；会话级模型驻留、显存建议、参数来源表、预设绑定、加载器盘点等本机端点。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合、导入音频直接合进成片（音轨合成），文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech，参考音频可复刻音色），模型无关角色参考；草图台手绘参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。
+> DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（QQ 交流群 454707710）。★ 0.33.0 起许可改为 BSL 1.1（BUSL-1.1，非 OSI 开源许可）：除托管/代管服务与直接竞品捆绑两类「竞争性使用」外免费生产使用，2030-11-15 转 Apache-2.0；0.32.1 及更早仍 MIT、不追溯。0.33.0 新增媒体格式转换（图片 JPG/PNG/WebP、视频 MP4/MKV/MOV/WebM、音频 MP3/AAC/WAV/FLAC，生成物可指定输出格式、动图转视频、自有素材转换，Agent 可直接调用 convert_media）与加速链全景（生图/视频缓存后端 + TTS 加速 + 显存预算 + 配置裁决 + 结构化日志，只列探测到的、未实测不写倍率）、本机能力功能区内嵌进 Comfy 控制面板（展开页恒在悬浮球正上方、边框对齐 DSH 右边框、四事件点按兜底）、GIF 转换 / 运行期自诊断 / 优先级任务队列 / 单图迭代优化 / 自适应 DAG 编排 / 生成历史可删改与冷热分离等本机工具与端点；0.32.1 两轮审计加固：ASR 音频路径围栏（只认出图目录内文件）、按包名安装也能执行引导脚本、草图台四事件点按、错误响应消毒收口；视频链清单化 + 生图/TTS 契约对账（改图自动报差异）；生图/视频/混合三模式界面各不同；批量出图带幂等保护（重试不重出）；Qwen3-TTS 语音克隆与可接 ASR 自动字幕；本机实测秒数；会话级模型驻留、显存建议、参数来源表、预设绑定、加载器盘点等本机端点。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合、导入音频直接合进成片（音轨合成），文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech，参考音频可复刻音色），模型无关角色参考；草图台手绘参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。
 
-本仓库是 DSH 的本地插件（bundle），不是 Web 服务：没有 HTTP API、没有 OpenAPI 规范，也没有 MCP server。本包**已发布到 npm**（`dsh-qwen-paint`，当前 `0.32.1`），既可按包名安装，也可指向本地目录做开发调试。
+本仓库是 DSH 的本地插件（bundle），**不是对外 / 远程的 Web 服务**：没有对外 HTTP API、没有 OpenAPI 规范，也没有 MCP server；但插件在本机回环 `127.0.0.1` 上提供一组本机端点（见下方端点目录与 `/api/qwen-paint/integration/routes`），只放行本机请求。本包在 npm 的包名为 `dsh-qwen-paint`（仓库当前 `0.33.0`），既可按包名安装，也可指向本地目录做开发调试。
 
 ## 能力 / Tools
 
@@ -21,13 +21,16 @@
 - CPU 端点：`GET /api/qwen-paint/cpu-profile`（画像 + 五档各自在本机的真实参数）、`POST /api/qwen-paint/cpu-accel`（选档，落 uiState）；均仅本机请求、不含绝对路径
 - 目标机实测入口：`node scripts/cpu-probe.mjs [--bench] [--dump-config]`（只读，借 ComfyUI 自带 python 问 PyTorch 的 CPU capability）
 - 生成历史（本机 SQLite）：`GET /api/qwen-paint/history`（`q` / `kind` / `from` / `to` / `limit` / `offset`）、`GET /api/qwen-paint/history/stats`、`POST /api/qwen-paint/history/delete`（软删除，只置 `deleted=1`，**绝不删磁盘文件**）；Agent 工具 `list_generated_images`。库文件 `<outputDir>/.qwen-paint-history.db`，只存相对 `outputDir` 的路径。持久化依赖 Node 内置 `node:sqlite`（**Node >= 22.5**）；更低版本返回 `available:false` / `persistent:false` 并如实说明，不假装有数据；`engines` 仍为 `>=18.0.0`
+- 本机能力工具（0.33.0 新增，全部进工具清单与 `/agent-guide`）：`convert_to_gif`（图片序列 / 视频转 GIF）、`manage_jobs`（优先级任务队列 / 取消 / 失败自动重试次数）、`iterate_image`（单图多轮迭代优化）、`query_history`（历史参数化查询与删改、软删冷热分离）、`doctor`（运行期自诊断）、`run_dag`（自适应 DAG 编排，默认 `dry_run`）、`convert_media`（媒体格式转换，见下条）
+- 媒体格式转换（Agent 工具 `convert_media`）：图片 **JPG / PNG / WebP**、视频 **MP4 / MKV / MOV / WebM**、音频 **MP3 / AAC / WAV / FLAC**；同类互转、跨类明确拒绝、**动图转视频**、用户自有素材转换、生成物按预设自动补转（原产物保留）。端点 `POST /api/qwen-paint/media/convert`、`GET|POST /api/qwen-paint/media/formats`。ComfyUI 保存节点格式固定（SaveImage→PNG / VHS_VideoCombine→mp4 / SaveAudioMP3→mp3），插件不能让节点直吐 WebP / MKV / FLAC，真实实现是**落盘后补转**；未探测到 ffmpeg 时只回参数预览并说明降级理由，不谎称已生成
+- 加速链与运行期端点：`GET /api/qwen-paint/accel/chain`（缓存后端 / TTS 加速 / 显存预算 / 配置裁决 / 结构化日志，只列探测到的、未实测不写倍率）、`GET /api/qwen-paint/doctor`、`GET|POST /api/qwen-paint/vram-budget`（0 / 2 / 4 / 8 / 12 / 16 / 24 GB 或无上限）、`GET /api/qwen-paint/config/conflicts`、`GET|POST /api/qwen-paint/events`（JSON Lines 运行日志，`queue/load/sample/decode` 未打点时为 `null`）、`GET /api/qwen-paint/agent-guide`（全量端点见 `/api/qwen-paint/integration/routes`）
 
 ## 安装 / Installation
 
 - **视频模型自动下载包**：`node scripts/setup.mjs --video-models`，默认关闭、需你显式执行；官方仓库文件清单运行时动态列举、由你选档位，多源轮询 + 断点续传 + 服务器权威 size + sha256 双校验，不合格删除。同类还有 `--igpu-download`（核显档，默认关闭）。
 - 一键安装：双击仓库根目录的 `一键安装.cmd`
 - CLI：`dsh plugin --profile desktop add link:<本插件目录的绝对路径>`（使用 desktop profile 时须先完全退出 DSH）
-- **已发布到 npm**：`dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式用于开发调试
+- **npm 包名安装**：`dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式用于开发调试
 - 要求 DSH >= 0.2.0-rc.2、Node >= 18.0.0
 - **可选核显型号**（`lib/igpu-profiles.js`）：AMD Radeon 780M / 680M / 760M / 660M / 8060S，Intel Iris Xe 96EU / UHD / Arc 140V / 140T / B390 共 10 档。`node scripts/setup.mjs --list-igpu` 列清单（零联网零下载）；`--igpu <id>` 选型号；`--igpu-download` 才真下推荐模型（默认关闭、`--check` 永远不下载、按服务器权威 size + sha256 双校验）。
 - 核显后端建议：AMD 消费级核显 → DirectML；Intel 核显 → OpenVINO；仅 Ryzen AI Max+ 395 / Radeon 8060S（gfx1151）有 AMD 官方 Windows ROCm 原生支持。**插件不自动更换 PyTorch 后端、不自动安装这些后端**，需用户自行配置。
@@ -39,7 +42,8 @@
 - **第三类出口：可选的联网参考图检索，默认拒绝**。配置项 `referenceSearchEndpoint` 默认为占位符 `<API_ENDPOINT>`，未替换时一律拒绝出站；换成外部 https 端点后仍须**每次检索单独显式同意**（`consent: true`，没有"记住同意"的常开开关）。出站字段仅 `query` / `limit` / `media`，不含提示词、seed、本机路径或凭据；只返回候选 URL，不自动下载图片字节。端点与候选 URL 都拒绝回环 / 内网 / 云元数据地址（含 IPv6 形态）以防 SSRF，不跟随重定向。
 - 角色参考适配层与模型无关：按 `/object_info` 的真实节点能力协商策略（按输入槽找节点，不靠类名猜），协商不到需配套权重的专属适配器就回落到只用基础节点的通用兜底；默认不启用 = 零漂移。
 - 无云端模型服务、无 API 密钥、无调用费用。
-- 版本 0.32.1；许可证 MIT。
+- 版本 0.33.0；许可协议 BSL 1.1（BUSL-1.1，非 OSI 开源许可），Change Date 2030-11-15，届时转 Apache-2.0；0.32.1 及更早版本仍按 MIT 授权、不受换证影响。
+- 附加使用授权：Licensor 为**单一主体** `@yanfei0725`；除「竞争性使用」（把本作品作为托管/代管服务提供给第三方，或捆绑为直接竞品销售分发）外，**任何个人、团队或企业均可免费在生产环境中使用**；以 LICENSE 中文原文为准，转 Apache-2.0 后该限制消失。
 
 ## 关键文档 / Docs
 
@@ -47,4 +51,4 @@
 - [INSTALL.md](https://github.com/yanfei0725/dsh-qwen-paint/blob/main/INSTALL.md)：安装步骤、profile 选择与排错
 - [package.json](https://github.com/yanfei0725/dsh-qwen-paint/blob/main/package.json)：`dsh` 字段、兼容性与工具清单
 - [cordis.patch.yml](https://github.com/yanfei0725/dsh-qwen-paint/blob/main/cordis.patch.yml)：bundle 补丁
-- [LICENSE](https://github.com/yanfei0725/dsh-qwen-paint/blob/main/LICENSE)：MIT
+- [LICENSE](https://github.com/yanfei0725/dsh-qwen-paint/blob/main/LICENSE)：BSL 1.1（BUSL-1.1）

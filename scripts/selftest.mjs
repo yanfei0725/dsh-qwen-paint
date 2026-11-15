@@ -127,10 +127,14 @@ check('注册了 draw_image（apply 直接注册，不经 root.inject）', tool.
 //   ★ 这些都是**有意的行为变更**（真的多注册了工具），不是改测试迁就 bug。
 //     为防止「加一个工具就把数字 +1」变成惯性操作，下面改成逐字比对集合：
 //     新增工具必须显式写进这份清单，等于强制过一次脑子（是工具还是误注册？）。
+// 2026-11-14：+ 6 个（convert_to_gif / manage_jobs / iterate_image / query_history / doctor / run_dag）13 → 19。
+//   全部走 lib/tool-registry.js 外置注册，index.js 不逐个 import（体积红线只剩 19 B）。
+// 2026-11-15：+ convert_media（媒体格式转换）19 → 20；同样走外置注册，index.js 零增长。
 const EXPECTED_TOOLS = [
-  'batch_draw', 'check_acceleration', 'compose_prompt', 'draw_image', 'generate_hybrid',
-  'generate_speech', 'generate_video', 'inpaint_image', 'list_available_models',
-  'list_generated_images', 'outpaint_image', 'remove_image', 'upscale_image',
+  'batch_draw', 'check_acceleration', 'compose_prompt', 'convert_media', 'convert_to_gif', 'doctor', 'draw_image',
+  'generate_hybrid', 'generate_speech', 'generate_video', 'inpaint_image', 'iterate_image',
+  'list_available_models', 'list_generated_images', 'manage_jobs', 'outpaint_image',
+  'query_history', 'remove_image', 'run_dag', 'upscale_image',
 ]
 check('注册的工具集合逐字等于预期（新增工具须显式登记）',
   registered.map((t) => t.name).slice().sort().join(' , ') === EXPECTED_TOOLS.join(' , '),
@@ -149,8 +153,8 @@ check('draw_image 带自定义 render（展示层增强，非注册硬校验）'
 check('output.schema 存在', typeof tool.output.schema === 'object' && tool.output.schema !== null)
 check('execute 是函数', typeof tool.execute === 'function')
 check('timeoutMs 是正有限数', Number.isFinite(tool.timeoutMs) && tool.timeoutMs > 0, tool.timeoutMs)
-check('★ 13 个工具全部具备基础形状（description / output.schema / execute / timeoutMs）',
-  registered.length === 13 && registered.every((t) =>
+check('★ 全部注册工具都具备基础形状（description / output.schema / execute / timeoutMs）',
+  registered.every((t) =>
     typeof t.description === 'string' && t.description.length > 20
     && t.output && typeof t.output.schema === 'object'
     && typeof t.execute === 'function'

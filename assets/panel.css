@@ -48,15 +48,25 @@
   --cp-r-tag: 4px;
 }
 
-/* ---- 浮标：胶囊 + 双层描边 + 顶部一条锚点边（可拖动） ---- */
+/* ---- 浮标：胶囊 + 双层描边 + 顶部一条锚点边（可拖动） ----
+ * ★ 2026-11-15：right/bottom 归零 —— 用户第三次强调「刚好靠边，
+ *   不是你提前空那么多」。旧的 16px 是 CSS 默认留白，未拖动时 JS 不接管
+ *   定位，于是永远差一截。
+ * ★★ 2026-11-15 第四次纠正：「放到右边不要变成一个更圆的球，跟以前一样就好」。
+ *   根因：拖动后 JS 把定位从 right:0 改成 left:Npx;right:auto，shrink-to-fit 的
+ *   可用宽度变窄 → 文字被压 / 换行 → 浮标变窄，配合 999px 圆角就缩成正圆。
+ *   ⇒ width:max-content + white-space:nowrap 让宽度只由内容决定，与位置无关；
+ *     圆角 / padding / min-height / 颜色一律不动，外观与 0.32.1 完全一致。 */
 .cp-fab {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  right: 0;
+  bottom: 0;
   z-index: 2147483000;
   display: inline-flex;
   align-items: center;
   gap: 9px;
+  width: max-content;
+  white-space: nowrap;
   min-height: 42px;
   padding: 10px 18px;
   font: 500 14px/1.25 var(--cp-font);
@@ -82,13 +92,15 @@
 .cp-fab-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--cp-ok); }
 .cp-fab.is-busy .cp-fab-dot { background: var(--cp-warn); }
 
-/* ---- 面板外壳 ---- */
+/* ---- 面板外壳 ----
+ * ★ 2026-11-15：right 归零贴右边框；bottom 只留浮标自身高度（42px），
+ *   面板底边正好压在浮标上沿，中间不再塞空隙。 */
 .cp-panel {
   position: fixed;
-  right: 16px;
-  bottom: 64px;
+  right: 0;
+  bottom: 42px;
   z-index: 2147483001;
-  width: min(392px, calc(100vw - 32px));
+  width: min(392px, 100vw);
   max-height: min(74vh, 680px);
   overflow-y: auto;
   padding: 18px;
@@ -364,11 +376,11 @@
   outline-offset: 2px;
 }
 
-/* ---- 小屏 ---- */
+/* ---- 小屏：同样零边距贴左右边框（2026-11-15） ---- */
 @media (max-width: 420px) {
-  .cp-panel { left: 12px; right: 12px; width: auto; max-height: 80vh; padding: 14px; }
+  .cp-panel { left: 0; right: 0; width: auto; max-height: 80vh; padding: 14px; }
   .cp-card, .cp-adv { padding: 14px; }
-  .cp-fab { right: 12px; bottom: 12px; }
+  .cp-fab { right: 0; bottom: 0; }
 }
 
 /* ---- 降低动效 ---- */

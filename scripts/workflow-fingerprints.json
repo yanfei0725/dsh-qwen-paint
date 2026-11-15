@@ -1,6 +1,6 @@
 {
   "_comment": "A1：工作流图结构指纹（scripts/test-runtime-guards.mjs 维护）。图变了先看 diff 再 --update。",
-  "_why": "生图链/TTS 链分支多，暂不做运行时清单接管；用指纹锁住\"图不会悄悄变\"。",
+  "_why": "生图链/TTS 链已按契约清单化（workflows/contracts/ + lib/chain-manifest.js）并做构建后逐槽位对账；运行时仍由代码构图，避免 JS/JSON 双轨半迁移。指纹只负责锁「图不会悄悄变」。",
   "fixtures": {
     "image-basic": {
       "hash": "aba4d1fc9a745ca4ba1064509d1a1eb7",

@@ -631,6 +631,49 @@
     return wrap
   }
 
+  /* ============================ 点按兜底 ============================
+   * ★★ 2026-11-15 第五次报障「悬浮球没反应 / 叉叉也点不动」的两个真根因：
+   *   ① DSH 宿主在 pointerdown 上 preventDefault，click 不派发。
+   *     assets/setup-guide.js::installPointerFallback() 的兜底是在
+   *     pointerup / mouseup / touchend 时**合成 click**（target.click()），
+   *     ⇒ 按钮必须自己绑 click 才救得活。此前 cp-fab 在 hasPointer 分支
+   *     只绑 pointerup、没绑 click，所以把 cp-fab 加进兜底白名单也没用。
+   *   ② wire() 只在首次 mount 跑一次，绑的是 firstPanel 上的 .cp-x；
+   *     切模式 / 宿主重建会 render() 造全新 panel + 全新叉叉，旧监听随旧节点
+   *     一起消失 ⇒ 叉叉永久失效。
+   * 修法：四种「抬起」事件 + 300ms 冷却；叉叉绑定搬进 render()，每次重建都重绑。
+   * ★ 联动纪律：改了兜底层（setup-guide）必须核实消费端真的绑了它合成的事件，
+   *   否则就是「白名单加了、按钮还是点不动」的孤儿接线。
+   */
+  var UI_BUILD = '2026-11-15.5'
+  var TAP_EVENTS = ['click', 'pointerup', 'mouseup', 'touchend']
+  var TAP_COOLDOWN_MS = 300
+
+  /** 一次手势只放行一次；拖动期间由 suppressUntil 抑制（拖完不该误开关面板）。 */
+  function tapFire(state) {
+    var now = Date.now()
+    if (now < (state.suppressUntil || 0)) return false
+    if (now - state.last < TAP_COOLDOWN_MS) return false
+    state.last = now
+    return true
+  }
+
+  /** 给任意按钮绑四种「抬起」事件；shared 可传入同一 state 与拖动链共用冷却。 */
+  function bindTap(node, fn, events, shared) {
+    var state = shared || { last: 0, suppressUntil: 0 }
+    if (!node || typeof node.addEventListener !== 'function') return state
+    var list = events || TAP_EVENTS
+    for (var i = 0; i < list.length; i += 1) {
+      (function (type) {
+        node.addEventListener(type, function () {
+          if (!tapFire(state)) return
+          try { fn() } catch (err) { /* 点按异常不卡死面板 */ }
+        })
+      })(list[i])
+    }
+    return state
+  }
+
   function render() {
     var modes = (schema && schema.modes) || []
     var ticks = aspectTicks()
@@ -646,6 +689,13 @@
       fab.appendChild(el('span', null, 'Comfy 控制'))
       document.body.appendChild(fab)
     }
+    // ★ 自证标记：鼠标悬停能看到 UI 构建号，用来确认真机加载的是不是新脚本。
+    //   DSH 页面不刷新时 loadComfyPipelinePanel() 会按 id 去重、不会重新加载脚本，
+    //   所以「改完没反应」也可能是页面里还跑着上一次加载的旧代码。
+    if (typeof fab.setAttribute === 'function') {
+      fab.setAttribute('data-cp-ui-build', UI_BUILD)
+      fab.title = 'Comfy 控制 · UI ' + UI_BUILD
+    }
 
     var panel = el('div', 'cp-panel')
     panel.hidden = true
@@ -656,6 +706,9 @@
     head.appendChild(el('h4', null, '通用 Comfy 控制层'))
     var x = el('button', 'cp-x', '×')
     x.type = 'button'
+    // ★ 2026-11-15：叉叉必须在 render() 里绑 —— rebuild() 会换掉整个 panel，
+    //   wire() 里那个「只绑一次 firstPanel」的旧写法会让重建后的叉叉永久失灵。
+    bindTap(x, close)
     head.appendChild(x)
     panel.appendChild(head)
 
@@ -910,8 +963,23 @@
     foot.appendChild(reset)
     panel.appendChild(foot)
 
+    // ★★ 2026-11-15（用户第三次强调）：**不要独立的实验室浮层**。
+    //   功能不删，但容器从「fixed 悬浮窗 + 独立浮标」改成面板内的一个普通插槽，
+    //   由 lab.js 把各功能区直接 append 进来 —— 它就是 Comfy 控制面板的一部分，
+    //   宽度跟随面板、贴边由面板决定，不再自己算 left/top/width。
+    var labSlot = el('div', 'dshqp-lab-slot')
+    labSlot.setAttribute('data-dshqp-lab-slot', '1')
+    panel.appendChild(labSlot)
+
     document.body.appendChild(panel)
-    nodes = { fab: fab, panel: panel, status: status, note: note, progress: progress, library: library, reference: reference }
+    nodes = { fab: fab, panel: panel, status: status, note: note, progress: progress,
+      library: library, reference: reference, labSlot: labSlot }
+    // rebuild() 会换掉 panel 节点；lab.js 已加载时立刻把功能重挂到新插槽，
+    // 否则切一次模式功能区就消失（历史上 catch 过的「缓存旧节点」同类问题）。
+    try {
+      var lab = window.DshQpLab
+      if (lab && typeof lab.mountInto === 'function') lab.mountInto(labSlot)
+    } catch (err) { /* 实验室未就绪不影响主面板 */ }
     paintReference()
     return nodes
   }
@@ -945,7 +1013,8 @@
     if (!nodes) return
     var wasOpen = nodes.panel.hidden === false
     try { nodes.panel.parentNode.removeChild(nodes.panel) } catch (err) { /* 已离体 */ }
-    nodes = { fab: nodes.fab, panel: null, status: null, note: null, progress: null, library: null, reference: null }
+    nodes = { fab: nodes.fab, panel: null, status: null, note: null, progress: null,
+      library: null, reference: null, labSlot: null }
     render()
     if (wasOpen) open()
   }
@@ -1008,31 +1077,114 @@
       h: Number.isFinite(fab.offsetHeight) && fab.offsetHeight > 0 ? fab.offsetHeight : 40,
     }
   }
-  /** 把 (left,top) 夹进视口并写到 style，返回夹后的坐标。 */
+
+  /* ---------- 浮标几何（纯函数，供回归用 node:vm 直接断言） ----------
+   * 用户报障「悬浮球拉到最右边会吞掉展开的界面」→ 当时靠硬预留 pw 解决；
+   * 2026-11-14 用户再报「拉不到右面去 / 限制那么多 / 只要对齐一点点」：
+   * 改为由翻边保证面板可见，浮标不再被硬预留挤在左侧。
+   * 2026-11-15 第三次报「我要它刚好靠边，不是你提前空那么多」：
+   *   ⇒ EDGE_GAP = 0，CSS 默认 right/bottom 归零，面板与浮标间不再塞 12px。
+   * ★★ 2026-11-15 第四次纠正（用户原话）：「展开的界面直接放到悬浮球的上方，
+   *   不是悬浮球的右侧或者左侧」「展开界面 UI 对齐 DSH 的边框，就是边框对齐边框」
+   *   「悬浮球放到右边不要变成一个更圆的球，跟以前一样就好」。
+   *   ⇒ 删除 geomPanelSide 的左右翻边，改 geomPanelAbove：
+   *     · 面板右缘恒等于浮标右缘；浮标贴右时两者右缘都是 vpW ⇒ 与 DSH 右边框同一条线；
+   *     · 面板底缘恒等于浮标上缘（上方优先；空间不足只压缩面板高度，绝不翻到下方）；
+   *     · 浮标尺寸不再随定位方式变化（CSS width:max-content + white-space:nowrap），
+   *       原来的圆角 / padding / min-height 一个都不改。
+   *   · 轻吸附：只有离边 ≤24px 才贴边，中间保留用户的微调位置；
+   *   · 旧 localStorage 值（可能越界）也走同一 clamp。
+   * 全部按数字算，不碰 DOM，因此离线可测；setFabPos / syncPanelPos 只负责读写 style。
+   */
+  var EDGE_GAP = 0
+  function geomPanelWidth(vpW) {
+    return Math.min(392, Math.max(EDGE_GAP, vpW))
+  }
+  /** 水平边界：只留浮标自身宽度，零视口边距（精确贴 DSH 左右边框）。
+   * ★ 2026-11-14 去掉给右侧面板预留 pw 的硬边界；2026-11-15 再把 8px 边距归零。
+   *   pw 参数保留以兼容既有调用（回归也按同一签名断言），只是不参与上界计算。
+   */
+  function geomFabBounds(vpW, fsW, pw) {
+    void pw
+    var minLeft = EDGE_GAP
+    var maxLeft = Math.max(minLeft, vpW - fsW - EDGE_GAP)
+    return { minLeft: minLeft, maxLeft: maxLeft }
+  }
+  /** 把任意 x（含越界旧值 / NaN）夹进水平边界。 */
+  function geomClampFabX(x, bounds) {
+    var n = Number(x)
+    if (!Number.isFinite(n)) n = bounds.minLeft
+    var hi = Math.max(bounds.minLeft, bounds.maxLeft)
+    return Math.min(Math.max(bounds.minLeft, n), hi)
+  }
+  /** 轻吸附：只在离边很近（≤24px）时贴边，中间区域**保留用户放的位置**。
+   * ★ 2026-11-14：旧实现无论放哪儿都吸到两端，用户「对齐一点点」的微调永远被弹回去。
+   */
+  var SNAP_NEAR = 24
+  function geomSnapFabX(x, bounds) {
+    var c = geomClampFabX(x, bounds)
+    if (c - bounds.minLeft <= SNAP_NEAR) return bounds.minLeft
+    if (bounds.maxLeft - c <= SNAP_NEAR) return bounds.maxLeft
+    return c
+  }
+  /** 面板永远在浮标正上方：右缘与浮标右缘对齐（贴右时右缘 = vpW = DSH 右边框）。
+   * ★ 2026-11-15 第四次纠正：不再有任何 left/right 翻边，任何位置都不往左右挪。
+   *   唯一夹取是「别超出视口」：浮标靠左时 raw 可能为负 → 夹到 0。
+   *   pw 传面板真实 offsetWidth（content-box 下含 padding/border），否则右缘会算错越界。
+   */
+  function geomPanelAbove(fabLeft, fsW, vpW, pw) {
+    var raw = fabLeft + fsW - pw
+    var maxLeft = Math.max(EDGE_GAP, vpW - pw - EDGE_GAP)
+    return Math.min(Math.max(EDGE_GAP, raw), maxLeft)
+  }
+  /** 一次算全：setFabPos 与「恢复旧 localStorage 位置」共用这一条 clamp。 */
+  function geomFabPos(left, top, vpW, vpH, fsW, fsH) {
+    var pw = geomPanelWidth(vpW)
+    var bounds = geomFabBounds(vpW, fsW, pw)
+    var l = geomClampFabX(left, bounds)
+    var nt = Number(top)
+    if (!Number.isFinite(nt)) nt = EDGE_GAP
+    var t = Math.min(Math.max(EDGE_GAP, nt), Math.max(EDGE_GAP, vpH - fsH - EDGE_GAP))
+    return { left: l, top: t, minLeft: bounds.minLeft, maxLeft: bounds.maxLeft, pw: pw }
+  }
+
+  /** 把 (left,top) 夹进视口并写到 style，返回夹后的坐标（含水平硬边界信息）。 */
   function setFabPos(fab, left, top) {
     var vp = vpSize(), fs = fabSize(fab)
-    var l = Math.min(Math.max(8, left), Math.max(8, vp.w - fs.w - 8))
-    var t = Math.min(Math.max(8, top), Math.max(8, vp.h - fs.h - 8))
+    var g = geomFabPos(left, top, vp.w, vp.h, fs.w, fs.h)
     if (fab.style) {
-      fab.style.left = l + 'px'; fab.style.top = t + 'px'
+      fab.style.left = g.left + 'px'; fab.style.top = g.top + 'px'
       fab.style.right = 'auto'; fab.style.bottom = 'auto'
     }
-    return { left: l, top: t }
+    return { left: g.left, top: g.top, maxLeft: g.maxLeft, pw: g.pw }
   }
-  /** 面板贴浮标：优先在浮标上方、右缘对齐，越界则改下方；用当前 nodes.panel。 */
+  /** 面板恒在浮标正上方：右缘对齐浮标右缘（贴右时与 DSH 右边框重合），底缘压浮标上沿。 */
   function syncPanelPos(fab, panel) {
     if (!panel || !panel.style) return
+    var vp = vpSize(), fs = fabSize(fab)
     var l = Number.parseFloat(fab.style && fab.style.left)
     var t = Number.parseFloat(fab.style && fab.style.top)
-    if (!Number.isFinite(l) || !Number.isFinite(t)) return // 仍用 CSS 默认右下角
-    var vp = vpSize(), fs = fabSize(fab)
-    var pw = Math.min(392, vp.w - 16)
+    // ★ 2026-11-15：CSS 默认右下角时**也要走同一套几何**，不能 early-return，
+    //   否则首次展开只能靠 CSS 猜的 bottom:42px，浮标真实高度一变边框就对不上。
+    if (!Number.isFinite(l)) l = vp.w - fs.w - EDGE_GAP
+    if (!Number.isFinite(t)) t = vp.h - fs.h - EDGE_GAP
+    // pw 必须是面板真实占宽：content-box 下 offsetWidth 含 padding + border，
+    // 用硬编码 392 会让面板右缘越过视口（用户说的「边框没对齐」）。
+    var pw = (Number.isFinite(panel.offsetWidth) && panel.offsetWidth > 0)
+      ? panel.offsetWidth : geomPanelWidth(vp.w)
     var ph = (Number.isFinite(panel.offsetHeight) && panel.offsetHeight > 0) ? panel.offsetHeight : 420
-    var px = Math.min(Math.max(8, l + fs.w - pw), Math.max(8, vp.w - pw - 8))
-    var above = t - ph - 12
-    var py = above >= 8 ? above : Math.min(t + fs.h + 12, Math.max(8, vp.h - ph - 8))
+    var px = geomPanelAbove(l, fs.w, vp.w, pw)
+    var above = t - ph
+    var py = Math.max(EDGE_GAP, above)
+    // 上方放不下时只压缩面板高度（overflow-y:auto 可滚），绝不翻到浮标下方 / 左侧 / 右侧。
+    if (above < EDGE_GAP) {
+      panel.style.maxHeight = Math.max(0, t - EDGE_GAP) + 'px'
+    } else {
+      panel.style.maxHeight = ''
+    }
     panel.style.left = px + 'px'; panel.style.right = 'auto'
-    panel.style.top = Math.max(8, py) + 'px'; panel.style.bottom = 'auto'
+    panel.style.top = py + 'px'; panel.style.bottom = 'auto'
+    if (typeof panel.setAttribute === 'function') panel.setAttribute('data-cp-panel-side', 'above')
   }
 
   function toggle() {
@@ -1042,9 +1194,9 @@
 
   function wire() {
     var fab = nodes.fab
-    var firstPanel = nodes.panel
-    var x = firstPanel.querySelector('.cp-x')
-    if (x) x.addEventListener('click', close)
+    // 叉叉的绑定在 render() 里（每次重建都重绑），这里不再缓存 firstPanel。
+    // 与拖动链共享点按状态：pointerup 由 finish() 判定，其余抬起事件走 bindTap。
+    var fabTap = { last: 0, suppressUntil: 0 }
 
     // 恢复上次拖动位置
     var saved = readFabPos()
@@ -1063,16 +1215,20 @@
     fab.addEventListener('keydown', function (ev) {
       if (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Spacebar') {
         if (typeof ev.preventDefault === 'function') ev.preventDefault()
-        toggle()
+        toggle() // 键盘路径不与鼠标手势共用冷却：一次按键只派发一个 keydown
       }
     })
 
     if (!hasPointer) {
-      fab.addEventListener('click', toggle) // 无 Pointer Events：不拖动，但按钮一定能点
+      bindTap(fab, toggle, TAP_EVENTS, fabTap) // 无 Pointer Events：不拖动，四种抬起都能点
       return
     }
 
     var press = null
+
+    // ★ 兜底：pointerup 由 finish() 处理，这里补 click / mouseup / touchend。
+    //   setup-guide.js 的宿主兜底是**合成 click**，不绑 click 浮标就永远「没反应」。
+    bindTap(fab, toggle, ['click', 'mouseup', 'touchend'], fabTap)
 
     function originOf() {
       var l = Number.parseFloat(fab.style && fab.style.left)
@@ -1083,13 +1239,20 @@
         if (r && Number.isFinite(r.left) && Number.isFinite(r.top)) return { left: r.left, top: r.top }
       }
       var vp = vpSize(), fs = fabSize(fab)
-      return { left: vp.w - fs.w - 16, top: vp.h - fs.h - 16 }
+      // ★ 2026-11-15：CSS 默认已改成右下贴边（right:0 / bottom:0），
+      //   这里的兜底坐标必须同口径，否则第一次拖动会凭空跳进 16px。
+      return { left: vp.w - fs.w - EDGE_GAP, top: vp.h - fs.h - EDGE_GAP }
     }
 
     fab.addEventListener('pointerdown', function (ev) {
       if (ev.button !== undefined && ev.button !== 0) return
       var o = originOf()
       press = { startX: ev.clientX, startY: ev.clientY, originLeft: o.left, originTop: o.top, dragging: false }
+      // ★ pointerdown = 新手势开始：重置去重与抑制。
+      //   冷却只用于「同一次手势的 click/pointerup/mouseup/touchend 只算一次」，
+      //   不能用 300ms 时间窗全局去重 —— 那样快速连点两下会被第二下吞掉。
+      fabTap.last = 0
+      fabTap.suppressUntil = 0
       if (typeof fab.setPointerCapture === 'function' && ev.pointerId !== undefined) {
         try { fab.setPointerCapture(ev.pointerId) } catch (err) { /* 忽略 */ }
       }
@@ -1100,6 +1263,8 @@
       var dx = ev.clientX - press.startX, dy = ev.clientY - press.startY
       if (!press.dragging && Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) return
       press.dragging = true
+      // 拖动中：抑制同一次手势随后派发的 mouseup / touchend，避免松手误开关面板
+      fabTap.suppressUntil = Date.now() + 350
       if (fab.classList && typeof fab.classList.add === 'function') fab.classList.add('is-dragging')
       setFabPos(fab, press.originLeft + dx, press.originTop + dy)
       syncPanelPos(fab, nodes.panel)
@@ -1118,16 +1283,70 @@
         try { fab.releasePointerCapture(ev.pointerId) } catch (err) { /* 忽略 */ }
       }
       if (dragged) {
-        if (p) writeFabPos(p)
+        // 拖动结束：pointerup 不 toggle，且继续抑制随后 350ms 内的 mouseup/click/touchend
+        fabTap.suppressUntil = Date.now() + 350
+        if (p) {
+          // 松手轻吸附：只在贴边时对齐，中间保留微调位置；结果仍出自同一硬边界，绝不越界。
+          var vp = vpSize(), fs = fabSize(fab)
+          var bounds = geomFabBounds(vp.w, fs.w, geomPanelWidth(vp.w))
+          var snappedLeft = geomSnapFabX(p.left, bounds)
+          var finalPos = setFabPos(fab, snappedLeft, p.top)
+          writeFabPos({ left: finalPos.left, top: finalPos.top })
+        }
       } else {
-        toggle() // 纯点按：由 pointerup 判定，不依赖会被吞掉的 click
+        if (tapFire(fabTap)) toggle() // 纯点按：与兜底事件共享冷却，一次手势只开关一次
       }
     }
     fab.addEventListener('pointerup', finish)
     fab.addEventListener('pointercancel', function () {
       press = null
+      fabTap.suppressUntil = Date.now() + 350 // 手势取消也不该开关面板
       if (fab.classList && typeof fab.classList.remove === 'function') fab.classList.remove('is-dragging')
     })
+  }
+
+  /* ---------- 实验室资源懒加载（按 id 去重挂 head，与 loadQpExtras 同口径） ----------
+   * 不改 lib/client.js：登记点放在本脚本里，主代理负责往 ASSET_ROUTES 加对应路由。
+   * 资源只走本机相对路径，绝不加载外部 URL；缺 head / 缺 DOM API 时静默跳过，
+   * 保证 node:vm 假 DOM 下 mount() 不抛错。
+   */
+  var LAB_ASSETS = [
+    { id: 'dshqp-lab-css', src: 'qwen-paint/lab.css', css: true },
+    { id: 'dshqp-lab-js', src: 'qwen-paint/lab.js', css: false },
+  ]
+  function loadLabAssets() {
+    try {
+      var doc = (typeof document !== 'undefined') ? document : null
+      if (!doc || typeof doc.getElementById !== 'function' || typeof doc.createElement !== 'function') return
+      var head = doc.head
+      if (!head && typeof doc.getElementsByTagName === 'function') {
+        var hs = doc.getElementsByTagName('head')
+        head = (hs && hs[0]) ? hs[0] : null
+      }
+      if (!head || typeof head.appendChild !== 'function') return
+      for (var i = 0; i < LAB_ASSETS.length; i += 1) {
+        var a = LAB_ASSETS[i]
+        if (doc.getElementById(a.id)) continue
+        var node = doc.createElement(a.css ? 'link' : 'script')
+        node.id = a.id
+        if (a.css) { node.rel = 'stylesheet'; node.href = a.src }
+        else {
+          node.defer = true
+          node.src = a.src
+          // ★ 2026-11-15：lab.js 加载完直接把它嵌进当前面板的插槽，
+          //   不再 attach 成独立浮层、也不降级挂到 body。
+          node.onload = function () {
+            try {
+              var lab = window.DshQpLab
+              if (lab && typeof lab.mountInto === 'function' && nodes && nodes.labSlot) {
+                lab.mountInto(nodes.labSlot)
+              }
+            } catch (err) { /* render() 里还有一次主动重挂兜底 */ }
+          }
+        }
+        head.appendChild(node)
+      }
+    } catch (err) { /* 实验室资源加载失败绝不影响既有面板 */ }
   }
 
   function mount() {
@@ -1138,6 +1357,7 @@
         state = pair[0]
         render()
         wire()
+        loadLabAssets()
         refreshNote()
         loadLibrary()
         loadReference()
@@ -1149,11 +1369,15 @@
   /* ============================ 导出 ============================ */
   window.ComfyPipelinePanel = {
     __cp: true,
+    uiBuild: UI_BUILD,
     mount: mount,
     open: open,
     close: close,
     getState: function () { return state ? JSON.parse(JSON.stringify(state)) : null },
     getModes: function () { return JSON.parse(JSON.stringify(modeAvailability)) },
+    // 2026-11-15：实验室功能区已内嵌进 cp-panel 的插槽；保留这个 getter
+    // 供 lab.js / 外部在宿主重建后取当前 panel（绝不能缓存旧引用）。
+    getPanelNode: function () { return nodes && nodes.panel ? nodes.panel : null },
     getReferenceState: function () { return JSON.parse(JSON.stringify(refState)) },
     api: {
       clampByDef: clampByDef,
@@ -1163,6 +1387,20 @@
       aspectTicks: aspectTicks,
       buildPayload: buildPayload,
       describe: describe,
+      tap: {
+        bind: bindTap,
+        fire: tapFire,
+        events: TAP_EVENTS,
+        cooldownMs: TAP_COOLDOWN_MS,
+      },
+      geom: {
+        panelWidth: geomPanelWidth,
+        fabBounds: geomFabBounds,
+        clampX: geomClampFabX,
+        snapX: geomSnapFabX,
+        panelAbove: geomPanelAbove,
+        fabPos: geomFabPos,
+      },
     },
   }
 

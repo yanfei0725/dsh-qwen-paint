@@ -15,6 +15,7 @@ import { TOOL_SUMMARIES } from '../lib/tool-descriptions.js'
 import { ASSET_ROUTES } from '../lib/asset-route.js'
 import { INTEGRATION_ROUTES } from '../lib/integration-state.js'
 import { buildMarkdown } from '../lib/history-export.js'
+import { EXTRA_TOOL_NAMES } from '../lib/tool-registry.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
@@ -90,10 +91,13 @@ console.log('\n=== 4. A4：嵌套错误字段消毒 + 死命令订正 ===')
 
 console.log('\n=== 5. A5：版本号与简介一次性同步 ===')
 {
-  ok('版本号 0.32.1', V === '0.32.1')
+  ok('版本号为语义化 X.Y.Z 三段（具体值由 test-release-metadata 锁）',
+    typeof V === 'string' && V.split('.').length === 3
+    && V.split('.').every((x) => x.length > 0 && Number.isInteger(Number(x))))
   const pkg = JSON.parse(read('package.json'))
   const DESC = pkg.description
-  ok('★ 简介前段写明 0.32.1 审计加固', DESC.indexOf('0.32.1 两轮审计加固') >= 0 && DESC.indexOf('0.32.1 两轮审计加固') < 120)
+  ok('★ 简介仍保留 0.32.1 审计加固的历史说明（版本 bump 后位置可后移）',
+    DESC.includes('0.32.1 两轮审计加固'))
   ok('★ QQ 群仍在 registry 255 字符截断内', DESC.indexOf('QQ 交流群') < 60)
   ok('description 与 meta.description 逐字一致', DESC === pkg.meta.description)
   ok('★ README 首段与 DESC 逐字一致', read('README.md').split('\n').slice(1).find((l) => l.trim() !== '') === DESC)
@@ -134,8 +138,19 @@ console.log('\n=== 7. A8：端点目录守卫不再漏根别名 ===')
 
 console.log('\n=== 8. B 类低风险项 ===')
 {
-  ok('★ TOOL_SUMMARIES 补齐 13 个工具', Object.keys(TOOL_SUMMARIES).length === 13
-    && ['list_generated_images', 'compose_prompt', 'batch_draw'].every((k) => k in TOOL_SUMMARIES))
+  // ★ 0.32.1 之后能力扩展：新增 6 个工具走 lib/tool-registry.js 外置注册。
+  //   判据升级为「键集合逐字相等」而不是硬编码数量：新增工具必须同时登记
+  //   EXTRA_TOOL_NAMES 与 TOOL_SUMMARIES，漏一处就红（集合相等 > 硬编码 N）。
+  const LEGACY_TOOLS = [
+    'draw_image', 'generate_video', 'generate_hybrid', 'generate_speech',
+    'list_available_models', 'check_acceleration', 'upscale_image', 'inpaint_image',
+    'remove_image', 'outpaint_image', 'list_generated_images', 'compose_prompt', 'batch_draw',
+  ]
+  const expectedSummaryKeys = [...LEGACY_TOOLS, ...EXTRA_TOOL_NAMES].sort().join(' , ')
+  ok('★ TOOL_SUMMARIES 键集合逐字等于全部工具（内置 + 外置注册）',
+    Object.keys(TOOL_SUMMARIES).sort().join(' , ') === expectedSummaryKeys
+    && ['list_generated_images', 'compose_prompt', 'batch_draw'].every((k) => k in TOOL_SUMMARIES),
+    Object.keys(TOOL_SUMMARIES).sort().join(' , '))
   ok('★ loading.gif 死路由已删', !ASSET_ROUTES.some((r) => r[1] === 'loading.gif'))
   ok('★ 登记的资源文件零缺失', ASSET_ROUTES.every(([, f]) => fs.existsSync(path.join(ROOT, 'assets', f))))
   const md = buildMarkdown({ id: 1, kind: 'image', file_path: 'a.png', prompt: 'a](b' })
@@ -143,7 +158,9 @@ console.log('\n=== 8. B 类低风险项 ===')
   ok('★ 转义后图片链接结构仍完整', (md.split('\n')[0].match(/\]\(/gu) ?? []).length === 1)
   ok('★ 无路径时仍明说「（无路径）」（不回归）', buildMarkdown({ id: 2, kind: 'image', prompt: 'x' }).includes('（无路径）'))
   ok('★ _client_scope_test 现在有逐条断言标记', read('scripts/_client_scope_test.mjs').includes('✓ 面板作用域'))
-  ok('★ selftest 形状检查扩到全部 13 个工具', read('scripts/selftest.mjs').includes('13 个工具全部具备基础形状'))
+  ok('★ selftest 形状检查覆盖全部注册工具（不再硬编码工具数）',
+    read('scripts/selftest.mjs').includes('全部注册工具都具备基础形状')
+    && !read('scripts/selftest.mjs').includes('registered.length === 13'))
   ok('★ render 断言文案不再谎称「register 强校验」', !read('scripts/selftest.mjs').includes('register 强校验'))
   const cliBytes = fs.statSync(path.join(ROOT, 'lib/client.js')).size
   ok('★ client.js 字节基线冻结（≤ 261467）', cliBytes <= 261467, String(cliBytes))

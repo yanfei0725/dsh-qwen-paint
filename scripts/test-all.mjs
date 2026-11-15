@@ -93,7 +93,7 @@ const SUITES = [
   // ★ 2026-11-13 产品化改造：图形化引导 / 蒙版精修真接线 / 卸载内存 / 外部集成状态
   { file: 'test-product-round.mjs', note: '产品化改造：引导步骤与同意门 / 蒙版参数真透传零漂移 / 卸载三态 / 端点围栏与脱敏 / 目录⊆注册 / 体积红线（全离线）' },
   // ★ 2026-11-13 用户定「每次发布，简介 / 描述 / 版本号全部一起改」：把它变成机器护栏
-  { file: 'test-release-metadata.mjs', note: '发布元数据护栏：简介逐字同步 / 版本号六处一致 / 视频下载包能力口径 / 无误读措辞（漏改一处就红）' },
+  { file: 'test-release-metadata.mjs', note: '发布元数据护栏：简介逐字同步 / 版本号六处一致 / 视频下载包能力口径 / 无误读措辞 / 时态·许可·更新说明不许说谎 / 回归套数与体积余量按真实值推导（漏改一处就红）' },
   // ★ 2026-11-13 CPU 指令集识别 / 加速档：五档参数 + --cpu 互斥裁决 + 三态语义 + 端点围栏
   { file: 'test-cpu-profile.mjs', note: 'CPU 加速档：型号/指令集三态 / 五档真实参数 / --cpu 摘显存与GPU内核 / 互斥组后者胜出 / QwenImage21Cache 覆盖 / 端点围栏与脱敏（全离线）' },
   // ★ 2026-11-13 生成历史：真跑 node:sqlite（库在系统临时目录、跑完即删）+ 端点围栏 + 降级口径
@@ -129,6 +129,29 @@ const SUITES = [
   { file: '_no_private_docs_test.mjs', note: '私人/开发文档不进公开仓库（源码目录 SKIP）' },
   { file: 'test-dsh-compat.mjs', note: 'COMPAT001 实测（无 dsh 环境时明确 SKIP）' },
   { file: 'test-audit-0321.mjs', note: '0.32.1 两轮审计修复：ASR 路径围栏 / 发布物脚本 / 草图台点按 / 嵌套消毒 / 版本简介同步 / 指纹基准只读 / 端点目录别名 / 体积写入前守卫（全离线）' },
+  // ★ 2026-11-14 0.32.1 之后能力扩展批次（9 套，全离线、注入假 deps，零出图零联网）
+  { file: 'test-gif.mjs', note: 'GIF 转换工具 + 端点（ffmpeg 参数纯构建 / 能力探测如实降级 / 端点围栏）' },
+  { file: 'test-job-queue.mjs', note: '通用优先级任务队列（排序 / 并发 / 取消信号 / 重试退避，纯 JS 零 I/O）' },
+  { file: 'test-iterate-tool.mjs', note: '单图多轮迭代优化（策略连跑 / 每轮候选 / 挑 best / 三条硬边界）' },
+  { file: 'test-history-admin.mjs', note: '生成历史可删改 / 冷热分离 / 参数化查询（幂等 ALTER + 注入 SQL）' },
+  { file: 'test-doctor-dag.mjs', note: '运行期自诊断 + 自适应 DAG 编排（默认 dry_run / 缺能力明确降级）' },
+  { file: 'test-accel-config.mjs', note: '配置一致性裁决 + 缓存后端注册表 + TTS 加速可插拔（诚实边界）' },
+  { file: 'test-vram-budget.mjs', note: '按子任务类型的显存预算建议（与 vram-strategy 档位的概念边界）' },
+  { file: 'test-structured-log.mjs', note: '结构化事件日志 JSON Lines（只记事实 / 可跨版本做趋势分析）' },
+  { file: 'test-fab-clamp.mjs', note: 'Comfy 控制面板零边距贴 DSH 边框 / 实验室已内嵌（无独立浮层）/ 四事件点按 / 300ms 冷却' },
+  // ★ 2026-11-14：孤儿模块修复后的联动护栏（用户亲订「单个功能完成 ≠ 最终完成」）
+  { file: 'test-accel-chain.mjs', note: '加速链联动：TTS 加速进链 / 5 个原孤儿模块真实参与 / 端点·工具报告·UI 三处消费 / 16 模块孤儿扫描' },
+  { file: 'test-capability-audit.mjs', note: '清单全面排查联动：显存 MB→GB 修复 / 结构化日志落盘 / 显存预算端点 / TeaCache 装配计划 / TTS 补丁零污染 / doctor 探针契约 / Agent 端点目录 / 新模块孤儿扫描' },
+  // ★ 2026-11-15：MEMORY.md 第 11 节「明确待办」六条收口后新增的护栏
+  { file: 'test-chain-manifest.mjs', note: '三条链统一声明式清单目录 / 契约+指纹来源真校验 / runtime 唯一 / 预设绑定去 pending' },
+  { file: 'test-generation-log.mjs', note: '生成完成自动落盘结构化日志（实测总耗时 / 脱敏 / 细分耗时 null / 钩子失败不影响出图）' },
+  { file: 'test-draft-pointer.mjs', note: '草图台指针序列离线仿真验收 + smoke.mjs 默认只读 / --submit 显式开关契约' },
+  // ★ 2026-11-15：MIT → BSL 1.1（四年后转 Apache-2.0）换证护栏
+  { file: 'test-license-bsl.mjs', note: 'BSL 1.1 换证：官方条款正文逐字 + SHA-256 / 五参数 / Change Date 真四年 / 0.32.1 不追溯 / 8 处文档口径 / 第三方许可不误改 / 脱敏' },
+  // ★ 2026-11-15 第五次 UI 报障：点不动 / 没反应的两个真根因
+  { file: 'test-ui-tap.mjs', note: 'UI 点按专项：四事件假 DOM 真派发 / 300ms 冷却 / 拖动抑制 / 叉叉 render 内重绑 / fab 补绑 click 与宿主合成 click 联动 / UI_BUILD 自证' },
+  // ★ 2026-11-15 媒体格式转换批次（图片/视频/音频 11 种 + 动图转视频 + 生成物预设后转码 + Agent 调用）
+  { file: 'test-media-convert.mjs', note: '媒体格式转换：11 种格式唯一真相源 / 同类互转与跨类拒绝 / ffmpeg 参数纯构建 / 输入输出双围栏 / ffmpeg 探测与诚实降级 / 生成完成钩子自动后转码（组合不覆盖日志）/ 端点预设 / 七处联动与孤儿扫描（全离线）' },
   // —— 最重的一套放最后 ——
   { file: 'selftest.mjs', note: '全量自测（392 项）', heavy: true },
 ]

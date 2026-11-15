@@ -1,6 +1,6 @@
 # dsh-qwen-paint · (绘图)千问（优化版）
 
-DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（QQ 交流群 454707710）。0.32.1 两轮审计加固：ASR 音频路径围栏（只认出图目录内文件）、按包名安装也能执行引导脚本、草图台四事件点按、错误响应消毒收口；视频链清单化 + 生图/TTS 契约对账（改图自动报差异）；生图/视频/混合三模式界面各不同；批量出图带幂等保护（重试不重出）；Qwen3-TTS 语音克隆与可接 ASR 自动字幕；本机实测秒数；会话级模型驻留、显存建议、参数来源表、预设绑定、加载器盘点等本机端点。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合、导入音频直接合进成片（音轨合成），文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech，参考音频可复刻音色），模型无关角色参考；草图台手绘参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。
+DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（QQ 交流群 454707710）。★ 0.33.0 起许可改为 BSL 1.1（BUSL-1.1，非 OSI 开源许可）：除托管/代管服务与直接竞品捆绑两类「竞争性使用」外免费生产使用，2030-11-15 转 Apache-2.0；0.32.1 及更早仍 MIT、不追溯。0.33.0 新增媒体格式转换（图片 JPG/PNG/WebP、视频 MP4/MKV/MOV/WebM、音频 MP3/AAC/WAV/FLAC，生成物可指定输出格式、动图转视频、自有素材转换，Agent 可直接调用 convert_media）与加速链全景（生图/视频缓存后端 + TTS 加速 + 显存预算 + 配置裁决 + 结构化日志，只列探测到的、未实测不写倍率）、本机能力功能区内嵌进 Comfy 控制面板（展开页恒在悬浮球正上方、边框对齐 DSH 右边框、四事件点按兜底）、GIF 转换 / 运行期自诊断 / 优先级任务队列 / 单图迭代优化 / 自适应 DAG 编排 / 生成历史可删改与冷热分离等本机工具与端点；0.32.1 两轮审计加固：ASR 音频路径围栏（只认出图目录内文件）、按包名安装也能执行引导脚本、草图台四事件点按、错误响应消毒收口；视频链清单化 + 生图/TTS 契约对账（改图自动报差异）；生图/视频/混合三模式界面各不同；批量出图带幂等保护（重试不重出）；Qwen3-TTS 语音克隆与可接 ASR 自动字幕；本机实测秒数；会话级模型驻留、显存建议、参数来源表、预设绑定、加载器盘点等本机端点。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合、导入音频直接合进成片（音轨合成），文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech，参考音频可复刻音色），模型无关角色参考；草图台手绘参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。
 
 ## Features
 
@@ -36,7 +36,7 @@ DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（Q
 dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 ```
 
-> 使用 `desktop` profile 时须**先完全退出 DSH**。本包**已发布到 npm**（`dsh-qwen-paint`，当前 `0.32.1`），可直接 `dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式仅用于开发或试用未发布改动。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
+> 使用 `desktop` profile 时须**先完全退出 DSH**。本包在 npm 的包名为 `dsh-qwen-paint`（仓库当前 `0.33.0`），可直接 `dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式仅用于开发或试用未发布改动。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
 
 ## Usage
 
@@ -102,7 +102,7 @@ dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 
 > **QQ 交流群**：`454707710`　｜　**反馈 / 提问 / 提需求**都走这里，issue 也欢迎：<https://github.com/yanfei0725/dsh-qwen-paint/issues>
 
-> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：MIT　｜　**当前版本**：`0.32.1`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
+> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：BSL 1.1（BUSL-1.1）　｜　**当前版本**：`0.33.0`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
 
 ---
 
@@ -188,6 +188,61 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 | `< 22.5` | 降级：`available: false`、`persistent: false`，只能读既有 `.qwen-paint-memory.jsonl` 做内存过滤；界面与工具都会**明说「未持久化」**，不假装有数据 |
 
 刻意**不**把 `engines` 提到 `>=22.5`：那会把一批能正常出图的用户直接挡在门外，代价只是少一个可搜索的历史库。
+
+## 0.33.0 更新说明
+
+这一版把 0.32.1 之后的**能力扩展批次、媒体格式转换、四轮 UI 纠正、许可证更换**一次性收口，并按「单个功能完成 ≠ 最终完成」的纪律做了全面联动审查与孤儿扫描。**本版为本地完成、尚未推送到 npm / GitHub 的开发版本**，线上 `latest` 目前仍是 `0.32.1`。
+
+### ★ 许可证：0.33.0 起改用 BSL 1.1（BUSL-1.1）
+- **不是 OSI 核准的开源许可证**。Licensor 为单一主体 `@yanfei0725`；`Additional Use Grant` 允许用户中文原文所述的授权：除托管 / 代管服务、直接竞品捆绑这两类「竞争性使用」外，任何个人 / 团队 / 企业可**免费在生产环境使用**；中文原文 governing、英译 non-binding。
+- Change Date **2030-11-15** 起转为 **Apache License, Version 2.0**；**转版后「竞争性使用」限制自动消失**（BSL 机制使然，不是额外承诺）。
+- **0.32.1 及更早版本仍按 MIT 授权，永久、不可撤销、不追溯**；`LICENSE` 与 README / 两份 llms / 落地页均已写明。
+- Covenants 第 4 条「不得改写条款」⇒ `LICENSE` 条款正文与 SPDX 官方 `BUSL-1.1.txt` 逐字一致（SHA-256 `20092e66…2293`），参数区与正文严格分离；`package.json` → `BUSL-1.1`、`pyproject.toml` classifier → `Other/Proprietary License`。
+- 第三方许可一律未动：frakd 节点 MIT 描述、Qwen Research License「禁止商用」提示、落地页 license URL、`dist/pkg/` 旧快照。
+- 专项护栏 `scripts/test-license-bsl.mjs`（83 项）：锁官方正文逐字 + SHA-256 双保险、五个参数、中文 AUG 逐字、只放宽不收窄、四年日期、旧版本边界、文档一致、第三方不误改、脱敏。
+
+### 新工具与端点（全部走外置注册层，lib/index.js 零增长）
+- 新增 6 个工具：`convert_to_gif`（图片序列 / 视频转 GIF）、`manage_jobs`（优先级任务队列管理）、`iterate_image`（单图多轮迭代优化）、`query_history`（生成历史可删改 / 冷热分离 / 参数化查询）、`doctor`（运行期自诊断）、`run_dag`（自适应 DAG 编排，默认 `dry_run`）；本轮再补第 7 个 `convert_media`（见下一节）。
+- 0.33.0 新增模块全部独立落在 `lib/` 与 `assets/`（`lib/*.js` 现 103 个 / 合计 1,829,983 B），经 `lib/tool-registry.js::createExtras()` / `registerExtras()` 注册；`lib/index.js` 只留一行接线。注释外置到 `docs/index-design-notes.md` 后，体积余量由 105 B 放宽到 **3,746 B**（258,398 B / 上限 262,144 B）。
+- 新增端点含 `/api/qwen-paint/accel/chain`、`/media/gif`、`/doctor`、`/history/query`、`/events`、`/vram-budget`、`/config/conflicts`、`/contracts`、`/eta`；`lib/integration-state.js` 端点目录同步登记。
+
+### 媒体格式转换（生成物指定格式 / 自有素材 / 动图转视频）
+- 新增 `convert_media` 工具与 5 个独立模块，覆盖用户点名的常用格式：图片 **JPG / PNG / WebP**、视频 **MP4 / MKV / MOV / WebM**、音频 **MP3 / AAC / WAV / FLAC**；格式表 `lib/media-formats.js` 是唯一真相源，同类互转、跨类明确拒绝。
+- **生成物指定输出格式**：ComfyUI 保存节点格式是固定的（PNG / mp4 / mp3），所以诚实实现是「落盘完成后由生成完成钩子自动补转一份、**原产物保留**」，不是谎称节点能直接吐 WebP。`POST /api/qwen-paint/media/formats` 设 `{kind, format}` 预设（进程内存、重启即清空），也可在单次生成条目里给 `output_format`。
+- **自有素材**：`source` 走输入目录围栏（默认出图目录，宿主可注入 `sourceDirs`），不把任意本机路径喂给 ffmpeg；输出同样落在出图目录内，拒绝 `..` 穿越与越界。
+- **动图转视频**：GIF / APNG / 动图 WebP → 四种视频容器，统一帧率 + 偶数尺寸 + `yuv420p`，显式 `-an`（动图无音轨），`loop_count` / `duration` / `fps` 可控；诚实说明 GIF 循环次数不会自动变成视频时长。
+- **真执行而非只给参数**：`lib/media-exec.js` 用 `execFile` argv 数组探测 `FFMPEG_PATH` / PATH 并真跑 ffmpeg；探测不到、执行器未注入、编码器缺失都返回 `ok:false` + 明确原因 + 完整参数预览，**绝不假装已生成文件**。
+- **Agent 可调用**：`convert_media` 已注册进工具清单、`/agent-guide` 的 `TOOL_HINTS` 与 `format_output` 编排剧本、`/media/convert`（POST）与 `/media/formats`（GET/POST）两条端点、内嵌 Comfy 控制面板的功能区，以及 `scripts/test-media-convert.mjs` 专项回归；5 个新模块全部通过孤儿扫描。
+- 编码器标识（libx264 / libvpx-vp9 / libwebp / libmp3lame / libopus / flac）是 ffmpeg 标准名，**不承诺本机一定编入**；实际是否可用由真实执行结果决定。
+
+### 加速链全景（TTS 加速进链）
+- `lib/accel-chain.js` 把 `cache-backends`（生图 / 视频缓存后端）、`tts-accel`（TTS 加速）、`vram-budget`、`config-consistency`、`structured-log` 汇成 `image` / `tts` / `all` 三段；`check_acceleration` 报告透出 `ttsAccel`，TTS 加速不再是孤儿模块。
+- 诚实边界：CUDA Graph / Triton / GGUF / 流式 / 声码器 fp16 只列**探测到的后端**与方向性建议，未实测**不写倍率、RTF 或毫秒数**；`TeaCache` 标 `needs-external-node`，`mrfow` 标 `term-unverified`（候选 MrFlow / arXiv 2607.01642 待用户确认），**永不自动启用**。
+
+### 工作流清单层与契约对账
+- `lib/chain-manifest.js` 统一声明式总账登记 4 条链，`/workflows` 吐 `chains` / `chain_summary` / `chain_errors`；`authoritative=runtime` 恰好 1 条（`video-wan22`），其余 3 条为 `contract`。
+- 生图 / TTS 链**契约清单化，运行时仍由代码构图** —— 这是为避免 JS/JSON 双轨半迁移的**有意设计**，不是未完成；图结构指纹 `scripts/workflow-fingerprints.json` 锁 5 组夹具，构建后逐槽位对账。
+- 预设去掉 `pending:true`，`preset_unverified` 现为 `[]`，并做契约存在性真校验。
+
+### 结构化运行日志
+- 每次真实生成由 `history-store.js` 钩子自动落一条 `generation_complete`（本机实测 `total_ms` + 尺寸，prompt 只留 hash、路径不进日志），零 `index.js` 改动。
+- 诚实边界：`queue_ms` / `load_ms` / `sample_ms` / `decode_ms` 主链路未打点，日志里为 `null`，需要时由宿主在生成完成时 POST 补报。
+
+### UI 与交互（四轮纠正后的最终口径）
+- **删除实验室独立浮层**（`.dshqp-lab-fab` / mask / `findHost()` / `tryRehost()`），功能改为 `mountInto()` 直接内嵌进 `cp-panel` 的插槽；找不到插槽就不挂，**绝不降级挂 `body`**。
+- **展开面板恒在悬浮球正上方**，不是左侧 / 右侧 / 下方：面板右缘 = 浮标右缘 = DSH 窗口右边框（**边框对齐边框**），底缘 = 浮标上缘、零空隙；上方放不下只压缩面板高度。
+- 浮标贴边**不变形**：圆角 / 内边距 / 最小高度保持 0.32.1 原样，只用 `width:max-content; white-space:nowrap` 锁死内容宽度；`EDGE_GAP = 0` 消除「提前留空」。
+- **点按链路**（第五次报障的根因）：DSH 宿主在 `pointerdown` 上 `preventDefault` ⇒ `click` 不派发，兜底是靠 `target.click()` **合成 click**。因此所有按钮自己绑 `click` + `pointerup` / `mouseup` / `touchend` 四事件与手势级冷却；会被 `render()` / `rebuild()` 重建的按钮（如 `×`）**必须在 render 里重绑**；冷却只去同一手势多个抬起事件的重、由 `pointerdown` 重置，不是全局 300 ms 时间窗；拖动开始 / 结束 / 取消都设抑制。
+- 浮标带 `UI_BUILD='2026-11-15.5'` 自证标记。**真机验证须刷新 DSH 页面** —— `client.js` 按脚本 id 去重，同一页面不会重拉（`asset-route.js` 是 `no-store`，缓存不是原因）；hover 应见 `Comfy 控制 · UI 2026-11-15.5`。
+
+### 联动护栏与回归
+- `scripts/test-accel-chain.mjs` 锁「TTS 加速进链 / 5 个原孤儿模块真实参与 / 端点·工具报告·UI 三处消费 / 16 模块孤儿扫描」；`scripts/test-capability-audit.mjs` 锁 3 个新端点在注册层→端点目录→Agent 指引→UI→回归五处联动。
+- 新增登记 `test-chain-manifest.mjs`(31) / `test-generation-log.mjs`(29) / `test-draft-pointer.mjs`(30) / `test-license-bsl.mjs`(83) / `test-ui-tap.mjs`(39)；`test-fab-clamp.mjs` 71 项锁 UI 几何，`test-fab-drag.mjs` 30 项真 DOM 仿真锁点按与 rebuild。
+- **全量回归 78 套 / 0 失败 / 逐项断言全绿**（连跑 3 轮一致）；发布护栏 `test-release-metadata.mjs` 全项通过；体积守卫 103 个 `lib/*.js` / 1,829,983 B。回归套数、`lib/` 文件数与体积均由真实值推导/校验，不写死「过一天就过期」的断言数，避免每加一套测试或一个模块就要改文档。关键护栏都做过「故意改坏 → 确认变红 → 逐字恢复」的反向核查。
+- 修掉两个真 bug：显存预算 MB→GB 档位错配（`budgetCapFromVramMb`）、`/agent-guide` 端点目录恒空（`deps.routes || INTEGRATION_ROUTES`）。
+
+### 文档
+- `package.json` / `meta.description` / README 首段 / 两份 llms 首段 / `pyproject.toml` / `docs/index.html` / `给DSH安装的话.md` 全部同步到 0.33.0，`scripts/test-release-metadata.mjs` 一处改、多处一起校验。
 
 ## 0.32.1 更新说明
 
@@ -1922,8 +1977,39 @@ LoRA 与缓存节点现在**无条件**接在模型链上。最小可行回退�
 
 ## 许可
 
-**MIT** —— 见 [LICENSE](LICENSE)。你可以自由使用、修改、再分发（包括商用），  
-**只需保留版权声明与许可声明**。
+**BSL 1.1（Business Source License 1.1，SPDX `BUSL-1.1`）** —— 见 [LICENSE](LICENSE)。  
+**BSL 1.1 不是 OSI 核准的开源许可证**。它授权复制、修改、派生、再分发与**非生产使用**；  
+本项目的 `Additional Use Grant`（附加使用授权）为：**除下列「竞争性使用」外，任何个人、
+团队或企业均可免费在生产环境中使用本作品**。「竞争性使用」仅指两类：
+
+1. 将本作品作为**托管（hosted）或代管（managed）服务**提供给第三方；
+2. 将本作品（或其修改版）**嵌入、捆绑或包装为与授权方产品构成直接竞争的商业产品**进行销售或分发。
+
+上述两类用途仍需向 Licensor 取得商业许可，或停止使用。授权以 LICENSE 中的**中文原文为准**，
+英文仅为非约束性参考译文。该授权属于 BSL Covenants 第 2(a) 条下的**追加**权利，
+**不收窄**条款原本授予的非生产使用权。
+
+| 参数 | 值 |
+| --- | --- |
+| Licensor | **@yanfei0725**（单一主体） |
+| Licensed Work | `dsh-qwen-paint` **0.33.0 及以后版本** |
+| Additional Use Grant | 除两类「竞争性使用」外，**生产使用免费**（以 LICENSE 中文原文为准） |
+| Change Date | **2030-11-15**（自 2026-11-15 起四年） |
+| Change License | **Apache License, Version 2.0** |
+
+按 BSL 条款，实际生效日取 `Change Date` 与「该版本首次公开发布四周年」**两者中较早者**，  
+且每个版本各算各的。到生效日，该版本即改按 Apache-2.0 授权，**「竞争性使用」限制随之消失**（该限制只存在于附加使用授权中）。Apache-2.0 与 GPLv3 兼容，  
+而 GPLv3 属于条款所说的「GPL Version 2.0 or a later version」，因此满足 Covenants 要求；  
+CockroachDB、Moonlink 等 BSL 1.1 项目同样使用 Apache-2.0 作为 Change License。条款还允许  
+并列指定额外的 Change License，如需再加 `GPL-2.0-or-later` 可以后补。
+
+⚠ **已发布版本不受影响**：`0.32.1` 及更早版本当初按 MIT 授权，该授权永久、不可撤销，  
+**不因本次换证被追溯收回**；从 `0.33.0` 起才适用 BSL 1.1。第三方组件（ComfyUI 及各  
+`custom_nodes`）仍各自按其原许可，本仓库中提及第三方 MIT 许可的说明保持不变。BSL 的  
+Licensor 自 0.33.0 起为**单一主体** `@yanfei0725`；原作者 `@奇迹与你` 的版权署名仅对应  
+MIT 授权的旧版本，见 LICENSE 文末。
+
+条款正文逐字取自 MariaDB 官方 BSL 1.1（未作任何改动），参数区仅填写上述 5 个参数与说明。
 
 ## 致谢与来源
 

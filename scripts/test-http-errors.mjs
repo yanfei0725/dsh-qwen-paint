@@ -111,7 +111,7 @@ const readSrc = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
   //   ② 每个登记的文件在 assets/ 里**真的存在**（防"登记了但没建文件"⇒ 线上 404）。
   const EXPECT_FILES = [
     'cpu-accel.css', 'cpu-accel.js', 'draft.css', 'draft.js',
-    'history.css', 'history.js', 'loading.webp',
+    'history.css', 'history.js', 'lab.css', 'lab.js', 'loading.webp',
     'mask-fx.css', 'mask-fx.js', 'panel.css', 'panel.js', 'setup-guide.css', 'setup-guide.js',
   ]
   eq(ASSET_ROUTES.map(([, f]) => f).slice().sort().join(','), EXPECT_FILES.join(','),

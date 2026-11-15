@@ -1,0 +1,106 @@
+/* assets/lab.css —— 本机能力功能区（★ 2026-11-15 起**内嵌进 cp-panel**，不再是浮层）。
+ * 旧版 .dshqp-lab-fab / .dshqp-lab-mask 是独立浮标 + fixed 悬浮窗，已整段删除。
+ * 现在宽度 100% 由插槽决定、配色跟随面板的 --cp-* 变量，
+ * 绝不自己算 left/top/width，也不会再出现「提前空那么多」的边距。
+ */
+.dshqp-lab-slot {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 14px 0 0;
+  padding: 0;
+}
+
+.dshqp-lab-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+}
+
+.dshqp-lab-head {
+  margin: 0;
+  padding: 0 0 6px;
+  border-bottom: 1px solid var(--cp-line, rgba(127, 127, 127, 0.22));
+}
+.dshqp-lab-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--cp-muted, #5b6270);
+}
+
+.dshqp-lab-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--cp-line, rgba(127, 127, 127, 0.20));
+  border-radius: 10px;
+  background: transparent;
+}
+.dshqp-lab-sec-title { font-weight: 600; }
+.dshqp-lab-body { display: flex; flex-direction: column; gap: 8px; }
+.dshqp-lab-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.dshqp-lab-btn {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--cp-accent, #2b6cb0);
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+}
+.dshqp-lab-btn:hover { filter: brightness(0.9); }
+.dshqp-lab-btn-ghost {
+  background: var(--cp-line, #eef0f4);
+  color: var(--cp-fg, #333a45);
+}
+.dshqp-lab-btn-ghost:hover { filter: brightness(0.94); }
+.dshqp-lab-input {
+  flex: 1 1 180px;
+  min-width: 140px;
+  padding: 6px 9px;
+  border: 1px solid var(--cp-line, rgba(127, 127, 127, 0.35));
+  border-radius: 8px;
+  font: inherit;
+  background: var(--cp-bg, #ffffff);
+  color: inherit;
+}
+.dshqp-lab-label { color: var(--cp-muted, #5b6270); font-size: 12px; }
+
+/* doctor：默认只有一行简略结论，详情容器默认收起（hidden）。 */
+.dshqp-lab-doctor-line {
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--cp-line, #f2f5fa);
+  font-weight: 600;
+}
+.dshqp-lab-doctor-detail[hidden] { display: none; }
+
+.dshqp-lab-result {
+  max-height: 220px;
+  overflow: auto;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--cp-line, #f7f8fa);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+}
+.dshqp-lab-line { min-height: 1.4em; }
+.dshqp-lab-empty { color: var(--cp-muted, #7a8290); }
+
+/* 主题由面板的 --cp-* 变量驱动；这里只兜底变量缺失时的对比度。 */
+[data-dshqp-lab-theme="dark"] .dshqp-lab-sec { border-color: rgba(255, 255, 255, 0.16); }
+[data-dshqp-lab-theme="dark"] .dshqp-lab-doctor-line,
+[data-dshqp-lab-theme="dark"] .dshqp-lab-result { background: rgba(255, 255, 255, 0.07); }
+[data-dshqp-lab-theme="dark"] .dshqp-lab-head { border-bottom-color: rgba(255, 255, 255, 0.16); }

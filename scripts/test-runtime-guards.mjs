@@ -256,7 +256,7 @@ const stored = (() => {
 if (UPDATE) {
   const payload = {
     _comment: 'A1：工作流图结构指纹（scripts/test-runtime-guards.mjs 维护）。图变了先看 diff 再 --update。',
-    _why: '生图链/TTS 链分支多，暂不做运行时清单接管；用指纹锁住"图不会悄悄变"。',
+    _why: '生图链/TTS 链已按契约清单化（workflows/contracts/ + lib/chain-manifest.js）并做构建后逐槽位对账；运行时仍由代码构图，避免 JS/JSON 双轨半迁移。指纹只负责锁「图不会悄悄变」。',
     fixtures: current,
   }
   fs.writeFileSync(FP_FILE, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
@@ -388,7 +388,15 @@ eq(vid.valid, true, '清单校验通过')
 ok(vid.loaders.always.includes('UNETLoader'), '必载加载器清单里有 UNETLoader')
 ok(Array.isArray(vid.patches) && vid.patches.includes('audio-track'), '★ 清单把条件补丁 id 一并列出（audio-track）')
 ok(vid.presets.length >= 1 && vid.presets.every((x) => typeof x.ok === 'boolean'), '每个预设都带可落地判定')
-eq(wf.body.preset_unverified.length, 2, '★ 生图链的预设标为"待校验"而不是假装通过')
+eq(wf.body.preset_unverified.length, 0, '★ 2026-11-15：生图链已契约清单化，预设不再标"待校验"')
+ok(Array.isArray(wf.body.chains) && wf.body.chains.length >= 4,
+  '★ /workflows 的链总账把生图 / 视频 / TTS 链都列出来了')
+eq(wf.body.chain_errors.length, 0,
+  '★ 链总账体检零错误（声明的契约 / 清单 / 指纹夹具都真实存在）')
+ok(wf.body.chains.some((c) => c.id === 'image-qwen21' && c.authoritative === 'contract'),
+  '★ 生图链登记为 contract（不假装运行时按 JSON 提交）')
+ok(wf.body.chain_summary.runtime_chains.length === 1,
+  '★ runtime 链恰好 1 条（只有视频链真按清单提交）')
 ok(Array.isArray(vid.presets) && vid.presets.length >= 1, '清单带出可绑预设')
 eq(wf.body.preset_errors.length, 0, '预设绑定无漂移')
 const wfText = JSON.stringify(wf.body)

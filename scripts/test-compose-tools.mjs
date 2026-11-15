@@ -289,14 +289,18 @@ ok(planPost({}).notes.some((n) => n.includes('执行顺序')), 'notes 说明执�
 sec('A3 预设绑定 manifest')
 
 ok(PRESET_BINDINGS.length >= 4, '预设表至少 4 条')
-eq(checkPresetBindings(['video-wan22', 'image-qwen21']).length, 0, '两条清单都在时全表通过')
+eq(checkPresetBindings(['video-wan22', 'image-qwen21']).length, 0, '两条链都在时全表通过')
 eq(checkPresetBindings([]).length, 1, '★ 没有清单时报错（不能默默通过）')
-// ★ 生图链的预设标了 pending：链还没清单化，绑定暂时无从校验。
-//   这种情况**不算错误**（否则每次启动一堆假红），但要能单独列出来。
-eq(checkPresetBindings(['video-wan22']).length, 0, 'pending 的预设不参与校验（不制造长期假红）')
-ok(PRESET_BINDINGS.some((p) => p.pending === true), '预设置里确实有 pending 项')
-ok(PRESET_BINDINGS.filter((p) => p.pending === true).every((p) => p.manifest === 'image-qwen21'),
-  'pending 的都是还没清单化的生图链')
+// ★★ 2026-11-15：生图链已按契约清单化，pending 全部清零（旧 3 条断言属「断言过期」）。
+//   contract 链的预设改由 /workflows 传契约 id 做真存在性校验，不再制造长期假红。
+eq(checkPresetBindings(['video-wan22']).length, 0, 'contract 预设在离线调用下不制造假红')
+ok(PRESET_BINDINGS.every((p) => p.pending !== true), '★ 预设表里已无 pending 项（生图链已清单化）')
+ok(PRESET_BINDINGS.filter((p) => p.authoritative === 'contract')
+  .every((p) => p.manifest === 'image-qwen21'), '契约链预设都指向 image-qwen21 契约')
+eq(checkPresetBindings(['video-wan22'], ['image-qwen21']).length, 0,
+  '★ 传入契约 id 时 contract 预设也真的校验通过')
+ok(checkPresetBindings(['video-wan22'], []).length > 0,
+  '★ 契约缺失时 preset_errors 会红（不是无条件放行）')
 
 const vm = { params: { steps: { default: 4 }, frames: { default: 81 } }, consts: { shift: 10 } }
 const pv = presetsForManifest('video-wan22', vm)

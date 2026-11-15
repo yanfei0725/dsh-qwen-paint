@@ -231,7 +231,48 @@ ok('★ 键盘 Enter 能开关面板', panelEl.hidden === false)
 fire('keydown', { key: ' ', preventDefault() {} })
 ok('★ 键盘 Space 能开关面板', panelEl.hidden === true)
 
-// ---- ⑤ 源码级：开关判定读当前 nodes.panel，不再缓存旧引用 ----
+// ---- ⑤ ★★ 2026-11-15 第五次报障「悬浮球没反应 / 叉叉也点不动」真 DOM 仿真 ----
+// 宿主兜底（setup-guide.js）是在抬起事件里调 target.click() 合成 click，
+// 所以 fab 必须真的绑了 click；只绑 pointerup 时白名单加了也点不动。
+ok('★★ fab 真的绑了 click（合成 click 有消费端）',
+  Boolean(fab.listeners.click && fab.listeners.click.length >= 1))
+ok('★ fab 也补绑了 mouseup / touchend',
+  Boolean(fab.listeners.mouseup && fab.listeners.touchend))
+// 完整手势：pointerup 判定 + 浏览器随后派发 click，只应 toggle 一次
+fire('pointerdown', pt(400, 400))
+fire('pointerup', pt(400, 400))
+fire('click', pt(400, 400))
+ok('★★ 完整手势（pointerup + 随后 click）只开关一次，不双触发',
+  panelEl.hidden === false, `hidden=${panelEl.hidden}`)
+// 叉叉：当前面板节点
+const xNow = panelEl.querySelector('.cp-x')
+ok('★ 当前面板能取到叉叉按钮', Boolean(xNow))
+ok('★★ 叉叉绑了全部四种抬起事件',
+  Boolean(xNow) && ['click', 'pointerup', 'mouseup', 'touchend']
+    .every((t) => xNow.listeners[t] && xNow.listeners[t].length >= 1))
+if (xNow && xNow.listeners.click) xNow.listeners.click.forEach((fn) => fn({ target: null }))
+ok('★★ 点叉叉真的关闭面板', panelEl.hidden === true, `hidden=${panelEl.hidden}`)
+// rebuild（切模式）之后：新面板 + 新叉叉仍必须能点 —— 这是旧代码永久失灵的地方
+const tabs2 = panelEl.querySelectorAll('.cp-tab')
+const imageTab = tabs2.find((t) => String(t.textContent).includes('生图'))
+ok('拿到生图模式 tab 用于再次 rebuild', Boolean(imageTab))
+if (imageTab && imageTab.listeners.click) imageTab.listeners.click.forEach((fn) => fn({ target: null }))
+await new Promise((r) => setTimeout(r, 0))
+const panel2 = body.querySelector('.cp-panel')
+const x2 = panel2 && panel2.querySelector('.cp-x')
+ok('★★ rebuild 后新叉叉仍带 click 监听（旧代码在这里永久失灵）',
+  Boolean(x2 && x2.listeners.click && x2.listeners.click.length >= 1))
+panel.open()
+if (x2 && x2.listeners.click) x2.listeners.click.forEach((fn) => fn({ target: null }))
+ok('★★ rebuild 后点新叉叉仍能关闭面板',
+  body.querySelector('.cp-panel').hidden === true)
+// 浮标带 UI 构建号：真机上 hover 就能自证加载的是不是新脚本
+ok('★★ 浮标带 data-cp-ui-build 自证标记',
+  typeof fab.getAttribute('data-cp-ui-build') === 'string'
+  && fab.getAttribute('data-cp-ui-build') === panel.uiBuild,
+  String(fab.getAttribute('data-cp-ui-build')))
+
+// ---- ⑥ 源码级：开关判定读当前 nodes.panel，不再缓存旧引用 ----
 ok('★ 源码不再有「缓存 panel.hidden 再判断」的旧模式',
   SRC.indexOf('panel.hidden ? open() : close()') < 0)
 ok('★ toggle() 读当前 nodes.panel.hidden',

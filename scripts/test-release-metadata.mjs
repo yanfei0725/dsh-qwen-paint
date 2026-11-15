@@ -95,7 +95,7 @@ console.log('\n=== 3. 版本号：一处改、六处必须同时改 ===')
     ['README 当前版本', readme, '**当前版本**：`' + V + '`'],
     ['README 更新说明章节', readme, '## ' + V + ' 更新说明'],
     ['llms.txt 版本行', llms, '版本 ' + V + '；'],
-    ['docs/llms.txt 是什么', docsLlms, '版本 ' + V + '，MIT'],
+    ['docs/llms.txt 是什么', docsLlms, '版本 ' + V + '，BSL 1.1（BUSL-1.1'],
     ['给DSH安装的话 当前版本', talk, '**当前版本：' + V + '**'],
     ['pyproject.toml version', pyproject, 'version = "' + V + '"'],
   ]
@@ -164,6 +164,109 @@ console.log('\n=== 5. 审计补漏：安装层标识与工具清单也得跟着�
   ok('★ 面板摘要也不出现「不支持视频」类误读措辞', !/不支持视频|不提供视频/u.test(describeSrc))
   ok('headline 常量在 setup-guide 里只有一处定义（口径唯一真相源）',
     (read('lib/setup-guide.js').match(/视频 \/ 生图 \/ TTS 全能/gu) ?? []).length === 1)
+}
+
+console.log('\n=== 6. ★ 2026-11-15 发布前审计补漏：时态 / 许可 / 更新说明不许说谎 ===')
+{
+  // 血泪：2026-11-15 发布前实采发现，5 处静态文档把「仓库当前版本 0.33.0」写成
+  //   「**已发布到 npm**（当前 0.33.0）」，而线上 latest 其实还是 0.32.1。
+  //   发布状态是**外部事实**，静态文档不该替 registry 断言；统一改成时态中立的
+  //   「包名为 X，可按包名安装（仓库当前 V）」。
+  //   判据故意不写「未发布 / 0.32.1」这类会随发布过期的话，只禁「已发布 + 当前 V」同句。
+  // ★ 2026-11-15 审计加严：静态文档集合必须覆盖全部对外「简介 / 安装说明」，
+  //   INSTALL.md 与 给DSH安装的话.md 此前漏检，旧 UI 口径（实验室浮层并入 / 浮标贴右边框）
+  //   就藏在那里没被抓到。以后新增静态文档忘了纳入这里，判据本身也要能发现。
+  const STATIC_DOCS = [
+    ['README.md', readme], ['llms.txt', llms], ['docs/llms.txt', docsLlms],
+    ['docs/index.html', read('docs/index.html')], ['pyproject.toml', pyproject],
+    ['INSTALL.md', install], ['给DSH安装的话.md', talk],
+  ]
+  // 不依赖「已发布 … 当前 V」的语序：只要同一行里同时出现「已发布」与「当前 V」，
+  // 或「已发布到 npm」紧跟本版本号，就算替 registry 断言发布状态。
+  const versionTag = V.replace(/\./gu, '\\.')
+  const publishedClaim = new RegExp(
+    '已发布[到于]?[^\\n]{0,80}(?:当前|latest|版本)?[^\\n]{0,20}(?:`|<code>)?' + versionTag + '(?:`|</code>)?', 'u')
+  const claimInLine = (s) => s.split('\n').some((line) =>
+    line.includes('已发布') && new RegExp('(?:当前|latest|版本)?[^\\n]{0,20}(?:`|<code>)?' + versionTag, 'u').test(line))
+  for (const [name, s] of STATIC_DOCS) {
+    ok('★ ' + name + ' 不把「已发布」与「当前 ' + V + '」绑成一句（发布状态交给 registry）',
+      !publishedClaim.test(s) && !claimInLine(s))
+  }
+  ok('★ 静态文档集合覆盖 7 份对外文档（新增文档忘了纳入会红）', STATIC_DOCS.length === 7)
+  ok('★ 现行文档不再出现已删除的「实验室浮层」形态（功能已内嵌进 cp-panel）',
+    STATIC_DOCS.every(([, s]) => !s.includes('实验室浮层')))
+  ok('★ 现行文档不再出现「浮标贴右边框」旧口径（最终是边框对齐边框 / 正上方）',
+    STATIC_DOCS.every(([, s]) => !s.includes('浮标贴右边框')))
+
+  // 本版最重大变更是许可证换 BSL 1.1；简介（含 registry 只显示的前 255 字符）
+  // 与 V 的更新说明都不得漏写。这两条不随「是否已推送」过期。
+  ok('★ 简介里写明许可为 BSL 1.1（且落在 npm 只显示的前 255 字符内）',
+    DESC.slice(0, 255).includes('BSL 1.1') && DESC.includes('BUSL-1.1'))
+  ok('★ 简介写明 0.32.1 及更早仍 MIT、不追溯', /0\.32\.1 及更早仍 MIT/u.test(DESC))
+  ok('★ 落地页与 pyproject 简介也带上 BSL 1.1',
+    read('docs/index.html').includes('BSL 1.1') && pyproject.includes('BSL 1.1'))
+
+  // README 的 V 更新说明不能停留在旧批次的口径（曾写着「面板翻边 / 105 B / 71 套 5309 项 /
+  // 补白名单就修好点不动」，全部被后续轮次推翻，且整个换证一个字没写）。
+  const noteStart = readme.indexOf('## ' + V + ' 更新说明')
+  const noteEnd = readme.indexOf('\n## ', noteStart + 4)
+  const note = noteStart >= 0 ? readme.slice(noteStart, noteEnd < 0 ? undefined : noteEnd) : ''
+  // 弱断言加严：不只看字节数，还要求关键小节标题都在（防「写一大段却漏掉本版最重大变更」）。
+  ok('★ ' + V + ' 更新说明存在且够长', note.length > 800, String(note.length))
+  ok('★ 更新说明覆盖本版全部重大主题（许可 / 新工具 / 加速链 / 链清单 / 结构化日志 / UI / 媒体格式 / 回归 / 文档）',
+    ['许可证', '新工具与端点', '加速链全景', '工作流清单层', '结构化运行日志',
+      'UI 与交互', '媒体格式转换', '联动护栏与回归', '### 文档'].every((k) => note.includes(k)))
+  // 旧版本边界用语义化判据：文档写「0.32.1 及更早版本仍按 MIT 授权，永久、不可撤销、
+  // 不追溯」，比硬字面量「0.32.1 及更早仍 MIT」更完整，不该被钉死措辞而误判为漏写。
+  ok('★ 更新说明写明 BSL 1.1 / 生效起点 / Change Date / 旧版本 MIT 边界与不追溯',
+    ['BSL 1.1', 'BUSL-1.1', '0.33.0 起', '2030-11-15', 'Apache'].every((k) => note.includes(k))
+    && /0\.32\.1 及更早[^。\n]{0,20}MIT/u.test(note) && note.includes('不追溯'))
+  ok('★ 更新说明写明 UI 最终口径（内嵌 / 正上方 / 边框对齐 / 不变形 / 点按链路）',
+    ['内嵌', '正上方', '边框对齐', '不变形', 'pointerdown'].every((k) => note.includes(k)))
+  ok('★ 更新说明不再出现已被推翻的旧结论（翻边 / 105 B / 5309 项 / 补白名单即修好）',
+    !/面板完整性改由翻边|余量守住 105 B|71 套 \/ 5309|白名单，修掉/u.test(note))
+  // ★ 2026-11-15 审计加严：原先硬编码「77 套 / 5,632 项」会随每加一个测试过期，
+  //   而且反过来**阻止**把数字订正到真实值（Spec 轴实测已 5,646）。
+  //   改成：套数由 scripts/test-all.mjs 的 SUITES 条目数静态推导（漏登记测试会红），
+  //   断言数只要求写明「项全绿」不锁具体数字，体积余量由真实字节数算，永不因回归增长失效。
+  const suiteCount = (read('scripts/test-all.mjs').match(/\{ file: '/gu) ?? []).length
+  const indexBytes = fs.statSync(path.join(ROOT, 'lib/index.js')).size
+  const freeBytes = 262144 - indexBytes
+  ok('★ 更新说明写明的回归套数 == SUITES 实际条目数（漏登记测试会红）',
+    suiteCount > 0 && note.includes(suiteCount + ' 套'), `SUITES=${suiteCount}`)
+  ok('★ 更新说明写明断言全绿但不锁死具体项数（避免每次加测试都要改文档）',
+    /项全绿|项断言|断言 \d/u.test(note) && !/5,632|5,499|5,490/u.test(note))
+  ok('★ 更新说明写明的 lib/index.js 体积余量 == 真实字节数推算值',
+    freeBytes > 0 && note.includes(freeBytes.toLocaleString('en-US') + ' B'),
+    `真实余量=${freeBytes} B`)
+  // ★ 同类问题再堵一次：README 曾写死「16 个独立模块 / 98 个 lib / 1,778,329 B」，
+  //   新增 5 个媒体模块后全部过期。改成拿真实值比对，加模块忘改文档就红。
+  const libFiles = fs.readdirSync(path.join(ROOT, 'lib')).filter((f) => f.endsWith('.js'))
+  const libTotal = libFiles.reduce((n, f) => n + fs.statSync(path.join(ROOT, 'lib', f)).size, 0)
+  ok('★ 更新说明写明的 lib/ 文件数与体积 == 真实值（加模块忘改文档会红）',
+    note.includes(libFiles.length + ' 个 `lib/*.js`')
+      && note.includes(libTotal.toLocaleString('en-US') + ' B'),
+    `真实 ${libFiles.length} 个 / ${libTotal} B`)
+  // ★ 自检不能自指：上一版把被检查的字面量原样写进检查代码，导致这条护栏恒红。
+  //   改为扫描护栏源码里是否还存在「把具体断言数写死成对 note 的硬编码调用」。
+  const guardSrc = read('scripts/test-release-metadata.mjs')
+  const staleAssertionCount = /note\.includes\(\s*['"]\d[\d,]*['"]\s*\)/u
+  ok('★ 发布护栏自身不再含会过期的断言数硬编码', !staleAssertionCount.test(guardSrc),
+    '护栏里不应出现对具体断言数的硬编码调用')
+  // ★ 2026-11-15 审计补漏：两份 llms 是 Agent 读的能力清单，新增工具漏写 =
+  //   Agent 根本不知道能调，等于功能没接线。工具名从 tool-registry 动态取，不硬编码。
+  const extraBlock = read('lib/tool-registry.js')
+    .match(/EXTRA_TOOL_NAMES = Object\.freeze\(\[([\s\S]*?)\]\)/u)
+  const extraTools = extraBlock
+    ? (extraBlock[1].match(/'[a-z0-9_]+'/gu) ?? []).map((s) => s.slice(1, -1))
+    : []
+  ok('★ 两份 llms 的能力清单以代码字体点名全部外置工具（新增工具漏写就红）',
+    extraTools.length >= 7 && ['llms.txt', 'docs/llms.txt'].every((f) => {
+      const s = read(f)
+      // 必须写成 `工具名`（反引号包裹）：单纯 includes 会被前缀 / 相似串骗过
+      //（反向核查实测：把 convert_to_gif 改成 convert_to_gif_DISABLED 仍能骗过 includes）。
+      return extraTools.every((t) => s.includes('`' + t + '`'))
+    }), '工具数=' + extraTools.length)
 }
 
 console.log(`\n结果：${pass} 通过 / ${fail} 失败`)
