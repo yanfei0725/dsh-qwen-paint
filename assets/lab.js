@@ -513,6 +513,82 @@
     }))
     box.appendChild(vs.sec)
 
+    /* ---- 参考图色调：浏览器 canvas 采样 32×32 → 主色 / 冷暖 / 一句可拼进提示词的话 ---- */
+    var tn = makeSection('参考图色调 · 取主色写进提示词')
+    tn.body.appendChild(el('div', 'dshqp-lab-note',
+      '选一张参考图，浏览器把它缩到 32×32 采样，只算色调（主色名 / 冷暖 / 饱和 / 明度）并给一句可直接拼进提示词的话。'
+      + '只做色调，不猜构图、光影、材质 —— 那些要靠视觉模型或 IP-Adapter，本插件不引额外权重，也不假装能看懂画面。'))
+    var tnFile = el('input', 'dshqp-lab-file')
+    try {
+      tnFile.setAttribute('type', 'file')
+      tnFile.setAttribute('accept', 'image/*')
+    } catch (err) { /* 忽略 */ }
+    var tnSwatch = el('div', 'dshqp-lab-swatch')
+    tn.body.appendChild(tnFile)
+    tn.body.appendChild(tnSwatch)
+
+    function sampleTone(file) {
+      if (!file) return
+      emptyResult(tn.result, '正在采样色调…')
+      var win = (typeof window !== 'undefined') ? window : null
+      if (!win || typeof win.Image !== 'function' || !win.URL || typeof win.URL.createObjectURL !== 'function') {
+        emptyResult(tn.result, '当前环境不支持本地图片采样（需要浏览器 canvas）')
+        return
+      }
+      var objUrl = ''
+      try { objUrl = win.URL.createObjectURL(file) } catch (err) {
+        emptyResult(tn.result, '读取图片失败')
+        return
+      }
+      var img = new win.Image()
+      img.onload = function () {
+        try {
+          var cv = win.document.createElement('canvas')
+          cv.width = 32
+          cv.height = 32
+          var ctx = cv.getContext && cv.getContext('2d')
+          if (!ctx) throw new Error('no ctx')
+          ctx.drawImage(img, 0, 0, 32, 32)
+          var data = ctx.getImageData(0, 0, 32, 32).data
+          var px = []
+          for (var i = 0; i < data.length; i += 1) px.push(data[i])
+          request('tone/extract', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ pixels: px }),
+          }).then(function (j) {
+            renderResult(tn.result, j)
+            try {
+              tnSwatch.style.background = (j && j.hex) ? j.hex : ''
+              tnSwatch.setAttribute('data-hex', (j && j.hex) || '')
+            } catch (err2) { /* 忽略 */ }
+          })
+        } catch (err3) {
+          emptyResult(tn.result, '采样失败（画布不可用或被跨域限制）')
+        }
+        try { win.URL.revokeObjectURL(objUrl) } catch (err4) { /* 忽略 */ }
+      }
+      img.onerror = function () {
+        emptyResult(tn.result, '这张图读不出来（格式不支持或已损坏）')
+        try { win.URL.revokeObjectURL(objUrl) } catch (err5) { /* 忽略 */ }
+      }
+      img.src = objUrl
+    }
+
+    try {
+      tnFile.addEventListener('change', function () {
+        sampleTone(tnFile.files && tnFile.files[0])
+      })
+    } catch (err) { /* 忽略 */ }
+    tn.row.appendChild(button('清空色块', true, function () {
+      try {
+        tnSwatch.style.background = ''
+        tnSwatch.setAttribute('data-hex', '')
+      } catch (err) { /* 忽略 */ }
+      emptyResult(tn.result, '已清空。重新选图即可再采样。')
+    }))
+    box.appendChild(tn.sec)
+
     /* ---- 音乐 BGM：ACE-Step 1.5 / YuE2 ---- */
     var bgm = makeSection('音乐 BGM · ACE-Step 1.5 / YuE2')
     bgm.body.appendChild(el('div', 'dshqp-lab-note',

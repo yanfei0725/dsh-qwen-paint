@@ -177,6 +177,9 @@ console.log('=== 5. 外置接线与体积红线 ===')
     '/api/qwen-paint/upscale/manual/capabilities', '/api/qwen-paint/upscale/manual',
     '/api/qwen-paint/workers', '/api/qwen-paint/workers/vram',
     '/api/qwen-paint/accel/backends',
+    // ★ 2026-11-15 收尾：三个孤儿模块接线后的端点（口语入口 / 参考图色调 / 资源需求声明）
+    '/api/qwen-paint/entry/aliases', '/api/qwen-paint/tone/extract',
+    '/api/qwen-paint/run/resources',
   ]
   ok('★ 端点集合逐字等于白名单（新增端点必须显式登记）',
     extras.routes.map((r) => r.path).sort().join(',') === [...NEW_ROUTE_PATHS].sort().join(','),

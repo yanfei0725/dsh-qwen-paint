@@ -120,3 +120,27 @@
 .dshqp-lab-result { overflow-wrap: anywhere; }
 /* 加速链卡片的常驻状态行会带安装提示，长文本必须能断行，不能把卡片顶宽。 */
 .dshqp-lab-line { overflow-wrap: anywhere; }
+
+/* ---- 参考图色调色块（2026-11-15）----
+ * 由 POST /tone/extract 返回的 hex 直接染这一块；没取到色就保持透明。
+ * 与上面同一套收口：宽高固定、不参与撑宽，色值只走内联 background。
+ */
+.dshqp-lab-swatch {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: 36px;
+  margin-top: 8px;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 6px;
+  background: transparent;
+}
+.dshqp-lab-swatch[data-hex]::after {
+  content: attr(data-hex);
+  display: block;
+  padding: 9px 10px;
+  font-size: 12px;
+  line-height: 18px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}

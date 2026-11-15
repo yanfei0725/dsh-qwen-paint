@@ -130,11 +130,14 @@ check('注册了 draw_image（apply 直接注册，不经 root.inject）', tool.
 // 2026-11-14：+ 6 个（convert_to_gif / manage_jobs / iterate_image / query_history / doctor / run_dag）13 → 19。
 //   全部走 lib/tool-registry.js 外置注册，index.js 不逐个 import（体积红线只剩 19 B）。
 // 2026-11-15：+ convert_media（媒体格式转换）19 → 20；同样走外置注册，index.js 零增长。
+// 2026-11-15 收尾：+ 5 个孤儿模块接线工具（口语入口 / 时间轴 / 资源声明 / 数据流 / 产出短引用）20 → 25。
 const EXPECTED_TOOLS = [
-  'batch_draw', 'check_acceleration', 'compose_prompt', 'convert_media', 'convert_to_gif', 'doctor', 'draw_image',
+  'batch_draw', 'check_acceleration', 'compose_prompt', 'convert_media', 'convert_to_gif',
+  'describe_resource_needs', 'doctor', 'draw_image',
   'generate_hybrid', 'generate_music', 'generate_speech', 'generate_video', 'inpaint_image', 'iterate_image',
   'list_available_models', 'list_generated_images', 'list_tts_backends', 'manage_jobs', 'manage_workers',
-  'manual_upscale', 'outpaint_image', 'query_history', 'remove_image', 'run_dag', 'upscale_image',
+  'manual_upscale', 'outpaint_image', 'plan_timeline', 'privacy_summary', 'query_history',
+  'remove_image', 'resolve_entry', 'resolve_produce_ref', 'run_dag', 'upscale_image',
 ]
 check('注册的工具集合逐字等于预期（新增工具须显式登记）',
   registered.map((t) => t.name).slice().sort().join(' , ') === EXPECTED_TOOLS.join(' , '),

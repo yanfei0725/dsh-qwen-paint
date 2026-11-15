@@ -261,16 +261,34 @@ console.log('\n=== 6. ★ 2026-11-15 发布前审计补漏：时态 / 许可 / �
   //    `...CREATIVE_TOOL_NAMES` 展开常量，源码正则只抠得到字面量 ⇒ 新增的
   //    4 个工具完全没进护栏视野，把 llms 里的反引号删掉竟然不红。
   //    ⇒ 把展开常量指向的定义也解析进来，并加一条「展开项必须可解析」自检。
-  const creativeBlock = read('lib/creative-extras.js')
-    .match(/CREATIVE_TOOL_NAMES = Object\.freeze\(\[([\s\S]*?)\]\)/u)
+  // ★★ 2026-11-15 收尾再补：同一盲区会随新模块**复发**（加了 `...ORPHAN_TOOL_NAMES`
+  //    后，只认 CREATIVE_TOOL_NAMES 的老写法又漏 5 个）。改成**通用解析**：
+  //    把 lib/ 全量源码扫一遍，任何一个 `X_TOOL_NAMES = Object.freeze([...])` 都能解，
+  //    解不出来的展开项直接判红 —— 新模块想绕过清单检查必须先让这条红。
   const namesFrom = (block) => block
     ? (block[1].match(/'[a-z0-9_]+'/gu) ?? []).map((s) => s.slice(1, -1))
     : []
-  const spreadRefs = extraBlock?.[1].match(/\.\.\.[A-Z_]+/gu) ?? []
+  const libDir = path.join(ROOT, 'lib')
+  const libSources = fs.readdirSync(libDir).filter((f) => f.endsWith('.js'))
+    .map((f) => fs.readFileSync(path.join(libDir, f), 'utf8'))
+  const spreadRefs = [...new Set((extraBlock?.[1].match(/\.\.\.([A-Z][A-Z0-9_]*)/gu) ?? [])
+    .map((s) => s.slice(3)))]
+  const resolvedNames = []
+  const unresolvedRefs = []
+  for (const ref of spreadRefs) {
+    const re = new RegExp(ref + ' = Object\\.freeze\\(\\[([\\s\\S]*?)\\]\\)', 'u')
+    let hit = null
+    for (const src of libSources) {
+      const m = src.match(re)
+      if (m) { hit = m; break }
+    }
+    if (hit) resolvedNames.push(...namesFrom(hit))
+    else unresolvedRefs.push(ref)
+  }
   ok('★ 展开常量里的工具名也能被护栏解析（防止新增工具绕过清单检查）',
-    spreadRefs.length === 0 || (creativeBlock !== null && namesFrom(creativeBlock).length >= 4),
-    '展开项=' + spreadRefs.join(','))
-  const extraTools = [...namesFrom(extraBlock), ...namesFrom(creativeBlock)]
+    unresolvedRefs.length === 0 && resolvedNames.length >= 4,
+    '展开项=' + spreadRefs.join(',') + ' 未解析=' + unresolvedRefs.join(','))
+  const extraTools = [...namesFrom(extraBlock), ...resolvedNames]
   ok('★ 两份 llms 的能力清单以代码字体点名全部外置工具（新增工具漏写就红）',
     extraTools.length >= 11 && ['llms.txt', 'docs/llms.txt'].every((f) => {
       const s = read(f)
