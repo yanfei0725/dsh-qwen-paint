@@ -296,6 +296,24 @@ console.log('\n=== 6. ★ 2026-11-15 发布前审计补漏：时态 / 许可 / �
       //（反向核查实测：把 convert_to_gif 改成 convert_to_gif_DISABLED 仍能骗过 includes）。
       return extraTools.every((t) => s.includes('`' + t + '`'))
     }), '工具数=' + extraTools.length)
+  // ★ 2026-11-16 隐患审计：外置工具点名护栏只盖 16 个外置工具，13 个内联工具不在
+  //    射程 —— llms.txt 漏 `compose_prompt` / `batch_draw`，docs 版连
+  //    `list_available_models` / `check_acceleration` 也漏。⇒ 升级为全量：
+  //    名单从 scripts/selftest.mjs 的 EXPECTED_TOOLS 解析（单一真相源），
+  //    29 个全部反引号点名，缺一就红。
+  const expectedBlock = read('scripts/selftest.mjs').match(/EXPECTED_TOOLS\s*=\s*\[([\s\S]*?)\]/u)
+  const expectedTools = expectedBlock
+    ? (expectedBlock[1].match(/'[a-z0-9_]+'/gu) ?? []).map((s) => s.slice(1, -1))
+    : []
+  ok('★ EXPECTED_TOOLS 名单可解析且与外置工具名单一致（两套名单不打架）',
+    expectedTools.length >= 29 && extraTools.every((t) => expectedTools.includes(t)),
+    'EXPECTED=' + expectedTools.length + ' 外置=' + extraTools.length)
+  ok('★ 两份 llms 以代码字体点名全部 29 个工具（内联工具漏写也红）',
+    expectedTools.length > 0 && ['llms.txt', 'docs/llms.txt'].every((f) => {
+      const s = read(f)
+      return expectedTools.every((t) => s.includes('`' + t + '`'))
+    }),
+    '名单=' + expectedTools.length)
 }
 
 console.log(`\n结果：${pass} 通过 / ${fail} 失败`)

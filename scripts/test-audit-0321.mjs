@@ -65,6 +65,18 @@ console.log('\n=== 2. A2：按包名安装也能跑引导脚本 ===')
   ok('★ files 白名单含它的依赖 video-model-catalog.mjs', files.includes('scripts/video-model-catalog.mjs'))
   ok('两个脚本真实存在', ['scripts/setup.mjs', 'scripts/video-model-catalog.mjs'].every((f) => fs.existsSync(path.join(ROOT, f))))
   ok('引导卡片里的命令与包内脚本对得上', read('lib/setup-guide.js').includes('node scripts/setup.mjs --check'))
+  // ★ 2026-11-16 隐患审计：随包 README / INSTALL / 给DSH安装的话 / 两份 llms 都在指引
+  //    scripts/install.mjs（README 安装章节）、scripts/cpu-probe.mjs（INSTALL 380-382）
+  //    与 一键安装.cmd（四处「双击」），但三者不在 files 白名单 —— npm 形态用户必撞
+  //    缺件，与 A2 同型的第三次复发。⇒ 用户安装入口脚本集合整体锁进护栏。
+  const entryScripts = ['scripts/setup.mjs', 'scripts/install.mjs', 'scripts/cpu-probe.mjs',
+    'scripts/video-model-catalog.mjs', 'scripts/audio-model-catalog.mjs',
+    'scripts/setup-audio-models.mjs', 'scripts/vulkan-upscale-catalog.mjs',
+    'scripts/vectorize-catalog.mjs', '一键安装.cmd']
+  ok('★ files 白名单含全部用户安装入口脚本（install.mjs / cpu-probe.mjs / 一键安装.cmd）',
+    entryScripts.every((f) => files.includes(f)),
+    '缺=' + entryScripts.filter((f) => !files.includes(f)).join(','))
+  ok('入口脚本在仓库里真实存在', entryScripts.every((f) => fs.existsSync(path.join(ROOT, f))))
 }
 
 console.log('\n=== 3. A3：草图台四事件点按 ===')

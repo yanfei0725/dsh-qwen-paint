@@ -623,7 +623,7 @@
     var mu = makeSection('手动超分 · 引擎 / 倍率 / 降噪 / 锐化')
     var muSrc = labeledInput('source（出图目录内的图片）', 'a.png')
     var muTgt = labeledInput('target（输出文件名）', 'a_upscaled.png')
-    var muEngine = labeledInput('engine（auto/vosr2/realesrgan/custom）', 'auto')
+    var muEngine = labeledInput('engine（auto/vosr2/realesrgan/custom/realesrgan-ncnn-vulkan/realcugan-ncnn-vulkan）', 'auto')
     var muScale = labeledInput('scale（2/3/4/6/8/16）', '4')
     var muDenoise = labeledInput('denoise（0-1）', '0')
     var muSharpen = labeledInput('sharpen（0-1）', '0')
@@ -652,6 +652,34 @@
       }).then(function (j) { renderResult(mu.result, j) })
     }))
     box.appendChild(mu.sec)
+
+    /* ---- 位图 → SVG 矢量化（0.35.0）：vtracer 彩色 / potrace 黑白 ---- */
+    var vz = makeSection('矢量化 · 位图 → SVG（vtracer 彩色 / potrace 黑白）')
+    var vzSrc = labeledInput('source（出图目录内的图片）', 'a.png')
+    var vzTgt = labeledInput('target（输出 SVG 文件名）', 'a.svg')
+    var vzEngine = labeledInput('engine（vtracer/potrace）', 'vtracer')
+    var vzPreset = labeledInput('preset（vtracer：bw/poster/photo，可空）', '')
+    vz.body.appendChild(vzSrc.wrap)
+    vz.body.appendChild(vzTgt.wrap)
+    vz.body.appendChild(vzEngine.wrap)
+    vz.body.appendChild(vzPreset.wrap)
+    vz.row.appendChild(button('查看能力', true, function () {
+      emptyResult(vz.result, '正在读取矢量化能力…')
+      request('vectorize/capabilities').then(function (j) { renderResult(vz.result, j) })
+    }))
+    vz.row.appendChild(button('转 SVG', false, function () {
+      emptyResult(vz.result, '正在矢量化…')
+      request('vectorize', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          source: String(vzSrc.input.value || '').trim(),
+          target: String(vzTgt.input.value || '').trim(),
+          engine: String(vzEngine.input.value || '').trim(),
+          preset: String(vzPreset.input.value || '').trim(),
+        }),
+      }).then(function (j) { renderResult(vz.result, j) })
+    }))
+    box.appendChild(vz.sec)
 
     /* ---- Worker：环境隔离 / 启停 / 空闲回收 / 显存预检 ---- */
     var wk = makeSection('独立 Worker · 环境隔离 / 显存预检')

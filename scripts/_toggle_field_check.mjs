@@ -16,5 +16,7 @@ console.log('key      :', bc?.toggle?.key)
 console.log('on       :', bc?.toggle?.on)
 console.log('canToggle:', bc?.toggle?.canToggle)
 console.log('')
+// ★ 2026-11-16：打一行 ✓ 让 test-all 的 tickCount 把本套计入（综合检查 = 1 项）。
+console.log(ok ? '✓ blockcache toggle：1 项综合检查通过' : '✗ blockcache toggle：综合检查失败')
 console.log(ok ? '结果：通过' : '结果：失败')
 if (!ok) process.exit(1)

@@ -269,6 +269,8 @@ console.log('=== 6. 实验室前端纪律（源码断言，零 DOM / 零联网�
     'contracts', 'contracts?build=1&id=image-qwen21', 'eta',
     'tts/backends', 'audio/samples', 'music/models', 'music/generate',
     'upscale/manual/capabilities', 'upscale/manual', 'workers', 'workers/vram',
+    // ★ 2026-11-16：矢量化入口（显式登记，漏一个就红）。
+    'vectorize/capabilities', 'vectorize',
     // ★ 2026-11-15 收尾：实验室新增「参考图色调」功能区，走本机取样端点。
     'tone/extract',
     'accel/backends']

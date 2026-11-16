@@ -160,6 +160,8 @@ const SUITES = [
   // ★ 2026-11-15：SageAttention / WaveSpeed 真接线（加速链 / 工作流 / 卡片 / 真实节点表探测）
   { file: 'test-attention-wiring.mjs', note: '注意力与编译后端真接线：并入加速链 / 两条工作流构造路径 / 卡片常驻显示 / 本机 /object_info 真实探测 / check_acceleration 报告 / 改坏变红反向核查（全离线）' },
   // ★ 2026-11-15 收尾：三个孤儿模块（entry-alias / color-tone / creative-chain）真接进主链路
+  { file: 'test-vectorize.mjs', note: '矢量化两步法：目录事实（MIT / GPL / 权威字节数 / 官方单源）/ argv 与 clamp / potrace 黑白位图限制 / 探测与执行诚实边界（未安装绝不谎称）/ 注册层与文档点名同步（全离线）' },
+  { file: 'test-vulkan-upscale.mjs', note: 'Vulkan 直跑超分：资产与许可事实（MIT / 权威字节数）/ argv 构造与逐项 clamp / 探测诚实降级 / 计划与执行边界（未安装绝不谎称）/ 文档与描述点名同步（全离线）' },
   { file: 'test-orphan-wiring.mjs', note: '孤儿模块接线：口语入口别名 / 参考图色调端点（像素上限与方法守卫）/ 时间轴·资源·数据流·产出短引用四工具 / 清单与 UI 入口同步 / 拆掉接线变红反向核查（全离线）' },
   // ★ 2026-11-16 全量审计：六套一直没进回归清单的历史测试（纯 JS / 零联网 / 零子进程，全部真绿）
   //   教训原话：「不在回归清单里的测试 = 等于没有测试」。它们各自锁着真实修过的 bug。

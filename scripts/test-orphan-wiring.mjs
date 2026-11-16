@@ -26,9 +26,12 @@ let fail = 0
 const fails = []
 
 function ok(cond, label, detail) {
-  if (cond) { pass += 1; return }
+  // ★ 2026-11-16：逐条打 ✓ / ✗ —— test-all 的 tickCount 按输出行计数，此前本套只打
+  //    汇总行 ⇒ 全量「N 项断言」一直不含这里的 ~120 项（统计口径对不上）。
+  if (cond) { pass += 1; console.log('✓ ' + label); return }
   fail += 1
   fails.push(label + (detail === undefined ? '' : '  → ' + String(detail)))
+  console.log('✗ ' + label)
 }
 
 const { createExtras, EXTRA_TOOL_NAMES } = await import('../lib/tool-registry.js')

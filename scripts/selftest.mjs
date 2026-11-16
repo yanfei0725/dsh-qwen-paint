@@ -137,7 +137,7 @@ const EXPECTED_TOOLS = [
   'generate_hybrid', 'generate_music', 'generate_speech', 'generate_video', 'inpaint_image', 'iterate_image',
   'list_available_models', 'list_generated_images', 'list_tts_backends', 'manage_jobs', 'manage_workers',
   'manual_upscale', 'outpaint_image', 'plan_timeline', 'privacy_summary', 'query_history',
-  'remove_image', 'resolve_entry', 'resolve_produce_ref', 'run_dag', 'upscale_image',
+  'remove_image', 'resolve_entry', 'resolve_produce_ref', 'run_dag', 'upscale_image', 'vectorize_image',
 ]
 check('注册的工具集合逐字等于预期（新增工具须显式登记）',
   registered.map((t) => t.name).slice().sort().join(' , ') === EXPECTED_TOOLS.join(' , '),

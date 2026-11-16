@@ -44,5 +44,7 @@ console.log('toError(undefined)  →', e3 instanceof Error, '|', e3.message)
 const e4 = I.toError([1, 2, 3])
 console.log('toError([1,2,3])    →', e4 instanceof Error, '|', e4.message)
 console.log('')
+// ★ 2026-11-16：打一行 ✓ 让 test-all 的 tickCount 把本套计入（八类 reason = 1 组综合检查）。
+console.log(bad === 0 ? '✓ cancelReason 八类 reason 规范化：1 组综合检查通过' : '✗ cancelReason 存在 [object Object] 泄漏')
 console.log(bad === 0 ? '结果：通过（无 [object Object] 泄漏）' : `结果：失败（${bad} 例泄漏）`)
 if (bad > 0) process.exit(1)

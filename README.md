@@ -237,13 +237,15 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
   - **9 套从未进过回归的历史测试重新登记**（`_abort_fix_test` / `_adapt_test` / `_init_abort_test` / `_wrapper_policy_test` / `_vram_patch_test` / `_toggle_field_check` / `_draw_smoke_test` / `_intent_test` / `_cordis_proxy_test`）：全部纯 JS、零联网、零子进程，各自锁着真实修过的 bug。它们一直绿、但**从没被 `npm test` 跑到过** —— 即用户说的"不在回归清单里的测试 = 等于没有测试"。
 - 发布护栏的展开常量解析改成**通用**：`lib/` 里任何 `X_TOOL_NAMES = Object.freeze([...])` 都能解析，解不出来直接判红 —— 否则新模块会重演 0.34.0 那个「展开常量绕过清单检查」的盲区。
 - 三处「新增入口必须显式登记」的白名单（selftest 工具集 / lab.js 端点 / 外置端点表）同步登记 5 个工具与 3 条端点。
-- 全量回归 **91 套，各套项全绿**（断言总数刻意不在此写死，避免每加一条测试就要改文档）；`lib/index.js` 仍是 **258,398 B / 上限 262,144 B，余量 3,746 B**（本版零增长，全部走外置注册层）。
+- 全量回归 **93 套，各套项全绿**（断言总数刻意不在此写死，避免每加一条测试就要改文档）；`lib/index.js` 仍是 **258,398 B / 上限 262,144 B，余量 3,746 B**（本版零增长，全部走外置注册层）。
 
 ### 文档
 
 - `package.json` / `meta.description` / README 首段 / 两份 llms 首段 / `pyproject.toml` / `docs/index.html` / `给DSH安装的话.md` 全部同步到 0.35.0，`scripts/test-release-metadata.mjs` 一处改、多处一起校验。
 - 两份 llms 以代码字体点名全部 5 个新工具与 3 条新端点；`TOOL_SUMMARIES` / `agent-guide` / 端点目录同步补齐。
-- 当前 **113 个 `lib/*.js`** / 合计 **1,960,661 B**。
+- 当前 **115 个 `lib/*.js`** / 合计 **1,993,379 B**。
+- **位图 → SVG 矢量化（两步法，内置执行路径）**：`vectorize_image` 工具 + `GET|POST /api/qwen-paint/vectorize*` 端点。引擎 `vtracer`（MIT，visioncortex/vtracer 官方 Release 单源，win 包 965,231 B，默认不装：setup `--vectorize` 或 `node scripts/vectorize-catalog.mjs --download`）做**彩色**矢量化；引擎 `potrace`（GPL-2.0+，黑白线稿专用）为**用户自备 exe**（SourceForge 无权威直链 ⇒ 不代下载，填 `potracePath` 即用）。输入限出图目录、SVG 落出图目录内；未安装引擎如实降级，绝不谎称已矢量化。
+- **手动超分新增 Vulkan 直跑引擎（内置执行路径，不经 ComfyUI）**：`realesrgan-ncnn-vulkan`（MIT，windows 包 2,159,606 B）/ `realcugan-ncnn-vulkan`（MIT，45,977,449 B，动漫向）；AMD / NVIDIA / Intel 核显 Vulkan 通吃。引擎二进制**默认不装**：`node scripts/vulkan-upscale-catalog.mjs --list` 查看、setup `--vulkan-upscale` 显式下载（GitHub Releases 官方源、权威字节数校验、系统 tar 解压；Release 无 sha256 ⇒ 只比大小并如实说明；可执行文件不加第三方加速镜像——供应链红线），装好后把目录填进 `vulkanUpscalePath` 配置，`manual_upscale`（engine=引擎 id）即真实执行；未安装时如实降级回草案，绝不谎称已放大。
 
 ## 0.34.0 更新说明
 

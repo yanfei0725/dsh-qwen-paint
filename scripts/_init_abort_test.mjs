@@ -70,5 +70,7 @@ console.log(`  ctx.effect 调用      ：${effectCalls.join(' | ') || '(无)'}`)
 console.log(`  ⇒ 走到状态端点注册   ：${reachedRoute ? '是 ✅' : '否 ❌'}`)
 
 const ok = reachedRoute && hasInjectDecl && registered.length > 0 && threw === null
+// ★ 2026-11-16：打一行 ✓ 让 test-all 的 tickCount 把本套计入（综合检查 = 1 项）。
+console.log(ok ? '✓ 初始化链路 A/B：1 项综合检查通过' : '✗ 初始化链路 A/B：综合检查失败')
 console.log(ok ? '\n=== 结果：通过 ===' : '\n=== 结果：失败 ===')
 process.exit(ok ? 0 : 1)

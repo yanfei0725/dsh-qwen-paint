@@ -160,7 +160,9 @@ console.log('=== 4. 音乐 BGM ===')
 /* ---------------- 5. 手动超分 ---------------- */
 console.log('=== 5. 手动超分 ===')
 {
-  ok('4 种引擎 / 6 档倍率', UPSCALE_ENGINES.length === 4 && MANUAL_SCALE_CHOICES.length === 6)
+  ok('引擎清单逐字相等（4 ComfyUI 系 + 2 Vulkan 直跑）/ 6 档倍率',
+    UPSCALE_ENGINES.map((e) => e.id).join(',') === 'auto,vosr2,realesrgan,custom,realesrgan-ncnn-vulkan,realcugan-ncnn-vulkan'
+    && MANUAL_SCALE_CHOICES.length === 6)
   ok('倍率档位含 2/4/8/16', [2, 4, 8, 16].every((s) => MANUAL_SCALE_CHOICES.includes(s)))
   ok('能力清单带档位', listUpscaleEngines().every((e) => Array.isArray(e.scaleChoices)))
   ok('源目录外绝对路径被拒',

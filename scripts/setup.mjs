@@ -45,6 +45,8 @@ import { spawn, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import readline from 'node:readline/promises'
 import { runVideoModelStep, targetDirOf } from './video-model-catalog.mjs'
+import { runVulkanUpscaleStep } from './vulkan-upscale-catalog.mjs'
+import { runVectorizeStep } from './vectorize-catalog.mjs'
 // ★ 2026-11-13：用户可选的核显型号档案（纯数据，不联网、不探测、不下载）。
 import {
   listIgpuOptions, igpuPlanFor, findIgpuProfile, matchIgpuProfile,
@@ -1336,6 +1338,76 @@ if (!CHECK_ONLY) {
   if (report.installed.length > 0) {
     console.log(`  视频模型已就位：${report.installed.map((f) => f.name).join('、')}`)
     console.log('  ⚠ 首次用视频功能前请重启一次 ComfyUI（让新权重进模型列表）。')
+  }
+}
+
+/* ②e Vulkan 直跑超分引擎（可选）—— 0.35.0 新增 --------------------------------
+ * 规矩：默认**不装**；`--vulkan-upscale` 显式要装；`--vulkan-dir <目录>` 指定安装位置；
+ *       `--vulkan-pick <编号>` 无人值守选引擎。下载只走 GitHub Releases 官方源
+ *       （可执行文件不加第三方加速镜像——供应链红线），字节数用 lib/vulkan-upscale.js
+ *       里的权威值校验（Release 无 sha256
+ *       ⇒ 只比大小并如实说明）；解压用系统 bsdtar（tar.exe），失败如实认输给手动路径；
+ *       绝不上传本机任何文件。
+ */
+if (!CHECK_ONLY) {
+  console.log('\n②e Vulkan 直跑超分引擎（可选，不经 ComfyUI；默认不装）…')
+  const wantVulkan = has('--vulkan-upscale') ? 'yes' : has('--no-vulkan-upscale') ? 'no' : null
+  const vulkanReport = await runVulkanUpscaleStep({
+    want: wantVulkan,
+    isTTY: Boolean(process.stdin.isTTY),
+    pick: valueOf('--vulkan-pick'),
+    dir: valueOf('--vulkan-dir'),
+    ask: async (q) => {
+      const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+      const answer = await rl.question(q)
+      rl.close()
+      return answer
+    },
+    log: (s) => console.log(s),
+    download: (url, dest) => downloadWithCurl(url, dest),
+    statSize: (p) => (fs.existsSync(p) ? fs.statSync(p).size : 0),
+    removeFile: (p) => fs.rmSync(p, { force: true }),
+    extract: (zip, dir) => {
+      const r = spawnSync(process.platform === 'win32' ? 'tar.exe' : 'tar', ['-xf', zip, '-C', dir], { encoding: 'utf8' })
+      return r.status === 0 ? { ok: true } : { ok: false, reason: `tar 退出码 ${r.status}（${(r.stderr || '').slice(0, 200)}）` }
+    },
+  })
+  if (vulkanReport.installed) {
+    console.log(`  Vulkan 超分引擎已就位：${vulkanReport.installed.dir}`)
+    console.log('  ⚠ 还需把该目录填进插件配置 vulkanUpscalePath（引导面板 / 配置端点），manual_upscale 才会真实执行。')
+  }
+}
+
+/* ②f 矢量化引擎 vtracer（可选）—— 0.35.0 新增 --------------------------------
+ * vtracer（彩色矢量化，MIT，visioncortex/vtracer 官方 Release 单源）；potrace（黑白，
+ * GPL-2.0+）为用户自备 exe —— SourceForge 无权威直链 ⇒ 不代下载，文档给官方项目页。
+ * 规矩同 ②e：默认不装、显式 --vectorize、字节数权威校验、系统 bsdtar 解压。
+ */
+if (!CHECK_ONLY) {
+  console.log('\n②f 矢量化引擎 vtracer（可选；默认不装）…')
+  const wantVz = has('--vectorize') ? 'yes' : has('--no-vectorize') ? 'no' : null
+  const vzReport = await runVectorizeStep({
+    want: wantVz,
+    isTTY: Boolean(process.stdin.isTTY),
+    dir: valueOf('--vectorize-dir'),
+    ask: async (q) => {
+      const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+      const answer = await rl.question(q)
+      rl.close()
+      return answer
+    },
+    log: (s) => console.log(s),
+    download: (url, dest) => downloadWithCurl(url, dest),
+    statSize: (p) => (fs.existsSync(p) ? fs.statSync(p).size : 0),
+    removeFile: (p) => fs.rmSync(p, { force: true }),
+    extract: (zip, dir) => {
+      const r = spawnSync(process.platform === 'win32' ? 'tar.exe' : 'tar', ['-xf', zip, '-C', dir], { encoding: 'utf8' })
+      return r.status === 0 ? { ok: true } : { ok: false, reason: `tar 退出码 ${r.status}（${(r.stderr || '').slice(0, 200)}）` }
+    },
+  })
+  if (vzReport.installed) {
+    console.log(`  vtracer 已就位：${vzReport.installed.dir}`)
+    console.log('  ⚠ 还需把该目录填进插件配置 vtracerPath，vectorize_image 才会真实执行。')
   }
 }
 
