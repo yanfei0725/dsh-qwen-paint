@@ -29,6 +29,7 @@
   var PROGRESS_PATH = 'api/comfy-pipeline/progress'
   var LIBRARY_PATH = 'api/comfy-pipeline/library'
   var MODES_PATH = 'api/comfy-pipeline/modes'
+  var MODEL_OPTIONS_PATH = 'api/comfy-pipeline/model-options'
   var REFERENCE_PATH = 'api/comfy-pipeline/reference'
   var REFERENCE_PREFER_PATH = 'api/comfy-pipeline/reference/prefer'
   var REFERENCE_SEARCH_PATH = 'api/comfy-pipeline/reference/search'
@@ -39,14 +40,120 @@
   var modeAvailability = { image: true, video: true, hybrid: false }
   var modeReason = { hybrid: '' }
 
+  // ★ 2026-11-16 性能：model-options 冷探测要发几十个 /object_info，切模式/重开面板
+  //   都会重拉一次 ⇒ 下拉会「卡一下」。前端按 TTL 缓存成功响应，命中就不发请求。
+  //   服务端 CAP_CACHE 是 10 分钟；这里取 120 s 更保守，避免配置改了很久不刷新。
+  var MODEL_OPTIONS_TTL_MS = 120000
+  var modelOptionsCache = { at: 0, data: null }
+
   var schema = null
   var state = null
   var nodes = null
   var saveTimer = null
   var saveSeq = 0
   var progressTimer = null
+  var progressIdleTicks = 0
 
   /* ============================ 纯函数（可被回归直接测） ============================ */
+
+  /** 缓存是否新鲜：命中必须 data 存在且未过期（TTL 内）。 */
+  function modelOptionsFresh(entry, now, ttl) {
+    return Boolean(entry && entry.data && Number.isFinite(entry.at)
+      && (now - entry.at) >= 0 && (now - entry.at) < ttl)
+  }
+
+  /** 构造缓存条目（不原地改，便于纯函数断言）。 */
+  function modelOptionsEntry(data, now) {
+    return { at: now, data: data }
+  }
+
+  /** 期望选项的签名（value + label 逐项）；值或显示名变了就判为需重建。 */
+  function optionSignature(opts, emptyLabel) {
+    var parts = [String(emptyLabel)]
+    for (var i = 0; i < opts.length; i += 1) {
+      parts.push(String(opts[i].value) + '\u0000' + String(opts[i].label))
+    }
+    return parts.join('\u0001')
+  }
+
+  /**
+   * 增量回填 select：选项集合没变就只改 `sel.value`（不 innerHTML='' 重建），
+   * 变了才重建。返回 { same, value, count } 供测试断言。el 注入避免依赖全局 DOM。
+   */
+  function fillSelect(sel, opts, cur, emptyLabel, el) {
+    var sig = optionSignature(opts, emptyLabel)
+    var same = sel && sel.__optSig === sig && Array.isArray(sel.__optVals)
+      && sel.__optVals.length === opts.length
+    var hit = false
+    for (var m = 0; m < opts.length; m += 1) if (opts[m].value === cur) hit = true
+    var want = hit ? cur : ''
+    if (!same && sel) {
+      sel.innerHTML = ''
+      var auto = el('option', null, emptyLabel)
+      auto.value = ''
+      sel.appendChild(auto)
+      for (var n = 0; n < opts.length; n += 1) {
+        var o = el('option', null, opts[n].label)
+        o.value = opts[n].value
+        sel.appendChild(o)
+      }
+      sel.__optSig = sig
+      sel.__optVals = opts.map(function (o) { return o.value })
+    }
+    if (sel) sel.value = want
+    return { same: same === true, value: want, count: opts.length }
+  }
+
+  /** 进度轮询间隔：连续空列表降频，避免面板开着就每 1.5s 白刷一次接口。 */
+  function pollIntervalMs(idleTicks) {
+    return idleTicks >= 4 ? 5000 : 1500
+  }
+
+  // ★ 2026-11-16 二次报障：内存 TTL 缓存刷新 DSH 页面就清零 ⇒ 首次展开下拉仍是
+  //   「白条等请求」（后端冷启动拉 3.4MB /object_info）。把成功清单持久化到
+  //   localStorage，下次打开**同步**回填，不等网络；后台再静默刷新。
+  var MODEL_OPTIONS_STORE_KEY = 'comfyPipelineModelOptions'
+  var MODEL_OPTIONS_STORE_VERSION = 1
+
+  /** 读持久化清单：结构/版本/时效任一不合法返回 null（宁可等请求也不回显脏候选）。 */
+  function loadPersistedModels(storage, now, ttl) {
+    if (!storage) return null
+    try {
+      var raw = storage.getItem(MODEL_OPTIONS_STORE_KEY)
+      if (!raw) return null
+      var box = JSON.parse(raw)
+      var d = box && box.data
+      // 结构和成功态都要对；离线/失败响应绝不持久化，这里再守一道。
+      var stale = !box || box.v !== MODEL_OPTIONS_STORE_VERSION
+        || !Number.isFinite(box.at) || (now - box.at) < 0 || (now - box.at) >= ttl
+        || !d || d.ok !== true || d.online !== true || !Array.isArray(d.unet)
+      if (stale) {
+        // ★ 2026-11-16 审计：过期即清除，别让已删的模型候选长期留在浏览器里。
+        try { storage.removeItem(MODEL_OPTIONS_STORE_KEY) } catch (err) { /* 隐私模式忽略 */ }
+        return null
+      }
+      return d
+    } catch (err) { return null }
+  }
+
+  /** 写持久化清单：只接受成功且在线的响应，写失败静默忽略（隐私模式）。 */
+  function savePersistedModels(storage, data, now) {
+    if (!storage || !data || data.ok !== true || data.online !== true) return false
+    try {
+      storage.setItem(MODEL_OPTIONS_STORE_KEY, JSON.stringify({
+        v: MODEL_OPTIONS_STORE_VERSION, at: now, data: data,
+      }))
+      return true
+    } catch (err) { return false }
+  }
+
+  /** 给用户看的占位 option（完全没缓存时也有东西，不是空 select 白条）。 */
+  function placeholderOption(label, el) {
+    var o = el('option', null, label)
+    o.value = ''
+    o.disabled = true
+    return o
+  }
 
   function defsByKey() {
     var out = {}
@@ -276,20 +383,34 @@
     try {
       fetch(PROGRESS_PATH, { cache: 'no-store' })
         .then(function (r) { return r.ok ? r.json() : null })
-        .then(function (j) { if (j && j.ok) paintProgress(j) })
-        .catch(function () { /* 进度拿不到就不显示，不报错弹窗 */ })
-    } catch (err) { /* 同上 */ }
+        .then(function (j) {
+          var items = j && j.ok && Array.isArray(j.items) ? j.items : []
+          // 有进度就归零（回到快档）；连续空列表逐步降频，面板常开不白刷接口。
+          if (items.length > 0) progressIdleTicks = 0
+          else progressIdleTicks += 1
+          if (j && j.ok) paintProgress(j)
+        })
+        .catch(function () { progressIdleTicks += 1 /* 进度拿不到就不显示，不报错弹窗 */ })
+    } catch (err) { progressIdleTicks += 1 /* 同上 */ }
+  }
+
+  // ★ 用递归 setTimeout 而非固定 setInterval —— 间隔随 idleTicks 动态降频。
+  function pollTick() {
+    if (progressTimer === null) return
+    pollProgress()
+    progressTimer = setTimeout(pollTick, pollIntervalMs(progressIdleTicks))
   }
 
   function startPolling() {
     if (progressTimer !== null) return
+    progressIdleTicks = 0
     pollProgress()
-    progressTimer = setInterval(pollProgress, 1500)
+    progressTimer = setTimeout(pollTick, pollIntervalMs(progressIdleTicks))
   }
 
   function stopPolling() {
     if (progressTimer === null) return
-    clearInterval(progressTimer)
+    clearTimeout(progressTimer)
     progressTimer = null
   }
 
@@ -308,11 +429,18 @@
             selected: j.selected || 'none',
             instruction: j.instruction || '',
             skills: Array.isArray(j.skills) ? j.skills : [],
+            libraryError: '',
           }
+        } else {
+          libState.libraryError = '素材库端点未返回有效数据'
         }
         paintLibrary()
       })
-      .catch(function () { /* 素材库拿不到就不显示，不影响出图 */ })
+      .catch(function (err) {
+        // 不再静默：错误态也要落到下拉里，用户看得见"读失败"而不是空白。
+        libState.libraryError = String(err && err.message ? err.message : err || '请求失败')
+        paintLibrary()
+      })
   }
 
   function saveLibrary(patch) {
@@ -339,6 +467,14 @@
     if (!sel || !ta || !list) return
     // 风格下拉
     while (sel.children.length > 0) sel.removeChild(sel.children[0])
+    if (libState.styles.length === 0) {
+      var emptyLabel = libState.libraryError
+        ? '（素材库读取失败，请稍后重试）' : '（暂无设计风格）'
+      var emptyOpt = el('option', null, emptyLabel)
+      emptyOpt.value = ''
+      emptyOpt.disabled = true
+      sel.appendChild(emptyOpt)
+    }
     for (var i = 0; i < libState.styles.length; i += 1) {
       var o = el('option', null, libState.styles[i].name)
       o.value = libState.styles[i].id
@@ -645,7 +781,7 @@
    * ★ 联动纪律：改了兜底层（setup-guide）必须核实消费端真的绑了它合成的事件，
    *   否则就是「白名单加了、按钮还是点不动」的孤儿接线。
    */
-  var UI_BUILD = '2026-11-15.5'
+  var UI_BUILD = '2026-11-16.1'
   var TAP_EVENTS = ['click', 'pointerup', 'mouseup', 'touchend']
   var TAP_COOLDOWN_MS = 300
 
@@ -754,6 +890,178 @@
     var plan = modePlan()
     if (plan.tagline) panel.appendChild(el('p', 'cp-tagline', plan.tagline))
 
+    // ★ 2026-11-16 报障修复：三段模型各自可选。旧代码把 hybrid 折叠成 image、
+    //   用 selected[state.mode] 取 hybrid 键（后端根本没这个键）→ 回显恒空，
+    //   且 TTS 段完全无入口。现在每段各有独立下拉 + 独立落盘键 + 独立回显键。
+    //   · 生图段 → mainmodel / selected.image
+    //   · TTS 段 → ttsbackend + ttsvoice / selected.tts_backend + tts_voice_sample
+    //   · 视频段 → unetvideo / selected.video
+    if (state.mode === 'image' || state.mode === 'video' || state.mode === 'hybrid') {
+      var modelDefs
+      if (state.mode === 'hybrid') {
+        modelDefs = [
+          { label: '混合链 ① 生图主模型', key: 'mainmodel', pick: 'image', src: 'unet', empty: '（自动挑）' },
+          { label: '混合链 ② TTS 后端', key: 'ttsbackend', pick: 'tts_backend', src: 'tts_backends', empty: '（默认 Qwen3-TTS）' },
+          { label: '混合链 ③ 音色样本', key: 'ttsvoice', pick: 'tts_voice_sample', src: 'tts_voices', empty: '（默认音色）' },
+          { label: '混合链 ④ 视频主模型', key: 'unetvideo', pick: 'video', src: 'unet', empty: '（默认 Hummingbird-XT-5B）' },
+        ]
+      } else if (state.mode === 'video') {
+        modelDefs = [{ label: '视频主模型（架构不符会被拒收）', key: 'unetvideo', pick: 'video', src: 'unet', empty: '（默认 Hummingbird-XT-5B）' }]
+      } else {
+        modelDefs = [{ label: '生图主模型（清空 = 自动挑）', key: 'mainmodel', pick: 'image', src: 'unet', empty: '（自动挑）' }]
+      }
+      var modelPicks = []
+      modelDefs.forEach(function (def) {
+        var mc = card(def.label, 'cp-model-card')
+        var mSel = el('select', 'cp-select cp-model-select')
+        var mStatus = el('p', 'cp-hint cp-model-status', '正在读取本机清单…')
+        mSel.addEventListener('change', function () {
+          var payload = {}
+          payload[def.key] = String(mSel.value)
+          mStatus.textContent = '正在保存…'
+          fetch('api/qwen-paint/status.json', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+            .then(function (r) { return r.json() })
+            .then(function (j) {
+              // ★ 2026-11-16 假成功根治：后端拒绝时必须说"没生效"，不能再无条件报喜。
+              var cr = j && j.choiceResult
+              var rejects = cr && Array.isArray(cr.rejections) ? cr.rejections : []
+              // 一次 POST 只改一个控件，但响应里可能带着别的写参数的拒绝原因。
+              // 先按 label 认领自己的；认不出且全场只有一条时再兜底，绝不张冠李戴。
+              var mine = rejects.filter(function (r) {
+                return def.label.indexOf(r.label) >= 0 || r.label.indexOf(def.label) >= 0
+              })[0] || (rejects.length === 1 ? rejects[0] : null)
+              if (cr && cr.ok === false && mine) {
+                mStatus.textContent = '未生效：' + (mine.reason ? mine.reason : '所选值被本机拒绝')
+                mStatus.setAttribute('data-choice-rejected', '1')
+                return
+              }
+              mStatus.removeAttribute('data-choice-rejected')
+              mStatus.textContent = mSel.value === ''
+                ? '已清除（回到默认/自动挑）' : '已选 ' + mSel.value + '（下次生成生效）'
+            })
+            .catch(function (err) { mStatus.textContent = '保存失败：' + (err && err.message ? err.message : err) })
+        })
+        mc.appendChild(mSel)
+        mc.appendChild(mStatus)
+        panel.appendChild(mc)
+        modelPicks.push({ def: def, sel: mSel, status: mStatus })
+      })
+      function applyModelOptions(j) {
+        if (!j || j.ok !== true) {
+          modelPicks.forEach(function (p) { p.status.textContent = '模型清单读取失败' })
+          return
+        }
+        if (j.online !== true) {
+          modelPicks.forEach(function (p) { p.status.textContent = j.reason || 'ComfyUI 未在线，候选暂不可用' })
+          return
+        }
+        var sel = j.selected && typeof j.selected === 'object' ? j.selected : {}
+        modelPicks.forEach(function (p) {
+          var opts = []
+          if (p.def.src === 'unet') {
+            var unet = Array.isArray(j.unet) ? j.unet : []
+            for (var i = 0; i < unet.length; i += 1) opts.push({ value: String(unet[i]), label: String(unet[i]) })
+          } else if (p.def.src === 'tts_backends') {
+            var bs = Array.isArray(j.tts_backends) ? j.tts_backends : []
+            for (var k = 0; k < bs.length; k += 1) {
+              var flag = bs[k].available ? '' : '（未探测到）'
+              opts.push({ value: String(bs[k].id), label: String(bs[k].label) + flag })
+            }
+          } else if (p.def.src === 'tts_voices') {
+            var vs = Array.isArray(j.tts_voices) ? j.tts_voices : []
+            for (var v = 0; v < vs.length; v += 1) opts.push({ value: String(vs[v].token), label: String(vs[v].name) + ' · ' + String(vs[v].format || '') })
+          }
+          var cur = typeof sel[p.def.pick] === 'string' ? sel[p.def.pick] : ''
+          // 增量回填：选项集合没变就不重建 DOM，只改 value —— 切模式/重开面板不再卡。
+          fillSelect(p.sel, opts, cur, p.def.empty, el)
+          p.status.textContent = opts.length > 0
+            ? '共 ' + opts.length + ' 个本机可用候选'
+            : (p.def.src === 'unet' ? 'ComfyUI 在线但没探到主模型文件（models/unet 为空？）' : '暂无候选（未探测到节点 / 未拖入音频样本）')
+        })
+      }
+      // 真正发请求：成功且在线才写两层缓存（内存 + localStorage），失败/离线不缓存留重试。
+      // silent=true 表示命中持久化缓存后的后台刷新：失败不覆盖已显示的好状态。
+      function fetchModelOptions(silent) {
+        fetch(MODEL_OPTIONS_PATH, { cache: 'no-store' })
+          .then(function (r) { return r.json() })
+          .then(function (j) {
+            if (j && j.ok === true && j.online === true) {
+              modelOptionsCache = modelOptionsEntry(j, Date.now())
+              savePersistedModels(getStorage(), j, Date.now())
+            }
+            applyModelOptions(j)
+          })
+          .catch(function (err) {
+            if (!silent) {
+              modelPicks.forEach(function (p) { p.status.textContent = '模型清单读取失败：' + (err && err.message ? err.message : err) })
+            }
+          })
+      }
+      // ★ 命中内存 TTL 缓存：瞬时回填，零请求。
+      if (modelOptionsFresh(modelOptionsCache, Date.now(), MODEL_OPTIONS_TTL_MS)) {
+        applyModelOptions(modelOptionsCache.data)
+      } else {
+        // ★ 二次报障根治：内存缓存刷新页面即清零 ⇒ 先读 localStorage 持久化清单，
+        //   命中就**同步**回填（下拉立刻能选，不再是白条等 3.4MB objectInfo），再后台静默刷新。
+        var persisted = loadPersistedModels(getStorage(), Date.now(), MODEL_OPTIONS_TTL_MS)
+        if (persisted) {
+          modelOptionsCache = modelOptionsEntry(persisted, Date.now())
+          applyModelOptions(persisted)
+          fetchModelOptions(true)
+        } else {
+          // 首次安装 / 缓存过期：放一个禁用占位，不让 select 完全空白；然后拉真清单。
+          modelPicks.forEach(function (p) { p.sel.appendChild(placeholderOption('（正在读取本机清单…）', el)) })
+          fetchModelOptions(false)
+        }
+      }
+    }
+
+    // ★ 2026-11-16 PPT 模式专属卡：deckTitle + slidesJson → POST /api/qwen-paint/pptx
+    //   （轻量档纯 JS 零 GPU，路由已存在）。解析失败先在前端如实拦下。
+    if (plan.cards && plan.cards.ppt === true) {
+      var pc = card('PPT 大纲（轻量档 · 零 GPU）', 'cp-ppt-card')
+      var pt = el('input', 'cp-ppt-title')
+      pt.type = 'text'
+      pt.placeholder = 'PPT 标题，例：季度汇报'
+      var pj = el('textarea', 'cp-textarea cp-ppt-slides')
+      pj.rows = 6
+      pj.placeholder = '[{"title":"章节一","bullets":["要点 A","要点 B"]}]'
+      var pStatus = el('p', 'cp-hint cp-ppt-status', '大纲级草稿；排版美化请走标准/质量档。')
+      var pBtn = el('button', 'cp-ref-search', '生成 PPTX')
+      pBtn.type = 'button'
+      pBtn.addEventListener('click', function () {
+        var slides = []
+        try { slides = JSON.parse(String(pj.value || '[]')) } catch (e) {
+          pStatus.textContent = 'slides JSON 解析失败：' + (e && e.message ? e.message : e) + '（未发起请求）'
+          return
+        }
+        pStatus.textContent = '正在生成 PPTX（纯 JS）…'
+        fetch('api/qwen-paint/pptx', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ title: String(pt.value || '').trim(), slides: slides }),
+        })
+          .then(function (r) { return r.json() })
+          .then(function (j) {
+            pStatus.textContent = j && j.ok === true
+              ? '已生成：' + (j.output_path || '') + '（' + (j.slides || 0) + ' 页 / ' + (j.bytes || 0) + ' B）'
+              : '未生成：' + ((j && j.reason) || '未知原因')
+          })
+          .catch(function (err) { pStatus.textContent = '请求失败：' + (err && err.message ? err.message : err) })
+      })
+      pc.appendChild(el('div', 'cp-field-label', 'PPT 标题'))
+      pc.appendChild(pt)
+      pc.appendChild(el('div', 'cp-field-label', '幻灯片大纲 JSON [{title,bullets[]}]'))
+      pc.appendChild(pj)
+      pc.appendChild(pBtn)
+      pc.appendChild(pStatus)
+      panel.appendChild(pc)
+    }
+
     var note = el('p', 'cp-note', '')
     panel.appendChild(note)
 
@@ -771,7 +1079,8 @@
     common.appendChild(textField('负面提示词', 'negative', {
       hint: '不想出现的东西：blurry、多余文字、畸变等。留空用模型默认。',
     }))
-    panel.appendChild(common)
+    // ★ 2026-11-16：卡片按 modePlans.cards 门控（false = 整卡不渲染，PPT 模式不显示画幅/速度）。
+    if (!(plan.cards && plan.cards.common === false)) panel.appendChild(common)
 
     // ★ 视频参数组：帧数与帧率**真接** generate_video（见 lib/video-workflow.js）。
     //   ★ 差异化：生图模式**整卡不渲染**（挂着三个 disabled 滑块只会让人以为
@@ -815,6 +1124,11 @@
     var library = card('素材库', 'cp-library')
     library.appendChild(el('div', 'cp-field-label', '设计风格'))
     var styleSel = el('select', 'cp-select')
+    // ★ 2026-11-16 P1：创建时零 option + 空 catch = 请求失败永久白条。先放禁用占位。
+    var stylePlace = el('option', null, '（正在读取素材库…）')
+    stylePlace.value = ''
+    stylePlace.disabled = true
+    styleSel.appendChild(stylePlace)
     styleSel.addEventListener('change', function () { saveLibrary({ selected: styleSel.value }) })
     library.appendChild(styleSel)
     library.appendChild(el('div', 'cp-field-label', '用户指令（每次生成都带上）'))
@@ -826,7 +1140,7 @@
     library.appendChild(el('div', 'cp-field-label', '可装载的技能（请装载美术、画风、配色相关的 skill）'))
     library.appendChild(el('div', 'cp-skills'))
     library.appendChild(el('p', 'cp-hint cp-library-hint', ''))
-    panel.appendChild(library)
+    if (!(plan.cards && plan.cards.library === false)) panel.appendChild(library)
 
     // ★ 角色参考：独立卡片，刻意不用 .cp-field / checkbox —— 面板回归锁的是
     //   「13 个 .cp-field + 6 个 disabled input」，新 UI 不能挤进那套计数里。
@@ -915,7 +1229,7 @@
     reference.appendChild(refBtn)
     reference.appendChild(el('p', 'cp-hint cp-ref-result', ''))
     reference.appendChild(el('p', 'cp-hint cp-ref-candidates', ''))
-    panel.appendChild(reference)
+    if (!(plan.cards && plan.cards.reference === false)) panel.appendChild(reference)
 
     var adv = el('details', 'cp-card cp-adv')
     adv.appendChild(el('summary', null, '高级设置'))
@@ -942,10 +1256,10 @@
       body.appendChild(field(d[0], d[1], d[2]))
     })
     adv.appendChild(body)
-    panel.appendChild(adv)
+    if (!(plan.cards && plan.cards.advanced === false)) panel.appendChild(adv)
 
     var foot = el('div', 'cp-foot')
-    var status = el('span', 'cp-status', '就绪')
+    var status = el('span', 'cp-status', '正在加载面板…')
     var reset = el('button', 'cp-reset', '恢复默认')
     reset.type = 'button'
     reset.addEventListener('click', function () {
@@ -1089,7 +1403,7 @@
    *   「悬浮球放到右边不要变成一个更圆的球，跟以前一样就好」。
    *   ⇒ 删除 geomPanelSide 的左右翻边，改 geomPanelAbove：
    *     · 面板右缘恒等于浮标右缘；浮标贴右时两者右缘都是 vpW ⇒ 与 DSH 右边框同一条线；
-   *     · 面板底缘恒等于浮标上缘（上方优先；空间不足只压缩面板高度，绝不翻到下方）；
+   *     · 面板底缘 = 浮标上缘 - 6px 呼吸空隙（上方优先；空间不足只压缩面板高度，绝不翻到下方）；
    *     · 浮标尺寸不再随定位方式变化（CSS width:max-content + white-space:nowrap），
    *       原来的圆角 / padding / min-height 一个都不改。
    *   · 轻吸附：只有离边 ≤24px 才贴边，中间保留用户的微调位置；
@@ -1097,6 +1411,8 @@
    * 全部按数字算，不碰 DOM，因此离线可测；setFabPos / syncPanelPos 只负责读写 style。
    */
   var EDGE_GAP = 0
+  // ★ 2026-11-16 用户拍板：展开面板与悬浮球之间留一点呼吸空隙（仅竖向；右缘贴边保持零空隙）。
+  var GAP_ABOVE = 6
   function geomPanelWidth(vpW) {
     return Math.min(392, Math.max(EDGE_GAP, vpW))
   }
@@ -1158,7 +1474,7 @@
     }
     return { left: g.left, top: g.top, maxLeft: g.maxLeft, pw: g.pw }
   }
-  /** 面板恒在浮标正上方：右缘对齐浮标右缘（贴右时与 DSH 右边框重合），底缘压浮标上沿。 */
+  /** 面板恒在浮标正上方：右缘对齐浮标右缘（贴右时与 DSH 右边框重合），底缘 = 浮标上缘 - 6px 呼吸空隙。 */
   function syncPanelPos(fab, panel) {
     if (!panel || !panel.style) return
     var vp = vpSize(), fs = fabSize(fab)
@@ -1174,7 +1490,7 @@
       ? panel.offsetWidth : geomPanelWidth(vp.w)
     var ph = (Number.isFinite(panel.offsetHeight) && panel.offsetHeight > 0) ? panel.offsetHeight : 420
     var px = geomPanelAbove(l, fs.w, vp.w, pw)
-    var above = t - ph
+    var above = t - ph - GAP_ABOVE
     var py = Math.max(EDGE_GAP, above)
     // 上方放不下时只压缩面板高度（overflow-y:auto 可滚），绝不翻到浮标下方 / 左侧 / 右侧。
     if (above < EDGE_GAP) {
@@ -1359,9 +1675,13 @@
         wire()
         loadLabAssets()
         refreshNote()
-        loadLibrary()
-        loadReference()
-        setStatus('就绪 · ' + describe(state))
+        // ★ 2026-11-16 P2：样式库/参考策略还在路上就宣告「就绪」= 假就绪。
+        //   主体先可用，但如实标注候选仍在加载；全部落地后再收口成就绪。
+        var statusReady = '就绪 · ' + describe(state)
+        setStatus(statusReady + '（候选清单加载中…）')
+        Promise.allSettled([loadLibrary(), loadReference()]).then(function () {
+          setStatus(statusReady)
+        })
         return nodes
       })
   }
@@ -1387,6 +1707,17 @@
       aspectTicks: aspectTicks,
       buildPayload: buildPayload,
       describe: describe,
+      // ★ 2026-11-16 性能纯函数：缓存命中/下拉增量回填/轮询降频，供离线回归直调。
+      modelOptionsFresh: modelOptionsFresh,
+      modelOptionsEntry: modelOptionsEntry,
+      optionSignature: optionSignature,
+      fillSelect: fillSelect,
+      pollIntervalMs: pollIntervalMs,
+      // ★ 2026-11-16 二次报障：持久化缓存纯函数（storage 注入，离线可测）。
+      loadPersistedModels: loadPersistedModels,
+      savePersistedModels: savePersistedModels,
+      placeholderOption: placeholderOption,
+      modelOptionsStoreKey: MODEL_OPTIONS_STORE_KEY,
       tap: {
         bind: bindTap,
         fire: tapFire,

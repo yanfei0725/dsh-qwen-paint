@@ -29,6 +29,7 @@
 
   var LIST_API = 'api/qwen-paint/history'
   var STATS_API = 'api/qwen-paint/history/stats'
+  var statsCache = null
   var DEL_API = 'api/qwen-paint/history/delete'
   var TAP_UP = ['click', 'pointerup', 'mouseup', 'touchend']
   var PAGE = 20
@@ -49,6 +50,7 @@
     offset: 0,
     items: [],
     total: 0,
+    allTotal: 0, // 全量条数（stats 端点）；与筛选后的 total 分开，避免覆盖分页基数
     available: false,
     persistent: false,
     reason: '',
@@ -309,6 +311,8 @@
     if (!els.state) return
     var bits = []
     if (state.total > 0) bits.push('共 ' + state.total + ' 条')
+    var filtered = Boolean(state.keyword || state.kind || state.from || state.to)
+    if (filtered && state.allTotal > state.total) bits.push('全部 ' + state.allTotal + ' 条')
     if (state.available === false && els.state.dataset.loaded === '1') {
       bits.push('未持久化' + (state.reason ? '（' + state.reason + '）' : ''))
     }
@@ -749,6 +753,8 @@
     card.appendChild(els.state)
 
     els.list = el('div', 'hs-list')
+    // ★ 2026-11-16 P2：首帧不再空列表，先给一条明确的读取中占位。
+    els.list.appendChild(el('div', 'hs-empty', '正在读取历史记录…'))
     card.appendChild(els.list)
 
     els.pager = el('div', 'hs-pager')
@@ -775,13 +781,24 @@
     if (els.overlay.parentNode === null) document.body.appendChild(els.overlay)
     els.overlay.hidden = false
     load()
-    // fetch stats 只为顶栏「共 N 条」——失败也不影响列表（列表自己带 total）。
+    // ★ 2026-11-16 审计 P2：stats 返回的是**全量**条数，列表返回的 total 是**筛选后**条数。
+    //   旧代码用全量覆盖 state.total（分页基数）⇒ 筛选后翻页全空白；且 stats 晚于列表
+    //   返回时会触发竞态。现在两者彻底分开：allTotal 只进顶栏文案，绝不碰分页。
+    //   60s 内不重复拉（原先每次开面板都双请求），失败也不影响列表。
+    var applyStats = function (total) {
+      state.allTotal = Number(total) || 0
+      paintState('')
+    }
+    if (statsCache && Date.now() - statsCache.at < 60000) {
+      applyStats(statsCache.total)
+      return
+    }
     fetch(STATS_API, { headers: { accept: 'application/json' }, cache: 'no-store' })
       .then(function (r) { return r.json().catch(function () { return null }) })
       .then(function (j) {
         if (!j || j.ok !== true) return
-        if (Number(j.total) > state.total) { state.total = Number(j.total); paintPager() }
-        paintState('')
+        statsCache = { at: Date.now(), total: Number(j.total) || 0 }
+        applyStats(j.total)
       })
       .catch(function () { /* 汇总拿不到就用列表里的 total */ })
   }

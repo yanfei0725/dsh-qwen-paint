@@ -47,6 +47,31 @@
   background: transparent;
 }
 .dshqp-lab-sec-title { font-weight: 600; }
+
+/* ★ 2026-11-16：22 节按职责分四组折叠，降低一屏信息密度。 */
+.dshqp-lab-group {
+  border: 1px solid var(--cp-line, rgba(127, 127, 127, 0.20));
+  border-radius: 10px;
+  padding: 4px 10px 10px;
+}
+.dshqp-lab-group > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 6px 2px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--cp-accent, #4a7dff);
+  user-select: none;
+}
+.dshqp-lab-group > summary::-webkit-details-marker { display: none; }
+.dshqp-lab-group > summary::before {
+  content: '▸ ';
+  font-size: 10px;
+}
+.dshqp-lab-group[open] > summary::before { content: '▾ '; }
+.dshqp-lab-group > .dshqp-lab-sec { margin-top: 8px; }
+[data-dshqp-lab-theme="dark"] .dshqp-lab-group { border-color: rgba(255, 255, 255, 0.16); }
 .dshqp-lab-body { display: flex; flex-direction: column; gap: 8px; }
 .dshqp-lab-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .dshqp-lab-btn {

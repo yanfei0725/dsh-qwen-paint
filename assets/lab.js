@@ -30,6 +30,28 @@
   var tapRegistry = []
   var fallbackInstalled = false
 
+  // ★ 2026-11-16 UI 收敛：22 个 section 按职责归入四组折叠，避免一屏糊成一片。
+  //   分组只按标题关键词判定（纯函数，可离线测），不改任何端点/业务代码。
+  var LAB_GROUPS = [
+    { id: 'diag', label: '诊断 · 本机状态', open: true },
+    { id: 'tool', label: '工具 · 转换与编辑', open: true },
+    { id: 'ops', label: '运维 · 队列与资源', open: false },
+    { id: 'voice', label: '语音 · 后端与音色', open: false },
+  ]
+  // 顺序敏感：先匹配到的组胜出。未命中一律落 tool（兜底，不丢 section）。
+  var GROUP_RULES = [
+    ['voice', /音色|TTS|语音|ASR|字幕|BGM|缝合|旁白/u],
+    ['ops', /队列|显存|Worker|DAG|工作流/u],
+    ['diag', /doctor|健康检查|加速链|配置矛盾|契约|ETA|结构化日志|诊断/u],
+  ]
+  function labGroupOf(title) {
+    var t = String(title ?? '')
+    for (var i = 0; i < GROUP_RULES.length; i += 1) {
+      if (GROUP_RULES[i][1].test(t)) return GROUP_RULES[i][0]
+    }
+    return 'tool'
+  }
+
   function el(tag, cls, text) {
     var n = document.createElement(tag)
     if (cls) n.className = cls
@@ -132,6 +154,10 @@
   var els = {}
   var doctorOpen = false
   var doctorLoaded = false
+  // ★ 2026-11-16 性能：panel.js 切模式 rebuild() 会反复 mountInto()，
+  //   旧代码每次都拉 /health ⇒ 一次切模式多次请求。简短结论首次挂载拉一次即可，
+  //   用户点「刷新简略」或 window.DshQpLab.refresh() 仍可显式重拉。
+  var briefLoaded = false
 
   function doctorBrief(health) {
     if (!health || typeof health !== 'object') return 'doctor：未检测到健康检查结论'
@@ -140,9 +166,25 @@
     return 'doctor：健康检查未给出结论'
   }
 
-  function loadDoctorBrief() {
+  var briefRetryTimer = null
+  function loadDoctorBrief(force) {
+    // ★ 2026-11-16 P2：旧代码请求前就置 briefLoaded=true，失败后永不重试；
+    //   改成只在成功时锁定，失败显示错误态并延迟自动重试一次。
+    if (briefLoaded && force !== true && force !== 'retry') return Promise.resolve(null)
+    if (briefRetryTimer !== null) { clearTimeout(briefRetryTimer); briefRetryTimer = null }
     return request('health').then(function (j) {
+      briefLoaded = true
       if (els.doctorLine) els.doctorLine.textContent = doctorBrief(j)
+      return j
+    }).catch(function () {
+      if (els.doctorLine) els.doctorLine.textContent = 'doctor：本机健康检查暂时取不到（稍后自动重试）'
+      if (force !== 'retry') {
+        briefRetryTimer = setTimeout(function () {
+          briefRetryTimer = null
+          loadDoctorBrief('retry')
+        }, 3000)
+      }
+      return null
     })
   }
   function loadDoctorDetail() {
@@ -169,6 +211,41 @@
     sec.appendChild(result)
     emptyResult(result, '点上面的按钮查看结果。')
     return { sec: sec, row: row, body: body, result: result }
+  }
+
+  /**
+   * 把 box 直属的 section 移进四组 <details>。纯 DOM 移动：createElement + appendChild，
+   * 不拼原始 HTML 串、不新建/复制任何业务节点 ⇒ 端点字面量与事件绑定逐字不变。
+   * 幂等：重复调用时若已有分组容器，直接返回（mountInto 可能被多次触发）。
+   */
+  function groupSections(box) {
+    if (!box || box.__labGrouped === true) return box
+    var secs = []
+    for (var i = 0; i < box.children.length; i += 1) {
+      var node = box.children[i]
+      if (node.className && String(node.className).indexOf('dshqp-lab-sec') >= 0) secs.push(node)
+    }
+    if (secs.length === 0) return box
+    var buckets = {}
+    LAB_GROUPS.forEach(function (g) { buckets[g.id] = [] })
+    secs.forEach(function (sec) {
+      var titleNode = sec.querySelector ? sec.querySelector('.dshqp-lab-sec-title') : null
+      var title = titleNode ? titleNode.textContent : ''
+      var g = labGroupOf(title)
+      sec.setAttribute('data-lab-group', g)
+      buckets[g].push(sec)
+    })
+    LAB_GROUPS.forEach(function (g) {
+      var wrap = el('details', 'dshqp-lab-group')
+      wrap.setAttribute('data-lab-group', g.id)
+      if (g.open) wrap.setAttribute('open', '')
+      var sum = el('summary', 'dshqp-lab-group-title', g.label + '（' + buckets[g.id].length + '）')
+      wrap.appendChild(sum)
+      buckets[g.id].forEach(function (sec) { wrap.appendChild(sec) })
+      box.appendChild(wrap)
+    })
+    box.__labGrouped = true
+    return box
   }
 
   function button(labelText, ghost, fn) {
@@ -230,7 +307,7 @@
       }
     })
     doctor.row.appendChild(els.doctorToggle)
-    doctor.row.appendChild(button('刷新简略', true, function () { loadDoctorBrief() }))
+    doctor.row.appendChild(button('刷新简略', true, function () { loadDoctorBrief(true) }))
     box.appendChild(doctor.sec)
 
     /* ---- 加速链：缓存 + TTS + 注意力/编译后端（★ 卡片常驻显示两个后端，不再藏在按钮后面） ---- */
@@ -375,6 +452,73 @@
       }).then(function (j) { renderResult(media.result, j) })
     }))
     box.appendChild(media.sec)
+
+    /* ---- 媒体后处理（2026-11-16 内置最小实现）：音频后处理 / 无模型抠图 / 中置相消声源分离。
+       纯 ffmpeg 零模型零下载；未探测到 ffmpeg 时端点如实回参数预览与降级原因。 ---- */
+    var fx = makeSection('媒体后处理 · 音频增强 / 抠图 / 声源分离')
+    var fxTool = labeledInput('工具（enhance_audio / cutout_image / split_audio）', 'enhance_audio')
+    var fxSrc = labeledInput('source（公布目录内的文件名或路径）', 'a.mp3')
+    var fxTgt = labeledInput('target / 抠图也可填（可留空自动命名）', 'a_enhanced.m4a')
+    var fxPreset = labeledInput('preset（voice/music/podcast；抠图填 key_color）', 'voice')
+    fx.body.appendChild(fxTool.wrap)
+    fx.body.appendChild(fxSrc.wrap)
+    fx.body.appendChild(fxTgt.wrap)
+    fx.body.appendChild(fxPreset.wrap)
+    fx.row.appendChild(button('查看能力', true, function () {
+      emptyResult(fx.result, '正在读取媒体后处理能力…')
+      request('media-fx/capabilities').then(function (j) { renderResult(fx.result, j) })
+    }))
+    fx.row.appendChild(button('执行', false, function () {
+      var tool = String(fxTool.input.value || '').trim()
+      var opt = String(fxPreset.input.value || '').trim()
+      var body = { source: String(fxSrc.input.value || '').trim() }
+      var tgt = String(fxTgt.input.value || '').trim()
+      var reqOpt = { method: 'POST', headers: { 'content-type': 'application/json' } }
+      // 三个端点写成字面量调用（不拼变量）：test-gif 的端点白名单能静态逐字看到，判据不放宽。
+      if (tool === 'cutout_image') {
+        if (tgt) body.target = tgt
+        if (opt) body.key_color = opt
+        reqOpt.body = JSON.stringify(body)
+        emptyResult(fx.result, '正在请求' + tool + '…')
+        request('cutout/image', reqOpt).then(function (j) { renderResult(fx.result, j) })
+      } else if (tool === 'split_audio') {
+        if (tgt) body.vocals_target = tgt
+        reqOpt.body = JSON.stringify(body)
+        emptyResult(fx.result, '正在请求' + tool + '…')
+        request('split/audio', reqOpt).then(function (j) { renderResult(fx.result, j) })
+      } else {
+        if (tgt) body.target = tgt
+        if (opt) body.preset = opt
+        reqOpt.body = JSON.stringify(body)
+        emptyResult(fx.result, '正在请求' + tool + '…')
+        request('enhance/audio', reqOpt).then(function (j) { renderResult(fx.result, j) })
+      }
+    }))
+    box.appendChild(fx.sec)
+
+    /* ---- 音频转文字（2026-11-16）：复用 asr-client 的 transcribeAudio。
+       插件不内置/不代装 ASR 运行时；没配 asrUrl 就回自检步骤，不假装能转。 ---- */
+    var tr = makeSection('音频转文字 · ASR 字幕')
+    var trAudio = labeledInput('audio（出图目录内音频文件名或路径）', 'narration.mp3')
+    var trFmt = labeledInput('format（json / srt / vtt）', 'json')
+    tr.body.appendChild(trAudio.wrap)
+    tr.body.appendChild(trFmt.wrap)
+    tr.row.appendChild(button('查看 ASR 能力', true, function () {
+      emptyResult(tr.result, '正在读取 ASR 配置…')
+      request('audio/transcribe/capabilities').then(function (j) { renderResult(tr.result, j) })
+    }))
+    tr.row.appendChild(button('转文字', false, function () {
+      var body = {
+        audio: String(trAudio.input.value || '').trim(),
+        format: String(trFmt.input.value || 'json').trim() || 'json',
+      }
+      emptyResult(tr.result, '正在转写…')
+      // 字面量端点（test-gif 静态白名单可逐字审计）。
+      request('audio/transcribe', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+      }).then(function (j) { renderResult(tr.result, j) })
+    }))
+    box.appendChild(tr.sec)
 
     /* ---- 队列 ---- */
     var queue = makeSection('队列 · 任务状态')
@@ -681,6 +825,46 @@
     }))
     box.appendChild(vz.sec)
 
+    /* ---- 本机 ASR 状态（faster-whisper 等，零新路径） ---- */
+    var as = makeSection('本机 ASR · faster-whisper 等（asrUrl 指过来即接通字幕链路）')
+    as.row.appendChild(button('查看 ASR 状态', true, function () {
+      emptyResult(as.result, '正在探测本机 ASR…')
+      request('asr/status').then(function (j) { renderResult(as.result, j) })
+    }))
+    box.appendChild(as.sec)
+
+    /* ---- 轻量缝合：旁白 + BGM ducking + SRT（纯 ffmpeg，显存 0） ---- */
+    var st = makeSection('轻量缝合 · 旁白时间轴 + BGM ducking + SRT')
+    var stItem = labeledInput('旁白 JSON [{file,text?,duration_ms?}]', '[{"file":"a.wav","text":"你好"}]')
+    var stBgm = labeledInput('bgm（可空）', 'bgm.wav')
+    var stTgt = labeledInput('target（输出音频）', 'mix.m4a')
+    var stSrt = labeledInput('srt_target（可空）', 'mix.srt')
+    st.body.appendChild(stItem.wrap)
+    st.body.appendChild(stBgm.wrap)
+    st.body.appendChild(stTgt.wrap)
+    st.body.appendChild(stSrt.wrap)
+    st.row.appendChild(button('查看能力', true, function () {
+      emptyResult(st.result, '正在读取缝合能力…')
+      request('av/stitch/capabilities').then(function (j) { renderResult(st.result, j) })
+    }))
+    st.row.appendChild(button('执行缝合', false, function () {
+      emptyResult(st.result, '正在缝合（ffmpeg 纯 CPU）…')
+      var items = []
+      try { items = JSON.parse(String(stItem.input.value || '[]')) } catch (e) { items = [] }
+      request('av/stitch', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          items: items,
+          bgm: String(stBgm.input.value || '').trim(),
+          target: String(stTgt.input.value || '').trim(),
+          srt_target: String(stSrt.input.value || '').trim(),
+        }),
+      }).then(function (j) { renderResult(st.result, j) })
+    }))
+    box.appendChild(st.sec)
+
+    /* ---- 轻量档 PPTX 已升为面板第四模式（panel.js 的 PPT 卡），实验室不再重复放一份 ---- */
+
     /* ---- Worker：环境隔离 / 启停 / 空闲回收 / 显存预检 ---- */
     var wk = makeSection('独立 Worker · 环境隔离 / 显存预检')
     wk.body.appendChild(el('div', 'dshqp-lab-note',
@@ -715,6 +899,8 @@
     }))
     box.appendChild(wk.sec)
 
+    // ★ 2026-11-16：全部 section 建好后按职责分组折叠（纯 DOM 移动，不动业务逻辑）。
+    groupSections(box)
     return box
   }
 
@@ -767,10 +953,15 @@
 
   window.DshQpLab = {
     __lab: true,
+    api: {
+      labGroupOf: labGroupOf,
+      groupSections: groupSections,
+      LAB_GROUPS: LAB_GROUPS,
+    },
     mountInto: mountInto,
     // 兼容旧调用名，但语义已是「嵌进插槽」而非「创建浮层」。
     attach: function (host) { return mountInto(host) },
-    refresh: function () { loadDoctorBrief() },
+    refresh: function () { return loadDoctorBrief(true) },
     isDoctorDetailOpen: function () { return doctorOpen === true },
     isAttached: function () { return Boolean(els.sections && els.sections.parentNode) },
   }

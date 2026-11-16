@@ -176,11 +176,19 @@ console.log('=== 5. 外置接线与体积红线 ===')
     '/api/qwen-paint/music/models', '/api/qwen-paint/music/generate',
     '/api/qwen-paint/upscale/manual/capabilities', '/api/qwen-paint/upscale/manual',
     '/api/qwen-paint/vectorize', '/api/qwen-paint/vectorize/capabilities',
+    '/api/qwen-paint/asr/status',
+    '/api/qwen-paint/av/stitch', '/api/qwen-paint/av/stitch/capabilities',
+    '/api/qwen-paint/pptx',
     '/api/qwen-paint/workers', '/api/qwen-paint/workers/vram',
     '/api/qwen-paint/accel/backends',
     // ★ 2026-11-15 收尾：三个孤儿模块接线后的端点（口语入口 / 参考图色调 / 资源需求声明）
     '/api/qwen-paint/entry/aliases', '/api/qwen-paint/tone/extract',
     '/api/qwen-paint/run/resources',
+    // ★ 2026-11-16 内置最小实现：媒体后处理四端点（能力探测 + 三执行）
+    '/api/qwen-paint/media-fx/capabilities', '/api/qwen-paint/enhance/audio',
+    '/api/qwen-paint/cutout/image', '/api/qwen-paint/split/audio',
+    // ★ 2026-11-16：音频转文字 2 端点。
+    '/api/qwen-paint/audio/transcribe/capabilities', '/api/qwen-paint/audio/transcribe',
   ]
   ok('★ 端点集合逐字等于白名单（新增端点必须显式登记）',
     extras.routes.map((r) => r.path).sort().join(',') === [...NEW_ROUTE_PATHS].sort().join(','),
@@ -198,7 +206,18 @@ console.log('=== 5. 外置接线与体积红线 ===')
   const sizeClient = Buffer.byteLength(read('lib/client.js'), 'utf8')
   ok('★ index.js 未爆单文件红线（262144）', sizeIndex <= 262144, '实际 ' + sizeIndex)
   ok('★ index.js 比接线前更小（拆分真的减压了）', sizeIndex < 262125, '实际 ' + sizeIndex)
-  ok('★ client.js 字节基线冻结（261467）', sizeClient === 261467, '实际 ' + sizeClient)
+  ok('★ client.js 未爆单文件红线（262144）', sizeClient <= 262144, '实际 ' + sizeClient)
+  // 旧判据锁死 ===261467；外置设计注释后合理下降，改为语义护栏：关键功能符号仍在 + 外置锚点可追溯
+  const clientSrc = read('lib/client.js')
+  ok('★ client.js 外置注释后关键功能符号仍在（防误删代码）',
+    ['openInpaintDialog', 'openWorkbench', 'openVideoTimeline', 'loadComfyPipelinePanel']
+      .every((s) => clientSrc.includes('function ' + s + '('))
+    && clientSrc.includes('PANEL_JS_ID') && clientSrc.includes('makeFlowNode'))
+  const anchors = clientSrc.match(/client-note-\d{3}/gu) ?? []
+  const docNotes = read('docs/client-design-notes.md')
+  ok('★ client.js 外置锚点逐个可追溯到文档（防注释丢失/路径错）',
+    anchors.length > 0 && anchors.every((a) => docNotes.includes('### ' + a)),
+    '锚点 ' + anchors.length + ' 个')
   const libTotal = fs.readdirSync(path.join(ROOT, 'lib'))
     .filter((f) => f.endsWith('.js'))
     .reduce((n, f) => n + fs.statSync(path.join(ROOT, 'lib', f)).size, 0)

@@ -49,6 +49,13 @@ ok('★ 三个菜单入口都接了分发',
   && CLIENT.includes("entry.kind === 'video-timeline'"))
 ok('★ 多图与单图结果下方都有可见按钮（不再只靠悬停提示）',
   CLIENT.includes('imageActionBar(p)') && CLIENT.includes('imageActionBar(filePath)'))
+// ★ 2026-11-16 UI clarity：消除「向导两义」——菜单自检项不再与图形化安装引导同名
+ok('★ 菜单自检项改名「就绪清单自检」，与图形化安装引导区分（防回退）',
+  CLIENT.includes("text: '就绪清单自检（查缺件）'")
+  && !CLIENT.includes('首次使用向导')
+  && CLIENT.includes("addGroup('自检与修复'"))
+ok('★ 就绪清单自检真接了 /wizard 端点（改名不改功能）',
+  CLIENT.includes("replace(/status\\.json$/u, 'wizard')"))
 ok('★ 圈选浮层支持「圈出要移除的东西」', CLIENT.includes("opts.mode === 'remove'"))
 ok('★ 圈选浮层有常用说法预设（不知道写什么也能点）', CLIENT.includes('dshqp-mask-presets'))
 // ★ 2026-11-13 变更：payload 多带一个可选 maskFx（蒙版精修参数）。
@@ -65,8 +72,17 @@ ok('★ 工作台是独立浮层、开窗前清残留（不碰消息树 / 不叠
   CLIENT.includes('.dshqp-wb-overlay')
   && CLIENT.includes("makeOverlay('dshqp-wb-overlay')")
   && CLIENT.includes('function makeOverlay('))
-ok('★ 三处浮层骨架真的收敛到一个 helper',
-  (CLIENT.match(/const \{ overlay, card \} = makeOverlay\(/gu) ?? []).length === 3)
+// ★ 2026-11-16：编辑台 picker 成为第 4 个浮层，也复用同一 helper。
+//   判据从「恰好 3」升级为「≥3 且编辑台 picker 在」，不再锁死数字。
+ok('★ 浮层骨架收敛到一个 helper（含编辑台 picker，防回退到手拼 className）',
+  (CLIENT.match(/const \{ overlay, card \} = makeOverlay\(/gu) ?? []).length >= 3
+  && CLIENT.includes("makeOverlay('dshqp-studio-picker')"))
+ok('★ 编辑台统一入口真接线：菜单一个 studio 项 + 分发 + picker 三能力 + 零改动原函数',
+  CLIENT.includes("{ kind: 'studio', text: '编辑台")
+  && CLIENT.includes("entry.kind === 'studio') openEditStudio()")
+  && CLIENT.includes('function openEditStudio(')
+  && ['openInpaintDialog(preselectPath', 'openWorkbench(preselectPath', 'openVideoTimeline(preselectPath']
+    .every((s) => CLIENT.includes(s)))
 ok('★ 四份 recent-images 拉取真的收敛到 fetchRecent()',
   CLIENT.includes('function fetchRecent()')
   && (CLIENT.match(/fetchRecent\(\)\s*\.then/gu) ?? []).length === 4)

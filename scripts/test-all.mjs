@@ -50,6 +50,7 @@ const SUITES = [
   // ★ v3 §15.4 第 1/3 步：ETA 方向 + 16→4 档量化 + schema JSON 桥接
   { file: 'test-mode-schema.mjs', note: 'mode-schema 契约 / ETA / schema 桥接' },
   { file: 'test-model-label.mjs', note: '模型文件名预处理（host + 前端同口径）' },
+  { file: 'test-model-options.mjs', note: '主模型候选端点 / 动态白名单 / 视频模型落盘' },
   // ★ v3 §15.4 第 2 步：控制项落地层（clamp / 速度%语义 / 落盘往返 / 优先级）
   { file: 'test-pipeline-controls.mjs', note: '控制项持久化与生效映射（pipeline-controls）' },
   // ★ v3 §15.4 第 3 步前端竖切：面板真渲染一遍（vm + 假 DOM，专抓"静态绿、一渲染就炸"）
@@ -72,6 +73,8 @@ const SUITES = [
   { file: 'test-speech-tool.mjs', note: 'generate_speech / 描述集中层 / 回包收口（假 deps，零联网零媒体）' },
   { file: 'test-pipeline-modes.mjs', note: '面板 /modes 动态可用性（vm 真跑 mount）' },
   { file: 'test-ast-split.mjs', note: 'A 线 derive-slots + C 线零依赖源码 AST 零漂移验证器' },
+  // ★ 2026-11-16 体积红线根治：注释外置减压工具（字符串状态机 / 语义注释保护 / 逐字可逆 / 幂等）
+  { file: 'test-slim-comments.mjs', note: '注释外置减压：状态机不误判字符串 / 语义注释不误删 / 零漂移可逆 / 真实源码减压达标与幂等' },
   // ★ 模型无关「角色参考」适配层 + 联网参考图硬同意门（两套都是纯 JS / 注入 fetch，不联网不派生子进程）
   //   新增测试必须登记进本清单，否则等于没写：这两套不登记就永远不会被 npm test 跑到。
   { file: 'test-reference-strategy.mjs', note: '角色参考：能力协商 / 模型无关查槽 / 零漂移 / I2V 起始帧契约' },
@@ -107,6 +110,8 @@ const SUITES = [
   // ★ 2026-11-14 第五批续：五条「诚实边界」收口（A1 契约 / D19 ASR 真通路 / E27 自校准 / B5 全覆盖 / 三模式差异化）
   { file: 'test-contract-asr-eta.mjs', note: '边界收口：契约对账全 diff.kind 与真 buildWorkflow 过契约含 turbo alternates（A1）/ ASR 真通路全分支（D19）/ 本机秒数自校准与不跨档借用（E27）/ 三模式差异化计划一致性（UI）' },
   { file: 'test-pipeline-panel.mjs', note: '控制面板行为回归（渲染 / 请求 / 禁用项 / 三模式差异化：生图隐藏视频组、混合出 TTS 卡）' },
+  // ★ 2026-11-16 UI 性能：选模型卡一下 / 渲染占资源 —— model-options TTL 缓存 / 下拉增量回填 / 轮询降频 / lab /health 懒加载（全离线 vm+假 DOM）
+  { file: 'test-ui-perf.mjs', note: 'UI 性能：model-options 缓存命中/TTL/失败不缓存 / 下拉增量回填只改 value / 轮询空列表降频 / lab health 懒加载与强制刷新 / 源码接线防孤儿' },
   { file: 'test-perf-config.mjs', note: '提示词模板（F28 渲染无残渣/无重复后缀）/ 显存与缓存档位语义（B7/B8）/ 缓存命中摘要口径（B9）/ 进度分级日志过滤（G35）/ 一键恢复默认改名不删（G34）' },
   // —— 契约 / 面板 / 步骤 ——
   { file: '_tool_contract_test.mjs', note: '工具契约' },
@@ -161,6 +166,12 @@ const SUITES = [
   { file: 'test-attention-wiring.mjs', note: '注意力与编译后端真接线：并入加速链 / 两条工作流构造路径 / 卡片常驻显示 / 本机 /object_info 真实探测 / check_acceleration 报告 / 改坏变红反向核查（全离线）' },
   // ★ 2026-11-15 收尾：三个孤儿模块（entry-alias / color-tone / creative-chain）真接进主链路
   { file: 'test-vectorize.mjs', note: '矢量化两步法：目录事实（MIT / GPL / 权威字节数 / 官方单源）/ argv 与 clamp / potrace 黑白位图限制 / 探测与执行诚实边界（未安装绝不谎称）/ 注册层与文档点名同步（全离线）' },
+  { file: 'test-blockswap.mjs', note: '极限低显存 Block 交换：目录事实（MIT / repo / 四态机制 / 不代装）/ 发现（模式匹配 + 未装如实）/ accel-chain 集成消费（低显存提示）/ 文档同步（全离线）' },
+  { file: 'test-hw-route.mjs', note: '硬件感知路由：架构解析（NVIDIA 四代 / AMD 三系 + 核显 / Intel / unknown）/ Sage 变体建议（FP8/INT8/unsupported）/ 量化内核保守提示（memory-only/unverified）/ stable-fast 跳过声明 / accel-chain 集成消费 / 文档同步（全离线）' },
+  { file: 'test-av-stitch.mjs', note: '轻量缝合：围栏 / 时间轴 / SRT（复用 subtitle-plan）/ ducking argv / ffmpeg 不可用诚实降级 / video-post 头部声明更新 / 注册层与文档点名同步（全离线假 execFile）' },
+  { file: 'test-pptx-lite.mjs', note: '轻量档 PPTX：ZIP 结构（PK 签名 / EOCD / store）/ OOXML 组成与转义 / 围栏（.pptx + 出图目录）/ 工具成功与拒绝路径 / 注册层与文档点名同步（全离线）' },
+  { file: 'test-media-fx.mjs', note: '内置最小实现：音频后处理（speechnorm/loudnorm/EQ/去齿音）/ 无模型抠图（键控+蒙版）/ 中置相消声源分离；argv 纯构建 / 双围栏 / 诚实降级 / 端点 / 七处接线孤儿扫描（全离线假执行器）' },
+  { file: 'test-transcribe.mjs', note: '音频转文字：能力探测诚实分支 / schema / 未配 ASR 先报缺件 / 路径围栏 / 成功收口白名单（不吐 key/路径）/ 端点围栏 / 七处接线孤儿扫描（全离线假 fetch）' },
   { file: 'test-vulkan-upscale.mjs', note: 'Vulkan 直跑超分：资产与许可事实（MIT / 权威字节数）/ argv 构造与逐项 clamp / 探测诚实降级 / 计划与执行边界（未安装绝不谎称）/ 文档与描述点名同步（全离线）' },
   { file: 'test-orphan-wiring.mjs', note: '孤儿模块接线：口语入口别名 / 参考图色调端点（像素上限与方法守卫）/ 时间轴·资源·数据流·产出短引用四工具 / 清单与 UI 入口同步 / 拆掉接线变红反向核查（全离线）' },
   // ★ 2026-11-16 全量审计：六套一直没进回归清单的历史测试（纯 JS / 零联网 / 零子进程，全部真绿）
@@ -174,6 +185,8 @@ const SUITES = [
   { file: '_draw_smoke_test.mjs', note: '生图链路 smoke：comfyUrl 指向必然连不上的端口，验降级路径不假装成功' },
   { file: '_intent_test.mjs', note: '生图意图判定四档语义差异 + 未知值安全回落 auto + 插件总开关' },
   { file: '_cordis_proxy_test.mjs', note: 'cordis ctx Proxy 裸读未声明服务属性（静态扫描；有 _vendor 时升级为真机加载）' },
+  // ★ 2026-11-16：白条同源 + 选模型假成功（P0/P1/P2）联动护栏
+  { file: 'test-white-bar.mjs', note: '假成功与白条：choiceResult 拒绝回传 / 权重下拉持久化缓存（真调纯函数）/ 风格下拉错误态 / 假就绪 / health 重试 / object_info 失败冷却（真跑 fetchFn）' },
   // —— 最重的一套放最后 ——
   { file: 'selftest.mjs', note: '全量自测（最重，项数最多）', heavy: true },
 ]

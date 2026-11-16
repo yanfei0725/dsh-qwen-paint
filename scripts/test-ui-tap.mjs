@@ -82,7 +82,11 @@ ok('api.tap 四个成员齐全', Boolean(tap) && typeof tap.bind === 'function' 
   && Array.isArray(tap.events) && Number.isFinite(tap.cooldownMs))
 ok('★ 四种抬起事件逐字相等（含 click）', tap && tap.events.join('|') === 'click|pointerup|mouseup|touchend', tap?.events?.join('|'))
 ok('冷却 300ms', tap?.cooldownMs === 300, String(tap?.cooldownMs))
-ok('UI_BUILD 为本轮修正版', ui?.uiBuild === '2026-11-15.5', String(ui?.uiBuild))
+// ★ 2026-11-16 判据升级：不再锁死具体 build 号（每次 UI 改动都改测试 = 测试追着代码跑）。
+//   锁「日期格式 + 不早于三段模型修复版」——真机靠它自证加载了新代码即可。
+ok('★ UI_BUILD 为日期版且不早于 2026-11-16.1（三段模型修复）',
+  /^\d{4}-\d{2}-\d{2}\.\d+$/u.test(String(ui?.uiBuild ?? ''))
+  && String(ui?.uiBuild) >= '2026-11-16.1', String(ui?.uiBuild))
 
 console.log('=== 2. 假 DOM 真派发：四事件 / 冷却 / 抑制 / 容错 ===')
 const node = makeNode()

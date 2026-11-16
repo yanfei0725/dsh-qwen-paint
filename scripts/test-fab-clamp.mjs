@@ -10,7 +10,7 @@
  * ★★ 2026-11-15 第四次纠正「展开界面直接放在悬浮球上方，不是右侧/左侧；
  *   边框对齐边框；浮标贴右不要变成更圆的球」：
  *   ⇒ geomPanelSide 左右翻边**整个删除**，改 geomPanelAbove：面板右缘 = 浮标右缘
- *     （贴右时 = vpW = DSH 右边框），底缘 = 浮标上缘；上方不足只压缩高度。
+ *     （贴右时 = vpW = DSH 右边框），底缘 = 浮标上缘 - 6px 呼吸空隙；上方不足只压缩高度。
  *   ⇒ .cp-fab 用 width:max-content + white-space:nowrap 锁死内容宽度，圆角/padding 不动。
  *   ⚠ 旧断言里 panelSide / side=left|right / 写死 8 / 1140 的都是**断言过期**
  *     （用户明确改了需求），不是改测试迁就 bug：新判据改成「精确几何等式」，
@@ -222,8 +222,9 @@ ok('★★ 浮标原有圆角 / 内边距 / 最小高度一个都没改（跟以
   && /\.cp-fab\s*\{[^}]*border-radius:\s*999px;/s.test(PANEL_CSS))
 ok('★ 源码里没有按位置改浮标圆角 / 宽高的逻辑',
   !/fab\.style\.(borderRadius|width|height)/.test(SRC))
-ok('★★ 面板底缘 = 浮标上缘（零空隙，不再翻到下方）',
-  SRC.includes('var py = Math.max(EDGE_GAP, above)') && SRC.includes('var above = t - ph'))
+ok('★★ 面板底缘 = 浮标上缘 - 6px 呼吸空隙（2026-11-16 用户拍板；不再翻到下方）',
+  SRC.includes('var py = Math.max(EDGE_GAP, above)') && SRC.includes('var above = t - ph - GAP_ABOVE')
+  && SRC.includes('var GAP_ABOVE = 6'))
 ok('★★ 面板右缘 = 浮标右缘（geomPanelAbove 用 fabLeft + fsW - pw）',
   SRC.includes('var raw = fabLeft + fsW - pw'))
 ok('★★ data-cp-panel-side 固定 above（不会再出现 left / right）',

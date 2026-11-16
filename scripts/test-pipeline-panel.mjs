@@ -133,6 +133,7 @@ const fetch = (url, init) => {
             { id: 'image', label: '生图模式', backends: ['qwen21'], deliver: 'png' },
             { id: 'video', label: '视频模式', backends: ['wan22'], deliver: 'mp4' },
             { id: 'hybrid', label: '混合模式', chain: ['image', 'tts', 'video'], deliver: 'mp4+wav' },
+            { id: 'ppt', label: 'PPT 模式', backends: ['pptx-lite'], deliver: 'pptx' },
           ],
           controls: {
             common: [
@@ -172,7 +173,19 @@ const fetch = (url, init) => {
           { id: 'image', available: true },
           { id: 'video', available: true },
           { id: 'hybrid', available: true },
+          { id: 'ppt', available: true },
         ],
+      }),
+    })
+  }
+  // ★ 2026-11-16 主模型候选端点（面板「主模型」下拉的数据源）
+  if (String(url).includes('model-options')) {
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({
+        ok: true, online: true,
+        unet: ['qwen_image_2.1_gguf.gguf', 'qwen-image-2.1.safetensors'],
+        selected: { image: '', video: '' },
       }),
     })
   }
@@ -327,9 +340,9 @@ ok('★ 面板源码里零 checkbox（防止哪天又退回原生方块）',
   SRC.indexOf("cb.type = 'checkbox'") < 0)
 
 const tabs = panelEl.querySelectorAll('.cp-tab')
-ok('三个模式 tab 都在', tabs.length === 3, String(tabs.length))
-// ★ 2026-11-14 三模式差异化：假 modes 端点放行三模式，tab 全部可点。
-ok('★ 三个模式 tab 全部可选（差异化渲染的前提是都能点进去）',
+ok('四个模式 tab 都在', tabs.length === 4, String(tabs.length))
+// ★ 2026-11-16 PPT 升第四模式：假 modes 端点放行四模式，tab 全部可点。
+ok('★ 四个模式 tab 全部可选（差异化渲染的前提是都能点进去）',
   tabs.every((t) => t.disabled !== true),
   tabs.map((t) => `${t.textContent}:${t.disabled}`).join(','))
 

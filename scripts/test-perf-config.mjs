@@ -16,7 +16,7 @@ import { makePromptTool } from '../lib/prompt-tool.js'
 import {
   CACHE_CHOICES, VRAM_CHOICES, describeCurrent, getCacheChoice, getVramChoice, planPerfChange,
 } from '../lib/perf-presets.js'
-import { CACHE_SCOPE, fetchCacheReport, summarizeCacheRun } from '../lib/cache-report.js'
+import { CACHE_SCOPE, fetchCacheReport, summarizeCacheRun, timingsFromHistory } from '../lib/cache-report.js'
 import {
   PREF_FILE, PROGRESS_MODES, configRouteTable, makeConfigHandlers,
 } from '../lib/config-endpoints.js'
@@ -245,7 +245,7 @@ console.log('\n=== 5. B9 缓存摘要 ===')
       3: { class_type: 'KSampler', inputs: {} },
       4: { class_type: 'VAEDecode', inputs: {} },
       5: { class_type: 'SaveImage', inputs: {} },
-    }, { client_id: 'x' }, ['5']],
+    }, { client_id: 'x', create_time: 997000 }, ['5']],
     status: {
       status_str: 'success', completed: true,
       messages: [
@@ -263,6 +263,22 @@ console.log('\n=== 5. B9 缓存摘要 ===')
   eq(s.cached_nodes.join(','), '1', '命中节点 id 保留')
   eq(s.executed_count, 4, '实际重算 4 个节点')
   eq(s.seconds, 12.4, '★ 用 execution_start/success 时间戳算出 12.4 秒')
+  // ★ 2026-11-16 内置最小实现：/history 真实耗时分解（官方无 timings 字段，只用存在的三个戳）
+  const tm = timingsFromHistory(rec)
+  eq(tm.total_ms, 12400, '★ total_ms = execution_success - execution_start（真实计算）')
+  eq(tm.queue_ms, 3000, '★ queue_ms = execution_start - create_time（排队等待，真实计算）')
+  eq(tm.load_ms, null, '★ load_ms 官方历史无数据 → 恒 null（不编）')
+  eq(tm.sample_ms, null, '★ sample_ms 官方历史无数据 → 恒 null（不编）')
+  eq(tm.decode_ms, null, '★ decode_ms 官方历史无数据 → 恒 null（不编）')
+  eq(s.timings.total_ms, 12400, '★ summarizeCacheRun 同时带出 timings（一次回查拿全）')
+  ok(tm.basis.includes('create_time'), 'basis 写明戳来源，可审计')
+  const tmNoExtra = timingsFromHistory({ prompt: [1, 'p', {}, {}, []],
+    status: { messages: [['execution_start', { timestamp: 100 }], ['execution_success', { timestamp: 300 }]] } })
+  eq(tmNoExtra.total_ms, 200, '无 create_time 时 total_ms 仍可算')
+  eq(tmNoExtra.queue_ms, null, '无 create_time 时 queue_ms 诚实 null')
+  const tmNull = timingsFromHistory(null)
+  ok(tmNull.total_ms === null && tmNull.queue_ms === null && tmNull.load_ms === null,
+    'null 输入不抛且五段全 null')
   ok(s.cache.present, '认出图里有 QwenImage21Cache')
   eq(`${s.cache.device}+${s.cache.dtype}`, 'cpu+int8', '★ 从图里读本轮真实档位（不是从 config 猜）')
   ok(s.note.includes('节点级缓存'), '★ note 明说口径是节点级')

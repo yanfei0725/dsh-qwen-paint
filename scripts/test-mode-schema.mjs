@@ -63,7 +63,10 @@ ok('snapshot.modes 含 image/video/hybrid',
   ['image', 'video', 'hybrid'].every((id) => snap.modes.some((m) => m.id === id)))
 ok('snapshot.speedMap 四档齐全（image/video）',
   ['image', 'video'].every((k) => SPEED_TIERS.every((t) => snap.speedMap[k][t] !== undefined)))
-ok('MODES 恰 3 个模式', MODES.length === 3)
+ok('MODES 恰 4 个模式（image/video/hybrid/ppt）',
+  MODES.length === 4 && ['image', 'video', 'hybrid', 'ppt'].every((id) => MODES.some((m) => m.id === id)))
+ok('CONTROLS.ppt 是两个文本域（deckTitle/slidesJson）',
+  (() => { const k = CONTROLS.ppt.map((c) => c.key); return k.length === 2 && k.includes('deckTitle') && k.includes('slidesJson') })())
 ok('CONTROLS.common.speedPercent 为 25..100 step5（16 档）',
   (() => { const c = CONTROLS.common.find((x) => x.key === 'speedPercent'); return !!c && c.min === 25 && c.max === 100 && c.step === 5 })())
 ok('SPEED_MAP.image/video 四档键齐',

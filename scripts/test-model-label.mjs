@@ -50,7 +50,13 @@ const hostRe = (host.match(/const PARAM_RE = (\/.+\/[a-z]*)/) ?? [])[1]
 const clientRe = (client.match(/const MODEL_PARAM_RE = (\/.+\/[a-z]*)/) ?? [])[1]
 ok('★★ 两端正则逐字一致（防止显示名漂移）', Boolean(hostRe) && hostRe === clientRe, `${hostRe} VS ${clientRe}`)
 ok('★ host 端点下发 fileLabels', idx.includes('preprocessFileLabels(caps?.files)'))
-ok('★ 前端动态下拉用 fileLabels 的干净名', client.includes('infoOf(f).clean') && client.includes('caps?.fileLabels'))
+// ★ 2026-11-16 判据升级：填充逻辑抽进 weightOptionsOf 之后，旧的字面量
+//   `infoOf(f).clean` 不再出现，但干净名 + meta 的语义仍在。锁语义，不锁写法。
+ok('★ 前端动态下拉用 fileLabels 的干净名',
+  client.includes('const labels = caps?.fileLabels ?? {}')
+  && /const infoOf = \(f\) => labels\[f\] \?\? splitModelLabelLocal\(f\)/u.test(client)
+  && /const d = info\(f\),[\s\S]{0,80}|const d = info\(f\)[\s\S]{0,80}label: d\.clean/u.test(client)
+  && client.includes('label: d.clean') && client.includes('meta: d.meta'))
 ok('★ 右侧灰字元素存在且随选择更新',
   client.includes('qwen-paint-opt-select-meta') && client.includes("metaEl.textContent = sel._metaMap"))
 ok('★ CSS 里灰字用 #6B7280、标签用 #9CA3AF',

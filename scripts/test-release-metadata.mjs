@@ -308,7 +308,7 @@ console.log('\n=== 6. ★ 2026-11-15 发布前审计补漏：时态 / 许可 / �
   ok('★ EXPECTED_TOOLS 名单可解析且与外置工具名单一致（两套名单不打架）',
     expectedTools.length >= 29 && extraTools.every((t) => expectedTools.includes(t)),
     'EXPECTED=' + expectedTools.length + ' 外置=' + extraTools.length)
-  ok('★ 两份 llms 以代码字体点名全部 29 个工具（内联工具漏写也红）',
+  ok('★ 两份 llms 以代码字体点名全部外置+内联工具（数量动态，漏写就红）',
     expectedTools.length > 0 && ['llms.txt', 'docs/llms.txt'].every((f) => {
       const s = read(f)
       return expectedTools.every((t) => s.includes('`' + t + '`'))

@@ -271,8 +271,15 @@ console.log('=== 6. 实验室前端纪律（源码断言，零 DOM / 零联网�
     'upscale/manual/capabilities', 'upscale/manual', 'workers', 'workers/vram',
     // ★ 2026-11-16：矢量化入口（显式登记，漏一个就红）。
     'vectorize/capabilities', 'vectorize',
+    'asr/status', 'av/stitch/capabilities', 'av/stitch',
+    // ★ 2026-11-16：轻量档 PPTX 升为面板第四模式（panel.js 的 PPT 卡），
+    //   lab.js 不再调用 pptx 端点 ⇒ 从 lab 白名单移除（本判据是集合逐字相等，多一个也红）。
     // ★ 2026-11-15 收尾：实验室新增「参考图色调」功能区，走本机取样端点。
     'tone/extract',
+    // ★ 2026-11-16 内置最小实现：媒体后处理 4 端点（能力探测 + 三执行）。
+    'media-fx/capabilities', 'enhance/audio', 'cutout/image', 'split/audio',
+    // ★ 2026-11-16：音频转文字 2 端点（能力探测 + 执行）。
+    'audio/transcribe/capabilities', 'audio/transcribe',
     'accel/backends']
   ok('lab.js 的 request 路径全是相对本机端点（无 / 或 http 开头）',
     reqPaths.length >= 18 && reqPaths.every((p) => !p.startsWith('/') && !p.startsWith('http')), reqPaths.join(','))

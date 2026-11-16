@@ -303,7 +303,7 @@ function runAsr() {
     ok(Object.keys(MODE_PLANS).every((k) => modeIds.has(k)), '计划只覆盖真实存在的模式')
     eq(Object.keys(MODE_PLANS).length, MODES.length, '每个模式都有计划（不许漏）')
 
-    const knownCards = new Set(['common', 'video-group', 'tts', 'library', 'reference', 'advanced'])
+    const knownCards = new Set(['common', 'video-group', 'tts', 'library', 'reference', 'advanced', 'ppt'])
     const advKeys = new Set(CONTROLS.advanced.map((d) => d.key))
     for (const [id, plan] of Object.entries(MODE_PLANS)) {
       ok(typeof plan.tagline === 'string' && plan.tagline.length >= 8, `${id} 有像样的标语`, plan.tagline)

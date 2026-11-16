@@ -193,6 +193,13 @@ const nativePlan = planReference(native, { mode: 'image', refs: ['a.png'], workf
 eq(nativePlan.applied, false, '原生编码器策略 → 零漂移，不注入节点')
 deep(nativePlan.nodePatches, [], '原生策略不产生节点补丁')
 
+// ★ 2026-11-16：Qwen Image Edit 多图参考策略（按真实节点名协商，不写死版本/步数）
+const editPlus = REFERENCE_STRATEGIES.find((s) => s.id === 'qwen-edit-plus')
+ok(Boolean(editPlus) && editPlus.note.includes('多图编辑'), '★ 编辑链策略声明多图编辑能力')
+ok(editPlus.requires.includes('TextEncodeQwenImageEditPlus'), '★ 依赖真实节点名（不是臆造的 2509 版）')
+ok(!/2509|8\s*步/.test(editPlus.note), '★ note 不写死未核实的版本号/步数（诚实边界）')
+ok(editPlus.maxRefs === 3, '编辑链槽位仍是真机的 image1…3（未夸大）')
+
 const pImg = planReference(UNIVERSAL_FALLBACK, { mode: 'image', refs: ['ref.png'], workflow: imageWorkflow() })
 eq(pImg.applied, true, '生图通用兜底可落地')
 eq(pImg.nodePatches.length, 2, '注入 LoadImage + VAEEncode 两个节点')
