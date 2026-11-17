@@ -41,6 +41,7 @@ export const KEEP_PATTERNS = Object.freeze([
   /用这张图做参考画/u,         // selftest.mjs 依赖此字面量
   /stable-diffusion\.cpp|general\.architecture/u, // ★ _review_fixes_test.mjs 依赖（删档位理由，2026-11-17 外置误伤教训）
   /绝不改动上面的门槛判定/u,     // ★ test-igpu-profiles.mjs 依赖（同上教训）
+  /2026-11-17 审计/u,            // ★ 审计留痕注释不外置：行为边界/信任边界说明必须就地可见
 ])
 
 /** 精确识别「整行都是注释」的行（0-based）：状态机排除字符串/正则里的注释记号。

@@ -11,7 +11,7 @@ import os from 'node:os'
 import path from 'node:path'
 import {
   VECTORIZE_ENGINES, VECTORIZE_ENGINE_IDS, listVectorizeEngines, resolveVectorizeEngine,
-  vectorizeExePath, buildVectorizeArgs, runVectorize, makeVectorizeTool,
+  vectorizeExePath, buildVectorizeArgs, runVectorize, makeVectorizeTool, vectorizeRouteTable,
 } from '../lib/vectorize.js'
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/u, '$1')), '..')
@@ -111,6 +111,24 @@ ok('lab UI 有矢量化入口', read('assets/lab.js').includes('vectorize'))
 ok('lib/vectorize.js 未超 DSH Store 单文件上限', fs.statSync(path.join(ROOT, 'lib', 'vectorize.js')).size <= 262144)
 ok('下载目录脚本存在且导入同一数据源', fs.existsSync(path.join(ROOT, 'scripts', 'vectorize-catalog.mjs'))
   && read('scripts/vectorize-catalog.mjs').includes('../lib/vectorize.js'))
+
+/* ---------------- §8 本机围栏（2026-11-17 审计 P1：同族补闸，防再漏） ---------------- */
+{
+  const fakeRes = () => ({ statusCode: 0, headers: {}, setHeader(k, v) { this.headers[k] = v }, end(b) { this.body = b ?? '' } })
+  const deny = vectorizeRouteTable({ isLocalRequest: () => false, outputDir: '', cfg: {} })
+  const allow = vectorizeRouteTable({ isLocalRequest: () => true, outputDir: '', cfg: {} })
+  const getCap = (t) => t.find((r) => r.method === 'GET').handler
+  const postExe = (t) => t.find((r) => r.method === 'POST').handler
+  let res = fakeRes()
+  await getCap(deny)({ method: 'GET', headers: {} }, res)
+  ok('非本机 GET capabilities → 403（引擎安装状态不外泄）', res.statusCode === 403)
+  res = fakeRes()
+  await postExe(deny)({ method: 'POST', headers: {} }, res)
+  ok('非本机 POST 执行 → 403（外部 exe 不可远程触发）', res.statusCode === 403)
+  res = fakeRes()
+  await getCap(allow)({ method: 'GET', headers: {} }, res)
+  ok('本机 GET 照常放行', res.statusCode === 200)
+}
 
 console.log(`\n=== test-vectorize：${pass} 项通过，${fail} 项失败 ===`)
 if (fail > 0) {

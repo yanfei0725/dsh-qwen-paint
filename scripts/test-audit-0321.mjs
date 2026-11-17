@@ -11,6 +11,8 @@ import path from 'node:path'
 import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { resolveAudioPath, transcribeAudio } from '../lib/asr-client.js'
+import { resolveUpscaleSourcePath } from '../lib/manual-upscale.js'
+import { resolveMediaSourcePath } from '../lib/media-convert-tool.js'
 import { TOOL_SUMMARIES } from '../lib/tool-descriptions.js'
 import { ASSET_ROUTES } from '../lib/asset-route.js'
 import { INTEGRATION_ROUTES } from '../lib/integration-state.js'
@@ -192,6 +194,35 @@ console.log('\n=== 8. B 类低风险项 ===')
   const orphan = debugs.filter((f) => !suites.includes(`'${f}'`) && !LEGACY.includes(f))
   ok('★ 历史调试脚本要么登记要么显式记账（新增未登记会红）', orphan.length === 0, orphan.join(','))
   ok('LEGACY 名单本身不虚报（每个都真实存在）', LEGACY.every((f) => fs.existsSync(path.join(ROOT, 'scripts', f))))
+}
+
+console.log('=== 2026-11-17 审计：junction 穿透围栏回归（realpath 复验） ===')
+{
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'qp-junction-'))
+  const out = path.join(base, 'out')
+  const outside = path.join(base, 'outside')
+  fs.mkdirSync(out)
+  fs.mkdirSync(outside)
+  fs.writeFileSync(path.join(outside, 'secret.png'), 'CANARY')
+  const link = path.join(out, 'link')
+  let linked = false
+  try { fs.symlinkSync(outside, link, 'junction'); linked = true }
+  catch { try { fs.symlinkSync(outside, link, 'dir'); linked = true } catch { /* 环境不允许链接 → 跳过而非误报 */ } }
+  if (linked) {
+    ok('★ ASR 围栏：junction 内文件被拒（链接目标越界）',
+      resolveAudioPath({ audioPath: path.join(link, 'secret.png'), outputDir: out }).ok === false)
+    ok('★ media-convert 输入围栏：junction 相对路径被拒',
+      resolveMediaSourcePath({ source: 'link/secret.png', outputDir: out }).ok === false)
+    ok('★ manual-upscale 源围栏：junction 绝对路径被拒',
+      resolveUpscaleSourcePath({ source: path.join(link, 'secret.png'), outputDir: out }).ok === false)
+  } else {
+    console.log('  ～ 环境不允许创建 junction/symlink，穿透回归跳过（非 FAIL）')
+  }
+  // 对照组：真实在目录内的文件照常放行（realpath 复验不误伤）
+  fs.writeFileSync(path.join(out, 'real.png'), 'OK')
+  ok('对照组：目录内真实文件照常放行',
+    resolveAudioPath({ audioPath: path.join(out, 'real.png'), outputDir: out }).ok === true)
+  try { fs.rmSync(base, { recursive: true, force: true }) } catch { /* 清理失败不影响结论 */ }
 }
 
 console.log(`\n结果：${pass} 通过 / ${fail} 失败`)

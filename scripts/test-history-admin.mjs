@@ -174,5 +174,35 @@ console.log('=== 5. 端点表与围栏 ===')
     && !JSON.stringify(r2.body).includes('TestUser') && !JSON.stringify(r2.body).includes('ENOENT'))
 }
 
+console.log('=== 2026-11-17 审计：POST 媒体类型闸 + hardDelete 不转发 body ===')
+{
+  const captured = { opts: null, id: null }
+  const admin = {
+    hardDelete: (id, opts) => { captured.id = id; captured.opts = opts; return { ok: true, affected: 1, fileRemoved: false, reason: '' } },
+    update: () => ({ ok: true, affected: 1, reason: '' }),
+  }
+  const routes = historyAdminRouteTable({
+    admin,
+    respondJson: (r, body, code) => { r.body = body; r.code = code ?? 200 },
+    isLocalRequest: (req) => req.local !== false,
+    readJsonBody: async () => ({}),
+    log: () => {},
+  })
+  const res1 = { body: null, code: null }
+  const hardDelete = routes.find((r) => r.path === '/api/qwen-paint/history/hard-delete').handler
+  await hardDelete({ local: true, method: 'POST', headers: { 'content-type': 'text/plain' } }, res1)
+  ok('★ text/plain POST → 415（旧浏览器跨站 simple request 被拒）', res1.code === 415)
+  await hardDelete({ local: true, method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' } }, res1)
+  ok('★ form-urlencoded POST → 415', res1.code === 415)
+  await hardDelete({ local: true, method: 'POST', headers: { 'content-type': 'application/json' } }, res1)
+  ok('application/json POST 放行', res1.code === 200 && res1.body.ok === true)
+  ok('★ hardDelete 收到空 options（body 里的 deleteFile/filePath 不经 HTTP 转发）',
+    captured.opts !== null && typeof captured.opts === 'object'
+    && !('deleteFile' in captured.opts) && !('filePath' in captured.opts))
+  const update = routes.find((r) => r.path === '/api/qwen-paint/history/update').handler
+  await update({ local: true, method: 'POST', headers: {} }, res1)
+  ok('无 content-type 的 POST 照旧放行（兼容既有调用/无 body 请求）', res1.code !== 415)
+}
+
 console.log(`=== test-history-admin：${pass} 项通过，${fail} 项失败 ===`)
 if (fail > 0) process.exit(1)
