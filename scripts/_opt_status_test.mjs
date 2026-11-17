@@ -548,8 +548,10 @@ console.log('\n=== 12. 界面侧：徽标可点 + 菜单入口 + 四态渲染 �
   // ★★★ 2026-10-12（用户反馈回归）：「一点它就自动把界面关了」。
   //   上一版切完开关直接 `closePanel()` ⇒ 用户看不到结果，以为开关是坏的。
   //   现在必须**原地刷新**（重新拉状态 → openPanel），面板不消失。
+  //   2026-11-18 审计：刷新路径统一走记住的 statusPath（不再硬编码 api/ 前缀），
+  //   本锁同步追踪新写法——意图不变：拉状态 → openPanel。
   assert('⑪ 切完开关**原地刷新**面板（不再"一点就关"）',
-    /fetch\('api\/qwen-paint\/status\.json'[\s\S]{0,240}openPanel\(/u.test(client))
+    /fetch\(statusPath \?\? STATUS_PATHS\[0\][\s\S]{0,240}openPanel\(/u.test(client))
 
   // ★★★ 2026-10-12 **死开关**事故回归（真事故，实测抓到的）。
   //   根因：开关的 `key` 是驼峰 `asyncOffload`，而端点监听的是全小写 `asyncoffload`；

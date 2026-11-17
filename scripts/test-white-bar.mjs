@@ -240,6 +240,19 @@ console.log('\n=== 7. 过期缓存主动清理 / 失败冷却可观测 ===')
     && CATALOG.includes('ageMs: Math.max(0, now - objectInfoCache.at)'))
 }
 
+// ★ 2026-11-18 审计修复回归锁：假成功处理回流 client.js（原只落了 panel.js 半边）。
+{
+  ok('★ client.js 开关/档位认领 choiceResult 拒绝（不再静默弹回）',
+    CLIENT.includes('const cr = ack && ack.choiceResult')
+      && CLIENT.includes("'未生效：' + (mine.reason ? mine.reason : '所选值被本机拒绝')"))
+  ok('★ client.js 状态刷新统一走记住的 statusPath（不再硬编码 api/ 前缀）',
+    !CLIENT.includes("fetch('api/qwen-paint/status.json'")
+      && CLIENT.includes('statusPath ?? STATUS_PATHS[0]')
+      && CLIENT.includes('if (res.ok) { statusPath = path; return res }'))
+  ok('★ client.js 死变量 base 已清（pickIdle/pickFlow/pickTrigger/setPreset/startComfy）',
+    (CLIENT.match(/const base = statusPath/gu) ?? []).length === 2)
+}
+
 console.log(`\n=== test-white-bar：${pass} 项通过，${fail} 项失败 ===`)
 if (fail > 0) {
   for (const f of fails) console.log('  ✗ ' + f)
