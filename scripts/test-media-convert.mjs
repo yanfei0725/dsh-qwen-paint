@@ -347,6 +347,8 @@ console.log('=== 6. 执行器：探测如实、enabled 关闭、argv 替换 ==='
   ok('enabled:false 不执行', await (async () => (await disabled.runCommand(['ffmpeg', '-i', 'a'])).ok === false)())
   ok('非法 command 直接拒绝',
     await (async () => (await exec.runCommand(null)).ok === false && (await exec.runCommand(['ffmpeg'])).ok === false)())
+  ok('★ 默认 runner 透传 timeoutMs（2026-11-18 审计：animation-kit 5min / media-fx 30min 曾被静默截成 180s）',
+    read('lib/media-exec.js').includes('Number(opts?.timeoutMs) || MEDIA_EXEC_TIMEOUT_MS'))
 }
 
 console.log('=== 7. 端点：围栏 / 能力如实 / 预设读写 ===')

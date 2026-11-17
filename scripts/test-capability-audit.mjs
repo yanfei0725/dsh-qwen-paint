@@ -93,6 +93,8 @@ console.log('=== 1. 注册层 / 端点目录 / Agent 指引（三处联动） ==
     String(guideRes.body && guideRes.body.endpoints && guideRes.body.endpoints.length))
   ok('lab.js 有三个新入口', ['vram-budget', 'events', 'config/conflicts']
     .every((p) => read('assets/lab.js').includes("request('" + p + "')")))
+  ok('★ lab.js request 链单次解析（cnet 双 .json() 事故回归锁，2026-11-18）',
+    !read('assets/lab.js').includes('.then(function (r) { return r.json() })'))
 }
 
 console.log('=== 2. 显存预算：MB→GB 档位错配修复（真 bug） ===')

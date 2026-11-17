@@ -630,7 +630,10 @@
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ path: p, type: String(prepType.value || 'canny') }),
-      }).then(function (r) { return r.json() }).then(function (j) {
+      // ★ 2026-11-18 审计修复：request() 内部已 r.json() 返回纯对象，这里再调一次必抛
+      //   TypeError → 永远渲染"预处理请求失败"（1.1.0 引入的手误，预览图分支是死代码）。
+      //   与本文件其余 20+ 个 request 调用点对齐：单次解析。
+      }).then(function (j) {
         renderResult(prep.result, j)
         if (j && j.ok && j.preview_url) {
           var img = el('img', '')
