@@ -220,12 +220,12 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 
 ### ★ 联动护栏与回归
 - `test-tts-lowlatency.mjs` 扩展两段式规划、首段回调时序、`progress.ttsLive`、面板播放与 file MIME 断言，并做「改坏三处 → 精确变红 → 逐字恢复 md5 一致」反向核查；`test-ui-perf.mjs` 同步 build 断言。
-- 全量回归 **110 套，各套项全绿**；`lib/index.js` **226,134 B / 上限 262,144 B，余量 36,010 B**；体积曾因本版超 2,645 B，按纪律外置 4 个文件头注释到 `docs/tts-early-audio-design-notes.md`（逐字留锚点）后守卫恢复通过。2026-11-17 全量审计整改（安全修复 + 测试扩展）后按真实值回填。
+- 全量回归 **110 套，各套项全绿**；`lib/index.js` **226,150 B / 上限 262,144 B，余量 35,994 B**；体积曾因本版超 2,645 B，按纪律外置 4 个文件头注释到 `docs/tts-early-audio-design-notes.md`（逐字留锚点）后守卫恢复通过。2026-11-17 全量审计整改（安全修复 + 测试扩展）后按真实值回填。
 
 ### 文档
 - `package.json` / `meta.description` / README 首段 / 两份 llms 首段 / `pyproject.toml` / `docs/index.html` / `给DSH安装的话.md` 全部同步到 1.1.1，`scripts/test-release-metadata.mjs` 一处改、多处一起校验。
 - 两份 llms 以代码字体点名全部工具与端点；`TOOL_SUMMARIES` / `agent-guide` / 端点目录保持同步。
-- 当前 **136 个 `lib/*.js`** / 合计 **2,038,066 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径；Windows 工作树受 `core.autocrlf` 影响略高。2026-11-17 全量审计：config.js / client.js 纯设计注释外置到 docs（余量 550 B → 76 KB）；2026-11-18 第二轮整改后余量 57.7 KB）。；2026-11-18 第二轮整改后余量 60.2 KB）。；2026-11-18 第二轮整改后余量 62.4 KB）。；2026-11-18 第二轮整改（job-queue 三件套等）后余量 64.5 KB）。
+- 当前 **136 个 `lib/*.js`** / 合计 **2,038,715 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径；Windows 工作树受 `core.autocrlf` 影响略高。2026-11-17 全量审计：config.js / client.js 纯设计注释外置到 docs，余量 550 B → 76 KB；2026-11-18 第二轮整改后余量 57.1 KB）。
 - 真机自证清单（如实列为未完成）：DSH 宿主启动后刷新页面 hover 自证 `UI 2026-11-17.2`、开面板跑 `lowLatencyChunks:true` 听首段是否先播、PPT 加速链档位按钮显示、`smoke.mjs --submit` 真出图、layout 中文可见性、8 GB 核显速度。
 
 ## 1.1.0 更新说明

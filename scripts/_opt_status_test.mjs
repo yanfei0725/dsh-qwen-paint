@@ -287,7 +287,9 @@ console.log('\n=== 10. 立即报错：致命日志识别（不等 45 秒）★ =
     assert('★ 启动中：failed=false', mid.failed === false)
 
     // ③ **核心保证：45 秒到点后绝不再报 starting**（这就是"永远卡在启动中"的根治）
-    L.phase = 'starting'; L.startedAt = Date.now() - (I.LAUNCH_TIMEOUT_MS + 1000); L.error = ''
+    //   2026-11-18 审计：超时判断改用单调钟 startedMono（hipfire NTP 回拨教训），
+    //   本夹具同步操纵新字段。
+    L.phase = 'starting'; L.startedMono = performance.now() - (I.LAUNCH_TIMEOUT_MS + 1000); L.error = ''
     const over = I.launchView(false)
     assert('★ 超时后 starting=false（不会再无限"启动中"）', over.starting === false)
 
