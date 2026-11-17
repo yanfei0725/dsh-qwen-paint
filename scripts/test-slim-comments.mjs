@@ -7,7 +7,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { KEEP_PATTERNS, commentOnlyLines, commentBlocks, buildPlan } from './slim-comments.mjs'
+import { KEEP_PATTERNS, commentOnlyLines, commentBlocks, buildPlan, targetOpts, nextAnchorNumber } from './slim-comments.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const src = (p) => readFileSync(path.join(ROOT, p), 'utf8')
@@ -100,6 +100,62 @@ ok('★ 语义注释仍在真实源码中（防止减压误删功能注释）', 
   for (const needle of ['看不到用户消息']) {
     assert.ok(real.includes(needle), '真实源码缺少语义注释: ' + needle)
   }
+})
+
+ok('★ --file 泛化：opts 指向 client.js 时锚点/文档路径同步切换', () => {
+  const long = Array.from({ length: 20 }, (_, i) => ' * 纯设计论证第 ' + i + ' 行说明').join('\n')
+  const s = 'export const a = 1\n\n/**\n' + long + '\n */\n\nconst b = 2\n'
+  const p = buildPlan(s, 400, targetOpts('lib/client.js'))
+  assert.equal(p.ok, true)
+  assert.ok(p.savedBytes > 0)
+  assert.ok(p.out.includes('设计说明已外置 → docs/client-design-notes.md#client-note-001'))
+  assert.ok(p.docText.includes('client-note-001'))
+  assert.ok(p.docText.includes('原 lib/client.js L'))
+})
+
+ok('★ 默认 opts 与历史行为逐字一致（index 锚点/文档路径不变）', () => {
+  const long = Array.from({ length: 20 }, (_, i) => ' * 纯设计论证第 ' + i + ' 行说明').join('\n')
+  const s = 'export const a = 1\n\n/**\n' + long + '\n */\n\nconst b = 2\n'
+  const p = buildPlan(s)
+  assert.ok(p.out.includes('设计说明已外置 → docs/index-design-notes.md#index-note-001'))
+  assert.ok(p.docText.includes('index-note-001'))
+})
+
+ok('★ 锚点编号接续：真实 client.js 新块从已有最大号+1 开始（不重号）', () => {
+  const next = nextAnchorNumber('lib/client.js')
+  const doc = src('docs/client-design-notes.md')
+  const used = [...doc.matchAll(/client-note-(\d{3,})/gu)].map((m) => Number(m[1]))
+  assert.ok(used.length >= 20, '已有锚点应至少 20 个: ' + used.length)
+  assert.equal(next, Math.max(...used) + 1, '接续号必须是文档最大号+1')
+})
+
+ok('★ 真实 client.js / config.js 已减压到无可外置块（幂等）', () => {
+  for (const f of ['lib/client.js', 'lib/config.js']) {
+    const p = buildPlan(src(f), 400, targetOpts(f))
+    assert.equal(p.ok, true, f + ' 零漂移自检失败')
+    assert.equal(p.picked.length, 0, f + ' 仍有可外置块，说明上次减压没做完')
+  }
+})
+
+ok('★ 正则字面量不弄瞎状态机（config.js 事故复现）：/** 照常识别', () => {
+  const s = "const re = /[\"']/\n/**\n * 设计论证一行又一行\n */\nconst x = 1\n"
+  const marks = commentOnlyLines(s.split('\n'))
+  assert.equal(marks.has(1), true, '/** 应识别为注释行（正则里的引号不得卡死状态机）')
+  assert.equal(marks.has(2), true)
+  assert.equal(marks.has(3), true)
+  const p = buildPlan(s)
+  assert.equal(p.ok, true)
+  assert.equal(p.picked.length, 0, '短 JSDoc 不外置，更不许半块外置')
+})
+
+ok('★ 长 JSDoc 紧跟正则字面量：整块（含 /** 与 */）外置，不留孤立记号', () => {
+  const long = Array.from({ length: 20 }, (_, i) => ' * 设计论证第 ' + i + ' 行说明').join('\n')
+  const s = "const re = /[\"']/\n/**\n" + long + '\n */\nconst y = 2\n'
+  const p = buildPlan(s)
+  assert.equal(p.ok, true)
+  assert.equal(p.picked.length, 1, '正则后的完整 JSDoc 应合成一块')
+  assert.ok(p.picked[0].text.startsWith('/**'), '块必须以 /** 开头')
+  assert.ok(p.picked[0].text.trimEnd().endsWith('*/'), '块必须以 */ 收尾')
 })
 
 console.log('\n全部通过 ✓ (' + n + ' 项)')
