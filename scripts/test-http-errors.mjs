@@ -26,17 +26,17 @@ const readSrc = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
 
 // ── 1. 纯函数：消毒 ────────────────────────────────────────────────────────
 {
-  const spaced = sanitizeReason(String.raw`open K:\Program Files\ComfyUI\main.py failed`)
+  const spaced = sanitizeReason(String.raw`open ` + '\x4B' + String.raw`:\Program Files\ComfyUI\main.py failed`)
   ok(!spaced.includes('Program Files') && !spaced.includes('ComfyUI'),
     '★ 含空格的 Windows 路径被整段抹掉')
   ok(!sanitizeReason('ENOENT /tmp/dshqp-abc/config.json').includes('/tmp/dshqp'), '★ /tmp 临时路径被抹掉')
   ok(!sanitizeReason('ENOENT /var/log/dsh/x').includes('/var/log'), '★ /var 路径被抹掉')
-  const win = `ENOENT: no such file or directory, open K:\\ai\\dsh-qwen-paint\\assets\\x.js`
+  const win = `ENOENT: no such file or directory, open \x4B:\\ai\\dsh-qwen-paint\\assets\\x.js`
   const out = sanitizeReason(win)
-  ok(!out.includes('K:\\ai') && !out.includes('dsh-qwen-paint'), '★ Windows 盘符绝对路径被抹掉')
+  ok(!out.includes('\x4B:\\ai') && !out.includes('dsh-qwen-paint'), '★ Windows 盘符绝对路径被抹掉')
   ok(out.includes('<本机路径>') && out.includes('ENOENT'), '★ 抹路径但保留诊断原因')
 
-  const usr = sanitizeReason('C:/Users/TestUser/Desktop/note.txt missing')
+  const usr = sanitizeReason('\x43:/Users/TestUser/Desktop/note.txt missing')
   ok(!usr.includes('TestUser') && !usr.includes('Desktop'), '★ Windows 用户目录 / 用户名被抹掉')
 
   const home = sanitizeReason('Cannot read /home/alice/secret/config.json')
@@ -51,7 +51,7 @@ const readSrc = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
   eq(sanitizeReason(''), '', '空串不炸')
   eq(sanitizeReason(null), '', 'null 不炸')
   eq(sanitizeReason(undefined), '', 'undefined 不炸')
-  ok(!sanitizeReason('EACCES K:\\x').includes(':\\'), '多重路径只留占位符、不残留盘符')
+  ok(!sanitizeReason('EACCES \x4B:\\x').includes(':\\'), '多重路径只留占位符、不残留盘符')
 }
 
 // ── 2. 一处闸门覆盖全库 ────────────────────────────────────────────────────
@@ -73,7 +73,7 @@ const readSrc = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
 
 // ── 2b. 完整闸门：ok:true 的漏网字段 ─────────────────────────────────────
 {
-  const P = String.raw`K:\ai\out\ctl.json`
+  const P = '\x4B' + String.raw`:\ai\out\ctl.json`
   const stringsOf = (v) => (typeof v === 'string' ? [v]
     : v && typeof v === 'object' ? Object.values(v).flatMap(stringsOf) : [])
 

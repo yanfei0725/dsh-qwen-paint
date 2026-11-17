@@ -318,12 +318,12 @@ console.log('=== 9. 端点：围栏 + 脱敏 + 真实参数 ===')
   ok('★ snapshot 抛错：500 且不回吐 error.message（可能带本机路径）', await (async () => {
     const logs = []
     const d4 = makeDeps({
-      snapshot: async () => { throw new Error('K:/secret/private/cpu.json 打不开') },
+      snapshot: async () => { throw new Error('\x4B:/secret/private/cpu.json 打不开') },
       log: (level, msg) => logs.push({ level, msg }),
     })
     const r = await run(makeCpuHandlers(d4.deps).profileHandler, { method: 'GET' })
-    return r?.code === 500 && !JSON.stringify(r.body).includes('K:/secret')
-      && logs.some((x) => x.msg.includes('K:/secret'))
+    return r?.code === 500 && !JSON.stringify(r.body).includes('\x4B:/secret')
+      && logs.some((x) => x.msg.includes('\x4B:/secret'))
   })())
   ok('写盘失败时如实说（ok:false + persisted:false）', await (async () => {
     const d5 = makeDeps({ writeUiState: () => false })

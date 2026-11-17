@@ -61,6 +61,10 @@
       "type": "string",
       "default": ""
     },
+    "endImage": {
+      "type": "string",
+      "default": ""
+    },
     "audioTrack": {
       "type": "string",
       "default": ""
@@ -194,6 +198,19 @@
       "set": {
         "7": {
           "start_image": "$param.startImage"
+        }
+      }
+    },
+    {
+      "id": "i2v-end-image",
+      "_comment": "H3（2026-11-17）：尾帧参考。⚠ 与 start_image 同理 —— 没给不写；给了也必须先过 index.js runVideo 的 schema 门禁（本机 Wan22ImageToVideoLatent 得有 end_image 输入，0.39.0 没有，给了会在门禁处如实报错）。",
+      "when": {
+        "param": "endImage",
+        "nonEmpty": true
+      },
+      "set": {
+        "7": {
+          "end_image": "$param.endImage"
         }
       }
     },

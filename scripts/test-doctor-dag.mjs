@@ -49,7 +49,7 @@ console.log('=== 2. doctor 探针真跑与工具两层输出 ===')
   const logs = []
   const probes = {
     comfyOnline: async () => ({ ok: true, detail: '127.0.0.1 在线' }),
-    ffmpeg: async () => { throw new Error('ENOENT C:/Users/TestUser/secret/ffmpeg.exe') },
+    ffmpeg: async () => { throw new Error('ENOENT \x43:/Users/TestUser/secret/ffmpeg.exe') },
   }
   const rows = await collectDoctorResults(probes, (l, m) => logs.push(m))
   ok('注入的项真跑', rows.find((r) => r.id === 'comfy_online').status === 'pass')
@@ -128,7 +128,7 @@ console.log('=== 4. 自适应计划与执行 ===')
   ok('★ 取消时立即停止且不给假成功', aborted.ok === false && aborted.results.length === 0)
 
   const failed = await runPlan(chain, async (n) => {
-    if (n.id === 'b') throw Object.assign(new Error('ENOENT C:/Users/TestUser/x'), { retryable: false })
+    if (n.id === 'b') throw Object.assign(new Error('ENOENT \x43:/Users/TestUser/x'), { retryable: false })
     return n.id
   })
   ok('★ 不可重试失败会中止', failed.ok === false && failed.degraded === true)

@@ -12,6 +12,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   TTS_FALLBACK_CHAINS, TTS_WEIGHT_NOTE, probeTts, ttsMissingReport, buildTtsWorkflow,
+  buildVoiceCloneWorkflow, TTS_ATTENTION_CHOICES,
 } from '../lib/tts-workflow.js'
 import { catalogForTts } from '../lib/comfy-catalog.js'
 
@@ -27,6 +28,7 @@ const REAL_NODES = {
   FB_Qwen3TTSCustomVoice: {}, FB_Qwen3TTSVoiceDesign: {},
   FB_Qwen3TTSDialogueInference: {}, FB_Qwen3TTSVoiceClone: {},
   SaveAudio: {}, SaveAudioMP3: {}, SaveAudioOpus: {}, SaveAudioAdvanced: {},
+  VHS_LoadAudio: {},
 }
 
 ok('★ 兜底链全部用 /object_info 里真实存在的类名（不再是猜名）', () => {
@@ -168,6 +170,41 @@ ok('★ comfy-catalog 注释不再写「本机没有 TTS 节点」', () => {
   const s = src('lib/comfy-catalog.js')
   assert.ok(s.includes('1684 个节点'))
   assert.ok(!s.includes('本机没有 TTS 节点与权重时返回空集合'))
+})
+
+// ★ 2026-11-17：Qwen3-TTS attention 参数透传（真机合法值，默认零漂移）
+ok('TTS_ATTENTION_CHOICES == 真机 /object_info 合法枚举', () => {
+  assert.deepEqual([...TTS_ATTENTION_CHOICES], ['auto', 'sage_attn', 'flash_attn', 'sdpa', 'eager'])
+})
+ok('buildTtsWorkflow 默认不写 attention（零漂移）', () => {
+  const caps = catalogForTts(REAL_NODES)
+  const r = buildTtsWorkflow(caps, { text: '测试' })
+  assert.equal(Object.hasOwn(r.payload[1].inputs, 'attention'), false)
+})
+ok('buildTtsWorkflow 显式 sdpa ⇒ 写入 attention', () => {
+  const caps = catalogForTts(REAL_NODES)
+  const r = buildTtsWorkflow(caps, { text: '测试', attention: 'sdpa' })
+  assert.equal(r.payload[1].inputs.attention, 'sdpa')
+})
+ok('buildTtsWorkflow 非法 attention 不写入（防污染工作流）', () => {
+  const caps = catalogForTts(REAL_NODES)
+  const r = buildTtsWorkflow(caps, { text: '测试', attention: 'evil' })
+  assert.equal(Object.hasOwn(r.payload[1].inputs, 'attention'), false)
+})
+ok('buildVoiceCloneWorkflow 默认不写 attention', () => {
+  const caps = catalogForTts(REAL_NODES)
+  const r = buildVoiceCloneWorkflow(caps, { text: '测试', referenceFile: 'input/a.wav' })
+  assert.equal(Object.hasOwn(r.payload[2].inputs, 'attention'), false)
+})
+ok('buildVoiceCloneWorkflow 显式 sage_attn ⇒ 写入', () => {
+  const caps = catalogForTts(REAL_NODES)
+  const r = buildVoiceCloneWorkflow(caps, { text: '测试', referenceFile: 'input/a.wav', attention: 'sage_attn' })
+  assert.equal(r.payload[2].inputs.attention, 'sage_attn')
+})
+ok('★ generate_speech schema 暴露 attention 枚举', () => {
+  const s = src('lib/speech-tool.js')
+  assert.ok(s.includes("enum: ['auto', 'sage_attn', 'flash_attn', 'sdpa', 'eager']"))
+  assert.ok(s.includes('attention: typeof args?.attention'))
 })
 
 console.log(`\n✓ 全部通过（${n} 项）`)

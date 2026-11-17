@@ -45,6 +45,7 @@
   var state = {
     keyword: '',
     kind: '',
+    lora: '',
     from: '',
     to: '',
     offset: 0,
@@ -240,6 +241,7 @@
     var q = []
     if (state.keyword) q.push('q=' + encodeURIComponent(state.keyword))
     if (state.kind) q.push('kind=' + encodeURIComponent(state.kind))
+    if (state.lora) q.push('lora=' + encodeURIComponent(state.lora))
     if (state.from) q.push('from=' + encodeURIComponent(state.from))
     if (state.to) q.push('to=' + encodeURIComponent(state.to))
     q.push('limit=' + PAGE)
@@ -311,7 +313,7 @@
     if (!els.state) return
     var bits = []
     if (state.total > 0) bits.push('共 ' + state.total + ' 条')
-    var filtered = Boolean(state.keyword || state.kind || state.from || state.to)
+    var filtered = Boolean(state.keyword || state.kind || state.lora || state.from || state.to)
     if (filtered && state.allTotal > state.total) bits.push('全部 ' + state.allTotal + ' 条')
     if (state.available === false && els.state.dataset.loaded === '1') {
       bits.push('未持久化' + (state.reason ? '（' + state.reason + '）' : ''))
@@ -435,6 +437,45 @@
       bMore.title = hints.map(function (h) { return h.label }).join(' / ')
       tap(bMore, function () { showHints(it, hints) })
       acts.appendChild(bMore)
+    }
+
+    // ★ 2026-11-17（M2）：一键重画 + 复制参数包。只对 draw_image 图片记录开放 ——
+    //   重画端点走与 Agent 出图同一条 runDraw 链路；视频/音频记录暂不支持，不装样子。
+    if (String(it.tool_name || '') === 'draw_image' && String(it.kind || '') === 'image') {
+      var bRedraw = el('button', 'hs-btn hs-btn-accent', '重画')
+      bRedraw.type = 'button'
+      bRedraw.title = '按这条记录的提示词 / 尺寸 / 步数 / seed 原样再画一张（面板当前风格与模型设置会照常参与）'
+      tap(bRedraw, function () {
+        paintState('正在按记录参数重画…（完整生成，出图完成后自动进历史）')
+        fetch('api/qwen-paint/history/redraw', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: it.id }),
+        }).then(function (r) { return r.json() }).then(function (j) {
+          if (j && j.ok) {
+            paintState('重画完成：' + String(j.path || '') )
+            load()
+          } else {
+            paintState('重画未执行：' + String((j && j.reason) || '原因未知'))
+          }
+        }).catch(function () { paintState('重画请求失败（网络/宿主问题）') })
+      })
+      acts.appendChild(bRedraw)
+
+      var bParams = el('button', 'hs-btn', '复制参数')
+      bParams.type = 'button'
+      bParams.title = '复制这条记录的可复用参数包（draw_image 入参 JSON，可直接发给 Agent）'
+      tap(bParams, function () {
+        fetch('api/qwen-paint/history/export?id=' + encodeURIComponent(it.id))
+          .then(function (r) { return r.json() }).then(function (j) {
+            if (j && j.ok && j.draw_args) {
+              copyText(JSON.stringify(j.draw_args, null, 2), '参数包已复制（draw_args JSON）')
+            } else {
+              paintState('参数包取不到：' + String((j && j.reason) || '原因未知'))
+            }
+          }).catch(function () { paintState('参数包请求失败') })
+      })
+      acts.appendChild(bParams)
     }
 
     var bDel = el('button', 'hs-btn hs-btn-danger', '移除')
@@ -690,6 +731,25 @@
     })
     filters.appendChild(kw)
 
+    // ★ 2026-11-17（M1）：按 LoRA 名筛选。记录里落的是**实际接线**的 LoRA
+    //   （extra.loras），所以搜文件名片段即可命中，大小写不敏感由后端 LIKE 处理。
+    var loraIn = el('input', 'hs-input')
+    loraIn.type = 'search'
+    loraIn.placeholder = '按 LoRA 名…'
+    loraIn.title = '只列出用了该 LoRA 的记录（2026-11-17 起的新记录才带 LoRA 信息）'
+    loraIn.value = state.lora
+    var loraTimer = 0
+    loraIn.addEventListener('input', function () {
+      if (loraTimer) clearTimeout(loraTimer)
+      loraTimer = setTimeout(function () {
+        loraTimer = 0
+        state.lora = String(loraIn.value || '').trim()
+        state.offset = 0
+        load()
+      }, 350)
+    })
+    filters.appendChild(loraIn)
+
     var sel = el('select', 'hs-select')
     for (var i = 0; i < KINDS.length; i += 1) {
       var o = el('option', '', KINDS[i].label)
@@ -729,8 +789,8 @@
     var reset = el('button', 'hs-btn', '重置')
     reset.type = 'button'
     tap(reset, function () {
-      state.keyword = ''; state.kind = ''; state.from = ''; state.to = ''; state.offset = 0
-      kw.value = ''; sel.value = ''; from.value = ''; to.value = ''
+      state.keyword = ''; state.kind = ''; state.lora = ''; state.from = ''; state.to = ''; state.offset = 0
+      kw.value = ''; loraIn.value = ''; sel.value = ''; from.value = ''; to.value = ''
       load()
     })
     filters.appendChild(reset)

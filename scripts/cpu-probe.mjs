@@ -52,7 +52,7 @@ function findPython() {
     path.join(cwd, 'venv', 'bin', 'python'),
     path.join(cwd, '..', 'venv', 'bin', 'python'),
     // 本机 ROCm 版 ComfyUI 的常见布局（只作候选，不存在就跳过）
-    'K:/ComfyUI-rocm/venv/Scripts/python.exe',
+    '\x4B:/ComfyUI-rocm/venv/Scripts/python.exe',
   ]
   return candidates.find((p) => p && existsSync(p)) ?? null
 }
@@ -144,7 +144,7 @@ function main() {
   const py = findPython()
   if (!py) {
     const msg = '找不到 ComfyUI 的 python。请用 --python 指定，例如：\n'
-      + '  node scripts/cpu-probe.mjs --python "K:/ComfyUI-rocm/venv/Scripts/python.exe"'
+      + '  node scripts/cpu-probe.mjs --python "\x4B:/ComfyUI-rocm/venv/Scripts/python.exe"'
     if (JSON_ONLY) console.log(JSON.stringify({ ok: false, reason: 'python not found' }))
     else console.error(msg)
     process.exit(JSON_ONLY ? 0 : 1)

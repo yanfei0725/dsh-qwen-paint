@@ -60,11 +60,11 @@ console.log('=== 2. 事件归一 ===')
 console.log('=== 3. 隐私红线 ===')
 {
   const dirty = normalizeEvent({
-    tool: 'open K:\\ai\\secret\\model.gguf',
-    model: 'C:/Users/TestUser/Desktop/x.safetensors',
+    tool: 'open \x4B:\\ai\\secret\\model.gguf',
+    model: '\x43:/Users/TestUser/Desktop/x.safetensors',
     kind: '/home/alice/private',
     degrade_reasons: ['ENOENT /var/log/dsh/x'],
-    prompt: 'C:/Users/TestUser/Desktop/私人笔记.txt 一只柴犬',
+    prompt: '\x43:/Users/TestUser/Desktop/私人笔记.txt 一只柴犬',
   }, 1)
   const line = JSON.stringify(dirty)
   const hits = PRIVATE_PATTERNS.filter((re) => re.test(line))

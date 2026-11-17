@@ -87,22 +87,37 @@ const codeOnly = body
   .replace(/^\s*\/\/.*$/gm, '')          // 整行注释
   .replace(/'(?:[^'\\]|\\.)*'/g, "''")   // 单引号串
   .replace(/"(?:[^"\\]|\\.)*"/g, '""')   // 双引号串
-  .replace(/`(?:[^`\\]|\\.)*`/g, '``')   // 模板串
 const used = new Set()
-for (const m of codeOnly.matchAll(/(?<![.\w$])([A-Za-z_$][\w$]*)\s*\./g)) used.add(m[1])
+// 取值根只在「抹掉模板串后」的文本上抓，避免插值里的 `X.y` 被重复误报。
+
+// ★ 2026-11-17：模板插值 `${API}` 这类未定义标识符——原扫描器把模板串整体抹掉，
+//   正好漏掉这类真事故（历史 bug：`${API}/status.json` 里 API 从未定义 → undefined/status.json，
+//   还被 window.prompt 拦后的提前 return 掩盖）。这里在抹模板串**之前**先抓插值根一并核对。
+//   只取紧跟 `${` 的简单标识符；`typeof`/`new` 等运算符不算变量，排除。
+const OPS = new Set(['typeof', 'new', 'void', 'delete', 'await', 'yield', 'in', 'of', 'instanceof'])
+let interpolationRoots = 0
+for (const m of codeOnly.matchAll(/\$\{([A-Za-z_$][\w$]*)/g)) {
+  if (!OPS.has(m[1])) { used.add(m[1]); interpolationRoots += 1 }
+}
+// 抹掉模板串（含插值内容），避免插值里的 `X.` 被重复当成取值根误报。
+const noTemplates = codeOnly.replace(/`(?:[^`\\]|\\.)*`/g, '``')
+// 取值根只在抹模板后的文本上抓；插值根已经单独进 used。
+for (const m of noTemplates.matchAll(/(?<![.\w$])([A-Za-z_$][\w$]*)\s*\./g)) used.add(m[1])
 
 // ---- 5. 核对 ----
 const unknown = [...used].filter((n) => !declared.has(n) && !GLOBALS.has(n)).sort()
-console.log(`声明过 ${declared.size} 个名字；用到 ${used.size} 个取值根`)
+console.log(`声明过 ${declared.size} 个名字；用到 ${used.size} 个标识符根（含 ${interpolationRoots} 个模板插值）`)
 if (unknown.length === 0) {
   // ★ 0.32.1 审计 B：以前只打「结果：全部通过」，test-all 统计成 0 项断言。
-  console.log('  ✓ 面板作用域没有未声明标识符（' + declared.size + ' 个声明 / ' + used.size + ' 个取值根）')
+  console.log('  ✓ 面板作用域没有未声明标识符（' + declared.size + ' 个声明 / ' + used.size + ' 个根，其中 ' + interpolationRoots + ' 个模板插值）')
   console.log('\n=== 结果：全部通过（面板作用域没有未声明标识符）===')
   process.exit(0)
 }
 console.log('\n  FAIL 这些标识符在 openPanel 作用域里**没声明**，运行时必抛 ReferenceError：')
 for (const n of unknown) {
-  const line = LINES.findIndex((l, i) => i >= startIdx && i < endIdx && new RegExp(`(?<![.\\w$])${n}\\s*\\.`).test(l))
+  // 同时匹配 `X.` 取值与 `${X}` 插值两种出现形态，报准行号。
+  const line = LINES.findIndex((l, i) => i >= startIdx && i < endIdx
+    && (new RegExp(`(?<![.\\w$])${n}\\s*\\.`).test(l) || new RegExp(`\\$\\{\\s*${n}\\b`).test(l)))
   console.log(`    - ${n}   首次出现在第 ${line + 1} 行`)
 }
 console.log('\n=== 结果：1 项失败 ===')

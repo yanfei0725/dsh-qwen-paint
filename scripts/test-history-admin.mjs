@@ -106,7 +106,7 @@ console.log('=== 3. 删改 / 冷热 / 导出 ===')
 
   const row = { id: 'r1', file_path: 'out/a.png', prompt: '一只柴犬', width: 1024,
     accel_chain: 'kv_prefix', duration_ms: 3000,
-    absolutePath: 'C:/Users/TestUser/Desktop/a.png' }
+    absolutePath: '\x43:/Users/TestUser/Desktop/a.png' }
   const safe = sanitizeExportRow(row)
   ok('★ 导出不含 file_path', !('file_path' in safe))
   ok('★ 导出不含 prompt 全文', !('prompt' in safe))
@@ -164,7 +164,7 @@ console.log('=== 5. 端点表与围栏 ===')
     admin: null,
     respondJson: (r, body, code) => { r.body = body; r.code = code },
     isLocalRequest: () => true,
-    readJsonBody: async () => { throw new Error('ENOENT C:/Users/TestUser/secret.txt') },
+    readJsonBody: async () => { throw new Error('ENOENT \x43:/Users/TestUser/secret.txt') },
     log: () => {},
   })
   const r2 = { body: null, code: null }

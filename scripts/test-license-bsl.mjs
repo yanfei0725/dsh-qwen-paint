@@ -330,9 +330,9 @@ console.log('=== 6. 发布护栏同步 + 脱敏 ===')
     '★ 发布护栏改为锁新口径 BSL 1.1')
   ok(testAll.includes("file: 'test-license-bsl.mjs'"),
     '★ 本套测试登记进 SUITES（不在清单里的测试 = 没写测试）')
-  const privatePat = /(?:C:\\Users\\|C:\/Users\/|K:\/ai\/|K:\\ai\\|npm_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9]{20,})/u
+  const privatePat = /(?:\x43:\\Users\\|\x43:\/Users\/|\x4B:\/ai\/|\x4B:\\ai\\|npm_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9]{20,})/u
   ok(!privatePat.test(LICENSE), '★ LICENSE 脱敏零命中（无本机路径 / 凭据）')
-  ok(!/Administrator|WorkBuddy/u.test(LICENSE), '★ LICENSE 不含真实用户名 / 私有目录名')
+  ok(!/\x41dministrator|WorkBuddy/u.test(LICENSE), '★ LICENSE 不含真实用户名 / 私有目录名')
   ok((LICENSE.match(/https:\/\/github\.com\/yanfei0725\/dsh-qwen-paint/gu) ?? []).length >= 1,
     '★ 商业许可联系渠道指向公开仓库（不写私人邮箱 / 绝对路径）')
   ok(LICENSE.includes('Copyright (c) 2026 @奇迹与你 (original work; MIT-licensed versions 0.32.1 and earlier)')

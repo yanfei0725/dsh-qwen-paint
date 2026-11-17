@@ -114,7 +114,7 @@ const outDir = path.join(tmp, 'out')
   // preview_url 必须能让 /api/qwen-paint/file 读到文件，所以保留绝对路径。
   // 真正要锁的是「解码后仍落在 outputDir 内」—— db 被篡改也不能把预览引到目录外。
   // （此前那条「URL 里没有临时目录明文」是假安全：encodeURIComponent 早把
-  //   `C:\Users\…` 编成 `C%3A%5CUsers…`，明文当然搜不到，但路径照样在里面。）
+  //   `\x43:\Users\…` 编成 `C%3A%5CUsers…`，明文当然搜不到，但路径照样在里面。）
   ok(all.items.every((x) => {
     const p = decodeURIComponent(String(x.preview_url).slice('api/qwen-paint/file?path='.length))
     return path.resolve(p).startsWith(path.resolve(outDir) + path.sep)
@@ -271,8 +271,8 @@ const jsonBody = (obj) => ({ headers: { 'content-type': 'application/json' }, bo
     isLocalRequest: () => true,
     guardWriteRequest: () => true,
     respondJson,
-    readJsonBody: async () => { throw new Error('K:/secret/private.db locked') },
-    store: { query: async () => { throw new Error('K:/secret/private.db') }, stats: () => { throw new Error('K:/secret') }, remove: () => { throw new Error('K:/secret') } },
+    readJsonBody: async () => { throw new Error('\x4B:/secret/private.db locked') },
+    store: { query: async () => { throw new Error('\x4B:/secret/private.db') }, stats: () => { throw new Error('\x4B:/secret') }, remove: () => { throw new Error('\x4B:/secret') } },
     log,
   })
   const e1 = await run(boom.historyHandler, { method: 'GET', url: '/' })
@@ -280,10 +280,10 @@ const jsonBody = (obj) => ({ headers: { 'content-type': 'application/json' }, bo
   const e3 = await run(boom.historyDeleteHandler, { method: 'POST', ...jsonBody({ id: 1 }) })
   for (const [name, r] of [['列表', e1], ['汇总', e2], ['删除', e3]]) {
     eq(r?.code, 500, `${name}异常 → 500`)
-    ok(!JSON.stringify(r?.body).includes('K:/secret'), `★★ ${name}异常不回吐本机路径`)
+    ok(!JSON.stringify(r?.body).includes('\x4B:/secret'), `★★ ${name}异常不回吐本机路径`)
     ok(String(r?.body?.reason ?? '').includes('详见插件日志'), `${name}异常回固定文案`)
   }
-  ok(logs.some((l) => l.level === 'warn' && l.msg.includes('K:/secret')), '★ 诊断细节只进本机日志')
+  ok(logs.some((l) => l.level === 'warn' && l.msg.includes('\x4B:/secret')), '★ 诊断细节只进本机日志')
 
   const table = historyRouteTable(h)
   // ★ 判据升级：不再断言「N 条」（增一条就得改数字，很容易变成"把数字改大"糊过去），
@@ -294,6 +294,8 @@ const jsonBody = (obj) => ({ headers: { 'content-type': 'application/json' }, bo
     '/api/qwen-paint/draft',
     '/api/qwen-paint/history',
     '/api/qwen-paint/history/delete',
+    '/api/qwen-paint/history/export',
+    '/api/qwen-paint/history/redraw',
     '/api/qwen-paint/history/stats',
     '/api/qwen-paint/history/thumb',
   ].sort()
@@ -344,11 +346,11 @@ console.log('\n=== 5. Agent 工具 list_generated_images ===')
   eq(dr.persistent, false, '降级时 persistent=false')
   ok(String(dr.note).includes('未持久化'), '★ 降级 note 如实说明')
 
-  const badTool = makeHistoryTool({ log, store: { query: async () => { throw new Error('K:/x') } } })
+  const badTool = makeHistoryTool({ log, store: { query: async () => { throw new Error('\x4B:/x') } } })
   const br = await badTool.execute({})
   eq(br.ok, false, 'store 抛错时 ok=false')
   eq(br.items.length, 0, '抛错时 items 为空数组（不是 undefined）')
-  ok(!JSON.stringify(br).includes('K:/x'), '★ 工具回包不含本机路径')
+  ok(!JSON.stringify(br).includes('\x4B:/x'), '★ 工具回包不含本机路径')
 }
 
 // ── 6. 前端接线（源码级） ───────────────────────────────────────────────────

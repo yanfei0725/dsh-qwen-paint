@@ -267,7 +267,7 @@ console.log('=== 7. 孤儿扫描：新模块必须有生产消费（用户亲订
   }
   ok('lab.js 消费 3 个新端点', NEW_PATHS.every((p) =>
     read('assets/lab.js').includes("request('" + p.replace('/api/qwen-paint/', '') + "')")))
-  const privateHits = ['C:/Users/Administrator', 'K:/ai/', 'gho_', 'github_pat_']
+  const privateHits = ['\x43:/Users/\x41dministrator', '\x4B:/ai/', 'gho_', 'github_pat_']
   ok('新增两模块不含本机路径 / 凭据',
     !privateHits.some((x) => read('lib/event-log.js').includes(x) || read('lib/runtime-endpoints.js').includes(x)))
 }

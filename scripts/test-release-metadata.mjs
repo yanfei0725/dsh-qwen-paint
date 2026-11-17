@@ -230,7 +230,12 @@ console.log('\n=== 6. ★ 2026-11-15 发布前审计补漏：时态 / 许可 / �
   //   改成：套数由 scripts/test-all.mjs 的 SUITES 条目数静态推导（漏登记测试会红），
   //   断言数只要求写明「项全绿」不锁具体数字，体积余量由真实字节数算，永不因回归增长失效。
   const suiteCount = (read('scripts/test-all.mjs').match(/\{ file: '/gu) ?? []).length
-  const indexBytes = fs.statSync(path.join(ROOT, 'lib/index.js')).size
+  // ★ 2026-11-16 CI 修复：Windows 工作树受 core.autocrlf 影响，有 3 个 lib 文件
+  //   落盘成 CRLF（比 git blob / Ubuntu checkout 多 699 B）。本地 stat 与 CI stat
+  //   不是同一个数 → 护栏在 CI 上必红。统一按**规范化 LF 字节**算，四处判据一致：
+  //   本地 Windows / CI Windows / CI Ubuntu / git blob。
+  const normalizedBytes = (rel) => Buffer.byteLength(read(rel).replace(/\r\n/gu, '\n'), 'utf8')
+  const indexBytes = normalizedBytes('lib/index.js')
   const freeBytes = 262144 - indexBytes
   ok('★ 更新说明写明的回归套数 == SUITES 实际条目数（漏登记测试会红）',
     suiteCount > 0 && note.includes(suiteCount + ' 套'), `SUITES=${suiteCount}`)
@@ -242,7 +247,7 @@ console.log('\n=== 6. ★ 2026-11-15 发布前审计补漏：时态 / 许可 / �
   // ★ 同类问题再堵一次：README 曾写死「16 个独立模块 / 98 个 lib / 1,778,329 B」，
   //   新增 5 个媒体模块后全部过期。改成拿真实值比对，加模块忘改文档就红。
   const libFiles = fs.readdirSync(path.join(ROOT, 'lib')).filter((f) => f.endsWith('.js'))
-  const libTotal = libFiles.reduce((n, f) => n + fs.statSync(path.join(ROOT, 'lib', f)).size, 0)
+  const libTotal = libFiles.reduce((n, f) => n + normalizedBytes('lib/' + f), 0)
   ok('★ 更新说明写明的 lib/ 文件数与体积 == 真实值（加模块忘改文档会红）',
     note.includes(libFiles.length + ' 个 `lib/*.js`')
       && note.includes(libTotal.toLocaleString('en-US') + ' B'),

@@ -280,6 +280,8 @@ console.log('=== 6. 实验室前端纪律（源码断言，零 DOM / 零联网�
     'media-fx/capabilities', 'enhance/audio', 'cutout/image', 'split/audio',
     // ★ 2026-11-16：音频转文字 2 端点（能力探测 + 执行）。
     'audio/transcribe/capabilities', 'audio/transcribe',
+    // ★ 2026-11-17（M3/M4）：队列操作 1 端点 + ControlNet 预处理 1 端点（显式登记，漏一个就红）。
+    'jobs', 'cnet-preprocess',
     'accel/backends']
   ok('lab.js 的 request 路径全是相对本机端点（无 / 或 http 开头）',
     reqPaths.length >= 18 && reqPaths.every((p) => !p.startsWith('/') && !p.startsWith('http')), reqPaths.join(','))

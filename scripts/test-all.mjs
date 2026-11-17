@@ -187,6 +187,14 @@ const SUITES = [
   { file: '_cordis_proxy_test.mjs', note: 'cordis ctx Proxy 裸读未声明服务属性（静态扫描；有 _vendor 时升级为真机加载）' },
   // ★ 2026-11-16：白条同源 + 选模型假成功（P0/P1/P2）联动护栏
   { file: 'test-white-bar.mjs', note: '假成功与白条：choiceResult 拒绝回传 / 权重下拉持久化缓存（真调纯函数）/ 风格下拉错误态 / 假就绪 / health 重试 / object_info 失败冷却（真跑 fetchFn）' },
+  { file: 'test-gap-fill.mjs', note: '2026-11-17 补缺批：队列端点 / 历史 LoRA 筛选与单条读 / 参数包导出与重画 / 前缀模板 / 视频尾帧双轨对称 / ControlNet 预处理纯逻辑与缓存' },
+  // ★ 2026-11-17：自研轻量代码动画三件套（不依赖 manim/Remotion）。
+  { file: 'test-animation-kit.mjs', note: '自研动画三件套：分镜切句与画面类型 / SVG 五种渲染 / image 降级 draw_image / 合成 argv（字幕+配音）/ 路径围栏 / 执行器降级' },
+  { file: 'test-anim-opt.mjs', note: '动画四项纯JS优化（hyperframes清单§13映射）：静态帧去重 / 分镜级缓存 / 草稿定稿档 / 时序校验前置；纯函数+animation-kit接线+体积（全离线内存fs桩）' },
+  { file: 'test-layout-vfr-ttscache.mjs', note: '三件新功能：纯JS flex子集布局器（字符宽度估算/四类版式/落盘围栏/光栅降级）+ compose VFR/PTS + TTS旁白内容缓存（指纹/往返/坏文件不命中/命中不探活）；含生产接线与体积' },
+  { file: 'test-render-backends.mjs', note: '渲染后端发现模式+动画缓存最小版：硬件编码择优(真跑探测/降级/不谎称) / resvg光栅探测 / 中文字体空白帧自检 / 瓦片缓存+可插拔后端接口 / tool-registry生产接线（全离线假执行器）' },
+  { file: 'test-bgm-opt.mjs', note: 'BGM三块优化：音乐计划缓存(指纹/往返/字节自校验/篡改降级) + ducking缝合缓存(文件身份指纹/命中跳过ffmpeg/关缓存强制真跑) + §7装配计划(缓存键/ducking/断点续推/blocked诚实) + 三处生产接线非孤儿（全离线假执行器）' },
+  { file: 'test-tts-lowlatency.mjs', note: '外部TTS低延迟编排（抄通用思路非抄代码）：语义分块降首音延迟 / 回环围栏(拒外部host) / gsv+openai两种API格式 / 探活结构化降级 / 许可证合规边界(GSV=MIT,AnifLive=禁商用) / 工具+端点+UI生产接线非孤儿（全离线假fetch）' },
   // —— 最重的一套放最后 ——
   { file: 'selftest.mjs', note: '全量自测（最重，项数最多）', heavy: true },
 ]

@@ -289,7 +289,7 @@ console.log('=== 7. 下载源与权威校验 ===')
     .some((s) => s.includes('不上传')))
   ok('★ 下载脚本不含本机绝对路径 / 不上传逻辑', (() => {
     const src = read('scripts/audio-model-catalog.mjs') + read('scripts/setup-audio-models.mjs')
-    return !/C:\\Users\\|K:\\ai\\|C:\/Users\/[A-Za-z][A-Za-z0-9_]*/u.test(src)
+    return !/\x43:\\Users\\|\x4B:\\ai\\|\x43:\/Users\/[A-Za-z][A-Za-z0-9_]*/u.test(src)
       && !/upload|multipart|formData/u.test(src.replace(/uploadLocalFiles/gu, ''))
   })())
 }
@@ -396,7 +396,7 @@ console.log('=== 9. SageAttention / WaveSpeed / 首次下载询问 ===')
   ok('★ CLI 默认只读、下载要显式确认',
     cli.includes('--list') && cli.includes('确认下载？输入 y 才继续') && cli.includes('零下载'))
   ok('★ CLI 不写本机绝对路径',
-    !/C:\\Users\\|K:\\ai\\|C:\/Users\/[A-Za-z][A-Za-z0-9_]*/u.test(cli))
+    !/\x43:\\Users\\|\x4B:\\ai\\|\x43:\/Users\/[A-Za-z][A-Za-z0-9_]*/u.test(cli))
 }
 
 console.log('')

@@ -33,16 +33,16 @@ const sec = (t) => console.log(`\n── ${t} ──`)
 sec('D18 产出短引用')
 
 const items = [
-  { id: 3, path: 'K:/out/qwen-paint/fox.png', kind: 'image' },
-  { id: 2, path: 'K:/out/qwen-paint/cat.png', kind: 'image' },
-  { id: 1, path: 'K:/out/qwen-paint/dog.png', kind: 'image' },
+  { id: 3, path: '\x4B:/out/qwen-paint/fox.png', kind: 'image' },
+  { id: 2, path: '\x4B:/out/qwen-paint/cat.png', kind: 'image' },
+  { id: 1, path: '\x4B:/out/qwen-paint/dog.png', kind: 'image' },
 ]
 const refs = buildProduceRefs(items)
 eq(refs.length, 3, '#1 列表长度不变')
 eq(refs[0].ref, '#1', '第一条（最新）是 #1')
 eq(refs[2].ref, '#3', '最后一条（最老）是 #3')
 eq(refs[0].id, 3, '原始字段保留（id）')
-eq(refs[0].path, 'K:/out/qwen-paint/fox.png', '原始字段保留（path）')
+eq(refs[0].path, '\x4B:/out/qwen-paint/fox.png', '原始字段保留（path）')
 eq(buildProduceRefs(null).length, 0, '非数组入参返回空数组而不是抛错')
 eq(items[0].ref, undefined, '★ 不修改入参数组（纯函数）')
 
@@ -69,13 +69,13 @@ ok(String(resolveProduceRef('nope.png', refs).reason).includes('没有哪条'), 
 
 // 歧义：两条都以 cat 结尾
 const amb = buildProduceRefs([
-  { id: 2, path: 'K:/a/cat.png' }, { id: 1, path: 'K:/b/cat.png' },
+  { id: 2, path: '\x4B:/a/cat.png' }, { id: 1, path: '\x4B:/b/cat.png' },
 ])
 const ambR = resolveProduceRef('cat.png', amb)
 ok(ambR.ok === false && String(ambR.reason).includes('匹配到 2 条'), '★ 歧义时报错，绝不替用户挑一条')
 
 // 反斜杠路径也能匹配（Windows 真实路径）
-const win = buildProduceRefs([{ id: 1, path: 'K:\\out\\qwen-paint\\fox.png' }])
+const win = buildProduceRefs([{ id: 1, path: '\x4B:\\out\\qwen-paint\\fox.png' }])
 eq(resolveProduceRef('fox.png', win).item.id, 1, '反斜杠路径同样能匹配后缀')
 
 /* ============================================================ D20 ==== */

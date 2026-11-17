@@ -82,7 +82,7 @@ console.log('\n=== 2. G32 复制为 Markdown 引用 ===')
     id: 1, kind: 'image', prompt: '赛博朋克城市夜景', model: 'qwen-image-2.1',
     tool_name: 'draw_image', steps: 20, cfg: 2.5, seed: 777,
     width: 1024, height: 1024, created_at: '2026-11-14T02:00:00.000Z',
-    file_path: 'qwen-paint/2026-11-14/shot.png', path: 'K:/out/qwen-paint/2026-11-14/shot.png',
+    file_path: 'qwen-paint/2026-11-14/shot.png', path: '\x4B:/out/qwen-paint/2026-11-14/shot.png',
     extra: { style: '霓虹' },
   }
   const md = buildMarkdown(img)
@@ -90,7 +90,7 @@ console.log('\n=== 2. G32 复制为 Markdown 引用 ===')
     || md.includes('![图片 · 1024×1024 · 赛博朋克城市夜景 · 风格 霓虹](qwen-paint/2026-11-14/shot.png)'),
   '图片用 ![]() 语法，alt 用结构化摘要')
   ok(md.includes('(qwen-paint/2026-11-14/shot.png)'), '链接用相对 outputDir 的路径')
-  ok(!md.includes('K:/out'), '★★ Markdown 里没有绝对路径（不把本机目录结构带进笔记）')
+  ok(!md.includes('\x4B:/out'), '★★ Markdown 里没有绝对路径（不把本机目录结构带进笔记）')
   ok(md.includes('- 种子：777'), '带种子')
   ok(md.includes('- 尺寸：1024×1024'), '带尺寸')
   ok(md.includes('- 风格卡：霓虹'), '带风格卡')
@@ -115,20 +115,20 @@ console.log('\n=== 2. G32 复制为 Markdown 引用 ===')
 // ── 3. G33 继续编辑候选 ─────────────────────────────────────────────────────
 console.log('\n=== 3. G33 快捷继续编辑 ===')
 {
-  const img = { id: 1, kind: 'image', file_path: 'a.png', path: 'K:/out/a.png' }
+  const img = { id: 1, kind: 'image', file_path: 'a.png', path: '\x4B:/out/a.png' }
   const hints = buildContinueHints(img)
   eq(hints.length, 3, '图片给 3 个后续动作（重绘 / 超分 / 图生视频）')
   eq(hints.map((h) => h.tool).join(','), 'inpaint_image,upscale_image,generate_video', '工具名与真实工具对齐')
-  ok(hints.every((h) => h.text.includes('K:/out/a.png')), '★ 指令里带绝对路径（粘贴就能直接用）')
-  ok(hints.every((h) => !h.text.includes('K:/out/a.png\n（注意')), '有绝对路径时不追加相对路径提示')
+  ok(hints.every((h) => h.text.includes('\x4B:/out/a.png')), '★ 指令里带绝对路径（粘贴就能直接用）')
+  ok(hints.every((h) => !h.text.includes('\x4B:/out/a.png\n（注意')), '有绝对路径时不追加相对路径提示')
 
   const rel = buildContinueHints({ id: 2, kind: 'image', file_path: 'a.png' })
   ok(rel.length > 0 && rel[0].text.includes('只有相对输出目录的路径'), '★ 只有相对路径时如实提示（不假装能直接用）')
 
-  const video = buildContinueHints({ id: 3, kind: 'video', file_path: 'v.mp4', path: 'K:/o/v.mp4' })
+  const video = buildContinueHints({ id: 3, kind: 'video', file_path: 'v.mp4', path: '\x4B:/o/v.mp4' })
   eq(video.map((h) => h.id).join(','), 'frames,audio', '视频给抽帧 / 换音轨')
 
-  const audio = buildContinueHints({ id: 4, kind: 'audio', file_path: 'a.wav', path: 'K:/o/a.wav' })
+  const audio = buildContinueHints({ id: 4, kind: 'audio', file_path: 'a.wav', path: '\x4B:/o/a.wav' })
   eq(audio.map((h) => h.id).join(','), 'clone,track', '★ 音频给「复刻音色 / 当音轨」——正好对应本轮 D21/D22')
   ok(audio[0].text.includes('reference_audio'), '复刻指令点名 reference_audio 参数')
   ok(audio[1].text.includes('audio_track'), '音轨指令点名 audio_track 参数')
@@ -136,8 +136,8 @@ console.log('\n=== 3. G33 快捷继续编辑 ===')
   eq(buildContinueHints({ id: 5, kind: 'other', file_path: 'x.bin' }).length, 0, '其它类型没有后续动作（返回空数组）')
   eq(buildContinueHints({ id: 6, kind: 'image' }).length, 0, '连路径都没有就返回空，不产出指向空串的指令')
 
-  const spaced = buildContinueHints({ id: 7, kind: 'image', file_path: 'a.png', path: 'K:/my out/a b.png' })
-  ok(spaced[0].text.includes('"K:/my out/a b.png"'), '路径含空格时自动加引号（否则粘出去会被拆成两个参数）')
+  const spaced = buildContinueHints({ id: 7, kind: 'image', file_path: 'a.png', path: '\x4B:/my out/a b.png' })
+  ok(spaced[0].text.includes('"\x4B:/my out/a b.png"'), '路径含空格时自动加引号（否则粘出去会被拆成两个参数）')
 }
 
 // ── 4. decorateHistoryItem 的降级 ───────────────────────────────────────────
@@ -268,7 +268,7 @@ console.log('\n=== 6. G36 缩略图端点 ===')
     '★ /history 条目带 thumb_url（否则前端每次都要自己拼）')
   ok(String(after.items[0].extra?.thumb ?? '').endsWith(`${id}.png`), 'extra.thumb 记了相对路径')
 
-  eq(historyRouteTable(handlers).length, 5, '路由表共 5 条（含 thumb 与 D25 草图台）')
+  eq(historyRouteTable(handlers).length, 7, '路由表共 7 条（含 thumb、D25 草图台与 M2 导出/重画）')
   store.close()
 }
 

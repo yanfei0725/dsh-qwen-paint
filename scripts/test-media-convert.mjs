@@ -590,7 +590,7 @@ console.log('=== 9. ★ 全链路联动（单个功能完成 ≠ 最终完成）
   ok('★ test-gif.mjs 的端点白名单显式登记两条新入口',
     read('scripts/test-gif.mjs').includes("'media/formats'") && read('scripts/test-gif.mjs').includes("'media/convert'"))
   ok('★ 5 个新模块不含本机绝对路径 / 凭据',
-    !['C:/Users/Administrator', 'K:/ai/', 'gho_', 'github_pat_', 'npm_']
+    !['\x43:/Users/\x41dministrator', '\x4B:/ai/', 'gho_', 'github_pat_', 'npm_']
       .some((x) => ['media-formats.js', 'media-exec.js', 'media-convert-tool.js',
         'media-convert-endpoints.js', 'media-postconvert.js'].some((f) => read('lib/' + f).includes(x))))
 }

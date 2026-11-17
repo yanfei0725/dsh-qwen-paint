@@ -192,6 +192,8 @@ function makeFakeDeps({ uploadStatus = 200, uploadName = 'dshqp-ref-audio-zz.wav
         json: async () => (uploadStatus === 200 ? { name: uploadName, subfolder: '', type: 'input' } : {}),
       }
     },
+    // 本套断言的是「真实上传/提交链路」的次数与形状，必须绕过旁白内容缓存（同参会被复用）。
+    narrationCache: false,
     cancelReason: () => new Error('cancelled'),
     safeStem: (s) => String(s).slice(0, 20),
     uniquePath: async (_dir, name) => `C:/tmp/out/${name}`,

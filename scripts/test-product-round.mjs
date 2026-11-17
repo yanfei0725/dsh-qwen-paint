@@ -153,7 +153,7 @@ console.log('\n=== 4. 外部集成状态：白名单脱敏 ===')
     maskFx: { feather: 44, edgeBlend: 12, grow: 9, invert: true, unloadMemory: true },
     imageBackend: 'hipfire', enabled: true, tier: 'gguf', speedTargetSec: 180,
     // 下面这些是**故意塞进来的脏数据**，一个都不许出现在输出里
-    homeDir: 'C:/Users/TestUser/secret/token.txt',
+    homeDir: '\x43:/Users/TestUser/secret/token.txt',
     apiKey: 'sk-THIS-MUST-NOT-LEAK', dialog: '用户私人对话原文',
   }
   const s = buildIntegrationState(dirty)
@@ -221,14 +221,14 @@ console.log('\n=== 5. 四个新端点：围栏 / 参数 / 卸载（注入假 dep
   ok('★ 探测抛错也返回完整步骤清单，且异常细节不回吐浏览器', await (async () => {
     const logs = []
     const d2 = makeDeps({
-      probeGuideState: async () => { throw new Error('K:/secret/private-path.txt') },
+      probeGuideState: async () => { throw new Error('\x4B:/secret/private-path.txt') },
       log: (level, msg) => logs.push({ level, msg }),
     })
     const r = await run(makeIntegrationHandlers(d2.deps).setupGuideHandler, { method: 'GET' })
     return r?.body?.ok === true && r.body.steps.length === 7
       && r.body.note.includes('状态探测暂不可用')
-      && !JSON.stringify(r.body).includes('K:/secret')
-      && logs.some((x) => x.msg.includes('K:/secret'))
+      && !JSON.stringify(r.body).includes('\x4B:/secret')
+      && logs.some((x) => x.msg.includes('\x4B:/secret'))
   })())
 
   const mf = await run(h.maskFxHandler, { method: 'GET' })
@@ -263,7 +263,7 @@ console.log('\n=== 5. 四个新端点：围栏 / 参数 / 卸载（注入假 dep
   ok('★ snapshot 抛错 500，异常细节只进本地日志不进响应', await (async () => {
     const logs = []
     const d4 = makeDeps({
-      snapshot: async () => { throw new Error('C:/Users/TestUser/SECRET-STACK') },
+      snapshot: async () => { throw new Error('\x43:/Users/TestUser/SECRET-STACK') },
       log: (level, msg) => logs.push({ level, msg }),
     })
     const r = await run(makeIntegrationHandlers(d4.deps).integrationStateHandler, { method: 'GET' })

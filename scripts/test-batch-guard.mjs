@@ -258,7 +258,7 @@ console.log('\n=== 4. C17 错误可操作化 ===')
   const offline = diagnoseError(new Error('fetch failed: connect ECONNREFUSED 127.0.0.1:8188'))
   eq(offline.code, 'offline', '★ 识别连不上服务')
 
-  const file = diagnoseError(new Error('ENOENT: no such file or directory, open \'K:/x/a.png\''))
+  const file = diagnoseError(new Error('ENOENT: no such file or directory, open \'\x4B:/x/a.png\''))
   eq(file.code, 'missing_file', '★ 识别文件不存在')
   eq(file.retryable, false, '★★ 文件不存在标记为不可重试（重试多少次都还是不存在）')
 

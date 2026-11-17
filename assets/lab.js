@@ -38,11 +38,15 @@
     { id: 'ops', label: '运维 · 队列与资源', open: false },
     { id: 'voice', label: '语音 · 后端与音色', open: false },
   ]
-  // 顺序敏感：先匹配到的组胜出。未命中一律落 tool（兜底，不丢 section）。
+  // ★ 2026-11-17 修正：顺序敏感且「强特征优先」——诊断卡的标题里也含 TTS
+  //   （「加速链 · 缓存 / TTS / SageAttention」/「链契约与 ETA · 生图 / TTS」），
+  //   若 voice 规则在前会先命中「TTS」把这两张诊断卡折叠进默认关闭的语音组 ⇒ 用户看不到加速链。
+  //   诊断关键词（加速链/契约/ETA/doctor…）是更精确的特征，必须排在 voice 的宽泛「TTS」之前。
+  //   真正的语音卡（「语音后端 · Qwen3-TTS」「音色样本」「轻量缝合 · 旁白」）不含诊断关键词，仍归 voice。
   var GROUP_RULES = [
-    ['voice', /音色|TTS|语音|ASR|字幕|BGM|缝合|旁白/u],
-    ['ops', /队列|显存|Worker|DAG|工作流/u],
     ['diag', /doctor|健康检查|加速链|配置矛盾|契约|ETA|结构化日志|诊断/u],
+    ['ops', /队列|显存|Worker|DAG|工作流/u],
+    ['voice', /音色|TTS|语音|ASR|字幕|BGM|缝合|旁白/u],
   ]
   function labGroupOf(title) {
     var t = String(title ?? '')
@@ -123,10 +127,14 @@
       : (typeof fetch === 'function' ? fetch : null)
     if (!f) return Promise.resolve({ ok: false, reason: '本机 fetch 不可用' })
     var url = API + pathPart
+    // ★ 2026-11-17.1：区分「连不上本机服务」与「服务返回异常」，
+    //   旧版两种都吞成「本机请求失败」掩盖了 ComfyUI 没启动这一真因。
+    //   只回固定文案，不回吐 error.message（防泄露本机路径/凭据）。
     return f(url, init || {}).then(function (r) {
+      if (!r || r.ok === false) return { ok: false, reason: '本机服务返回异常（HTTP ' + ((r && r.status) || '?') + '），请确认 ComfyUI 已启动' }
       return (r && typeof r.json === 'function') ? r.json() : null
     }).catch(function () {
-      return { ok: false, reason: '本机请求失败（详见插件日志）' }
+      return { ok: false, reason: '连不上本机服务：ComfyUI 可能未启动（请启动后重试）' }
     })
   }
 
@@ -521,11 +529,121 @@
     box.appendChild(tr.sec)
 
     /* ---- 队列 ---- */
-    var queue = makeSection('队列 · 任务状态')
+    // ★ 2026-11-17（M3）：队列从"只读状态"升级为可操作。走的是 /api/qwen-paint/jobs
+    //   —— 同一份真队列（manage_jobs 工具用的那个实例），不另建、不代理。
+    var queue = makeSection('队列 · 任务状态与操作')
+    function renderJobs(j) {
+      var box = queue.result
+      while (box.firstChild) box.removeChild(box.firstChild)
+      if (!j || !j.ok) {
+        box.appendChild(el('div', '', String((j && j.reason) || '队列状态取不到')))
+        return
+      }
+      var s = j.stats || {}
+      box.appendChild(el('div', '', 'pending ' + (s.pending || 0) + ' · running ' + (s.running || 0)
+        + ' · done ' + (s.done || 0) + ' · failed ' + (s.failed || 0) + ' · canceled ' + (s.canceled || 0)
+        + (s.paused ? ' · 【已暂停派发】' : '')))
+      var jobs = Array.isArray(j.jobs) ? j.jobs : []
+      if (jobs.length === 0) {
+        box.appendChild(el('div', '', '（队列空）'))
+        return
+      }
+      for (var i = 0; i < jobs.length && i < 30; i += 1) {
+        var job = jobs[i] || {}
+        var line = el('div', '')
+        line.appendChild(el('span', '', '#' + String(job.id || '') + ' [' + String(job.state || '') + ']'
+          + (job.priority !== undefined ? ' P' + String(job.priority) : '')))
+        if (job.state === 'pending' || job.state === 'running') {
+          var cancelBtn = el('button', '', '取消')
+          cancelBtn.type = 'button'
+          cancelBtn.title = job.state === 'running'
+            ? '运行中取消：通知任务自行收尾并立即标记取消（尽力而为）'
+            : '排队中取消：直接移出队列'
+          tap(cancelBtn, function (id) {
+            return function () {
+              request('jobs', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ action: 'cancel', id: id }),
+              }).then(function (x) {
+                // 取消后直接重拉列表：结果与原因一起如实展示（不 ok 也会带回队列的真实原因）。
+                renderResult(queue.result, x)
+                request('jobs').then(renderJobs)
+              })
+            }
+          }(job.id))
+          line.appendChild(cancelBtn)
+        }
+        box.appendChild(line)
+      }
+      if (jobs.length > 30) box.appendChild(el('div', '', '…（只显示前 30 条，共 ' + jobs.length + ' 条）'))
+    }
+    queue.row.appendChild(button('查看任务', false, function () {
+      request('jobs').then(renderJobs).catch(function () { renderJobs({ ok: false, reason: '队列端点不可达' }) })
+    }))
+    queue.row.appendChild(button('暂停派发', false, function () {
+      request('jobs', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'pause' }),
+      }).then(function (j) {
+        renderResult(queue.result, j)
+        if (j && j.ok) queue.result.insertBefore(el('div', 'dshqp-lab-line', '已暂停派发新任务；正在跑的不受影响。'), queue.result.firstChild)
+      })
+    }))
+    queue.row.appendChild(button('恢复派发', false, function () {
+      request('jobs', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'resume' }),
+      }).then(function (j) {
+        renderResult(queue.result, j)
+        if (j && j.ok) queue.result.insertBefore(el('div', 'dshqp-lab-line', '已恢复派发。'), queue.result.firstChild)
+      })
+    }))
     queue.row.appendChild(button('刷新队列', false, function () {
       request('status.json').then(function (j) { renderResult(queue.result, j) })
     }))
     box.appendChild(queue.sec)
+
+    /* ---- ControlNet 预处理（M4）：Canny / Depth / OpenPose，产物落缓存可当 controlImage ---- */
+    var prep = makeSection('ControlNet 预处理 · 产物缓存')
+    var prepPath = labeledInput('原图绝对路径', '')
+    prep.body.appendChild(prepPath.wrap)
+    var prepType = el('select', '')
+    var PREP_TYPES = [
+      { id: 'canny', label: '线稿（Canny，核心节点）' },
+      { id: 'depth', label: '深度（Depth，需预处理器包）' },
+      { id: 'pose', label: '姿态（OpenPose，需预处理器包）' },
+    ]
+    for (var pi = 0; pi < PREP_TYPES.length; pi += 1) {
+      var po = el('option', '', PREP_TYPES[pi].label)
+      po.value = PREP_TYPES[pi].id
+      prepType.appendChild(po)
+    }
+    prep.body.appendChild(prepType)
+    prep.row.appendChild(button('提取并缓存', false, function () {
+      var p = String(prepPath.input.value || '').trim()
+      if (p === '') { renderResult(prep.result, { ok: false, reason: '先填原图绝对路径' }); return }
+      renderResult(prep.result, { ok: true, note: '正在预处理…（首次会跑一次 ComfyUI 小工作流）' })
+      request('cnet-preprocess', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ path: p, type: String(prepType.value || 'canny') }),
+      }).then(function (r) { return r.json() }).then(function (j) {
+        renderResult(prep.result, j)
+        if (j && j.ok && j.preview_url) {
+          var img = el('img', '')
+          img.src = j.preview_url
+          img.alt = '预处理结果预览'
+          img.style.maxWidth = '320px'
+          img.style.display = 'block'
+          prep.result.appendChild(img)
+          prep.result.appendChild(el('div', '', '把上面响应里的 path 填进 draw_image 的 controlImage 即可。'))
+        }
+      }).catch(function () { renderResult(prep.result, { ok: false, reason: '预处理请求失败' }) })
+    }))
+    box.appendChild(prep.sec)
 
     /* ---- 显存预算：每个子任务独立可选 0/2/4/8/12/16/24 GB 或无上限 ---- */
     var budget = makeSection('显存预算 · 每个子任务独立上限')
@@ -593,7 +711,9 @@
     /* ---- 语音后端：用户选模型（第三方节点只探测，不假装已装） ---- */
     var ttsB = makeSection('语音后端 · Qwen3-TTS / GPT-SoVITS v5 / IndexTTS2')
     ttsB.body.appendChild(el('div', 'dshqp-lab-note',
-      'GPT-SoVITS v5 分「原版 dev」与「蒸馏版 turbo」；第三方节点需自行安装。未探测到会明确标不可用，插件不自动下载权重。'))
+      'GPT-SoVITS v5 分「原版 dev」与「蒸馏版 turbo」；第三方节点需自行安装。未探测到会明确标不可用，插件不自动下载权重。'
+      + '「查看后端」还会探测可外接的低延迟服务：GSV.CPP（MIT，需自装 9880 服务）与 AnifLive-TTS（PolyForm 禁商用，'
+      + '本插件只给引导、不捆绑其代码）。'))
     ttsB.row.appendChild(button('查看后端与探测状态', false, function () {
       emptyResult(ttsB.result, '正在读取后端清单…')
       request('tts/backends').then(function (j) { renderResult(ttsB.result, j) })

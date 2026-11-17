@@ -102,7 +102,7 @@ console.log('\n[3] ★★ 双轨一致性：清单产物 === 源码产物（逐�
 
 const CASES = [
   { name: 't2v 基本（全默认）', opts: { prompt: '一只橘猫在草地上奔跑', seed: 12345 } },
-  { name: 'i2v 带首帧', opts: { prompt: '镜头缓慢推近', seed: 12345, startImage: 'K:/tmp/first.png' } },
+  { name: 'i2v 带首帧', opts: { prompt: '镜头缓慢推近', seed: 12345, startImage: '\x4B:/tmp/first.png' } },
   { name: '非默认尺寸/帧数/帧率/步数', opts: { prompt: '海浪拍岸', seed: 7, width: 1000, height: 600, frames: 30, fps: 16, steps: 6 } },
   { name: '越界值（低）', opts: { prompt: '极简色块', seed: 0, width: 100, height: 100, frames: 5, fps: 1 } },
   { name: '越界值（高）', opts: { prompt: '极繁细节', seed: 2147483647, width: 4096, height: 4096, frames: 999, fps: 999 } },
@@ -116,7 +116,7 @@ const CASES = [
   { name: '没探测到 caps（undefined 不算缺）', opts: { prompt: '测试', seed: 11 }, caps: { nodes: { KSampler: undefined } } },
   // ↓ D22 音轨（2026-11-14 新增）：这是**条件新增节点**，双轨最容易漂的地方
   { name: 'D22 带音轨', opts: { prompt: '测试', seed: 11, audioTrack: 'dshqp-ref-audio-x.wav' } },
-  { name: 'D22 音轨 + 首帧（两个补丁同时生效）', opts: { prompt: '测试', seed: 11, startImage: 'K:/a.png', audioTrack: 'a.wav' } },
+  { name: 'D22 音轨 + 首帧（两个补丁同时生效）', opts: { prompt: '测试', seed: 11, startImage: '\x4B:/a.png', audioTrack: 'a.wav' } },
   { name: 'D22 音轨白空格（trim 后视为没给，不得新增节点）', opts: { prompt: '测试', seed: 11, audioTrack: '   ' } },
   { name: 'D22 缺 VHS_LoadAudio 但不用音轨（不该报缺件）', opts: { prompt: '测试', seed: 11 }, caps: { nodes: { VHS_LoadAudio: false } } },
   { name: 'D22 缺 VHS_LoadAudio 又给了音轨（要报缺件）', opts: { prompt: '测试', seed: 11, audioTrack: 'a.wav' }, caps: { nodes: { VHS_LoadAudio: false } } },
@@ -134,9 +134,9 @@ for (const c of CASES) {
 // 单条细化断言：i2v 的补丁到底有没有生效
 {
   const t2v = buildVideoWorkflowFromManifest({ nodes: {} }, { prompt: 'x', seed: 1 })
-  const i2v = buildVideoWorkflowFromManifest({ nodes: {} }, { prompt: 'x', seed: 1, startImage: 'K:/a.png' })
+  const i2v = buildVideoWorkflowFromManifest({ nodes: {} }, { prompt: 'x', seed: 1, startImage: '\x4B:/a.png' })
   ok(!('start_image' in (t2v.workflow[7].inputs)), 't2v：节点 7 没有 start_image（没首帧就不写这个槽）')
-  ok(i2v.workflow[7].inputs.start_image === 'K:/a.png', 'i2v：节点 7 的 start_image 等于传入路径')
+  ok(i2v.workflow[7].inputs.start_image === '\x4B:/a.png', 'i2v：节点 7 的 start_image 等于传入路径')
   ok(eq(t2v.appliedPatches, []), 't2v：没有应用任何补丁')
   ok(eq(i2v.appliedPatches, ['i2v-start-image']), 'i2v：应用了 i2v-start-image 补丁')
   ok(t2v.plan.mode === 't2v' && i2v.plan.mode === 'i2v', 'plan.mode 随首帧正确切换')
@@ -156,7 +156,7 @@ for (const c of CASES) {
   ok(eq(withAudio.appliedPatches, ['audio-track']), 'D22：应用了 audio-track 补丁')
   ok(withAudio.plan.audioTrack === 'input/a.wav', 'D22：plan 回传规范化后的音轨路径',
     withAudio.plan.audioTrack)
-  const both = buildVideoWorkflowFromManifest({ nodes: {} }, { prompt: 'x', seed: 1, startImage: 'K:/a.png', audioTrack: 'a.wav' })
+  const both = buildVideoWorkflowFromManifest({ nodes: {} }, { prompt: 'x', seed: 1, startImage: '\x4B:/a.png', audioTrack: 'a.wav' })
   ok(eq(both.appliedPatches, ['i2v-start-image', 'audio-track']), 'D22：首帧 + 音轨两个补丁按声明顺序都应用')
 }
 

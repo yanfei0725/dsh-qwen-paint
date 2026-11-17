@@ -119,7 +119,7 @@ console.log('=== 3. 工具执行：围栏 / 降级 / 成功 ===')
   const f0 = await makeSplitAudioTool({ ...deps, mediaExec: failExec }).execute({ source: 'in.mp3' })
   ok('执行失败 → degraded', f0.degraded && !f0.ok)
   ok('失败原因固定文案（不回吐异常）', f0.reason.length > 0 && !f0.reason.includes('C:'))
-  const throwExec = { probe: async () => ({ available: true }), runCommand: async () => { throw new Error('SECRET /C:/Users/x') } }
+  const throwExec = { probe: async () => ({ available: true }), runCommand: async () => { throw new Error('SECRET /\x43:/Users/x') } }
   const f1 = await makeEnhanceAudioTool({ ...deps, mediaExec: throwExec }).execute({ source: 'in.wav', target: 'a.m4a' })
   ok('抛异常 → 固定文案不泄漏路径', f1.degraded && !f1.reason.includes('C:') && !f1.reason.includes('SECRET'))
 }

@@ -1347,3 +1347,28 @@
           //   runSpeechStage（backend / voiceSample）。旧代码一个都不传 ⇒ UI 选了不生效，
           //   是假控件。配置缺失时回落默认（'' = Qwen3-TTS / 默认音色），行为不变。
 ```
+
+
+---
+
+<!-- 由 scripts/slim-comments.mjs 自动外置；源码只留锚点，逐字内容见此。 -->
+
+### index-note-001（原 lib/index.js L2033-2037）
+
+```js
+      // ★ 2026-11-13：写生成历史（SQLite）。与上面的 JSONL 并列，互不替代：
+      //   JSONL 是 dsh-auto-memory 的既有通道，SQLite 是可搜索/分页/血缘的正式历史层。
+      // ★ 2026-11-17（M1/M2）：把**实际接线**的 LoRA / 主模型 / CFG 值落进 extra ——
+      //   支撑按 LoRA 检索与参数包导出。数据取自构建出的工作流本体：
+      //   记录的是真的进了图的东西，不是面板的"当前选择"（并发下两者可能不一致）。
+```
+
+### index-note-002（原 lib/index.js L3003-3007）
+
+```js
+          // M4：ControlNet 预处理（Canny / Depth / OpenPose）+ 产物缓存。
+          //   纯逻辑（候选节点表 / 构图 / 缓存键 / 账本）在 lib/cnet-preprocess.js，
+          //   这里的处理器只做 IO 串接：上传 → 提交 → 等待 → 下载产物 → 落缓存。
+          //   缺节点时如实 409 + 安装提示，绝不假装能跑（契约 0.39.0 只有 Canny）。
+          //   ⚠ 本文件 fs 是具名导入（无默认 fs 对象）：这里传 {readFileSync,...} 面给缓存账本。
+```

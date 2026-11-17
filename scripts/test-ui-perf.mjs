@@ -155,10 +155,22 @@ ok('lab.js 暴露分组纯函数', labApi
   && typeof labApi.labGroupOf === 'function' && typeof labApi.groupSections === 'function')
 if (labApi) {
   const g = labApi.labGroupOf
-  ok('诊断组：doctor / 加速链 / 配置矛盾 / 契约 / 日志',
-    g('doctor · 健康检查') === 'diag' && g('加速链 · 缓存') === 'diag'
-    && g('配置矛盾 · 只读报告') === 'diag' && g('链契约与 ETA') === 'diag'
-    && g('结构化日志 · 生成事件') === 'diag')
+  // ★ 2026-11-17 修正：必须用**真实完整标题**断言。此前用简化标题「加速链 · 缓存」
+  //   （不含 TTS）测试通过，但真实标题含 TTS 被 voice 规则截胡 ⇒ 加速链卡被折叠看不见。
+  //   教训：测试夹具与真实字面量不一致 = 假绿。
+  ok('诊断组（真实标题）：加速链/契约虽含 TTS 仍归 diag 不被语音折叠',
+    g('doctor · 健康检查') === 'diag'
+    && g('加速链 · 缓存 / TTS / SageAttention / WaveSpeed') === 'diag'
+    && g('链契约与 ETA · 生图 / TTS') === 'diag'
+    && g('配置矛盾 · 只读报告') === 'diag'
+    && g('结构化日志 · 生成事件（JSON Lines）') === 'diag')
+  ok('语音组（真实标题）：TTS 后端/音色/缝合仍归 voice',
+    g('语音后端 · Qwen3-TTS / GPT-SoVITS v5 / IndexTTS2') === 'voice'
+    && g('音色样本 · 拖入音频做新音色') === 'voice'
+    && g('轻量缝合 · 旁白时间轴 + BGM ducking + SRT') === 'voice'
+    && g('音频转文字 · ASR 字幕') === 'voice'
+    && g('本机 ASR · faster-whisper 等（asrUrl 指过来即接通字幕链路）') === 'voice'
+    && g('音乐 BGM · ACE-Step 1.5 / YuE2') === 'voice')
   ok('运维组：队列 / 显存 / DAG / Worker',
     g('队列 · 任务状态') === 'ops' && g('显存预算') === 'ops'
     && g('DAG · 工作流') === 'ops' && g('独立 Worker · 环境隔离') === 'ops')
@@ -248,6 +260,19 @@ ok('完全没缓存时放占位 option（不是空 select 白条）',
   /placeholderOption\('（正在读取本机清单…）', el\)/u.test(PANEL_SRC))
 ok('silent 刷新失败不覆盖已显示状态',
   /if \(!silent\)[\s\S]{0,120}模型清单读取失败/u.test(PANEL_SRC))
+
+console.log('\n=== 6. 错误文案可诊断 + UI_BUILD 自证（2026-11-17.1） ===')
+// ★ 2026-11-17.1：旧版把「连不上服务」和「服务返回异常」都吞成
+//   「本机请求失败（详见插件日志）」，掩盖了 ComfyUI 没启动这一真因。
+ok('★ 本机请求失败文案已区分服务离线 vs 服务异常（不再笼统一句）',
+  LAB_SRC.includes("连不上本机服务：ComfyUI 可能未启动")
+  && LAB_SRC.includes("本机服务返回异常（HTTP ")
+  && !LAB_SRC.includes('本机请求失败（详见插件日志）'))
+ok('★ 区分文案不回吐 error.message（catch 里不拼 error）',
+  /\.catch\(function \(\) \{\s*return \{ ok: false, reason: '连不上本机服务/u.test(LAB_SRC))
+ok('★ UI_BUILD 已 bump 到 2026-11-17.1（分组修复+错误文案，真机刷新可自证）',
+  /var UI_BUILD = '2026-11-17\.1'/u.test(PANEL_SRC)
+  && /data-cp-ui-build', UI_BUILD/u.test(PANEL_SRC))
 
 console.log(`\n结果：${pass} 通过 / ${fail} 失败`)
 if (fail > 0) process.exit(1)

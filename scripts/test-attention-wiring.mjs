@@ -151,7 +151,7 @@ console.log('\n=== 5. 两条真实工作流构造路径都接上了 ===')
     config.includes("import { buildAttentionWorkflowPatch } from './attention-workflow.js'"))
   ok('★ config.js 真的调用并把节点 40 接进模型链末端',
     config.includes('const attentionPlan = buildAttentionWorkflowPatch(')
-    && config.includes('40: withAttention') && config.includes("[7, 11, 12, 13, 14, 16, 17, 18, 19, 40]"))
+    && config.includes('40: withAttention') && config.includes("[7, 11, 12, 13, 14, 16, 17, 18, 19, 42, 40]"))
   ok('★ modelRef 在启用时指向 40', config.includes("withAttention ? '40'"))
   ok('★ turbo-workflow.js 也接上了',
     turbo.includes('buildAttentionWorkflowPatch') && turbo.includes('applyAttentionNodes'))
