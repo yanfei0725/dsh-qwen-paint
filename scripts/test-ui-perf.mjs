@@ -134,9 +134,13 @@ ok('只对成功且在线的清单写缓存（失败不缓存，保留重试）'
   /j\s*&&\s*j\.ok === true\s*&&\s*j\.online === true/u.test(PANEL_SRC))
 ok('轮询用递归 setTimeout + 动态间隔',
   /setTimeout\(pollTick, pollIntervalMs\(progressIdleTicks\)\)/u.test(PANEL_SRC))
-ok('pollProgress 有进度归零 / 空列表累加',
-  /if \(items\.length > 0\) progressIdleTicks = 0/u.test(PANEL_SRC)
+ok('pollProgress 有进度或 TTS 首段事件归零 / 空列表累加',
+  /if \(items\.length > 0 \|\| \(j && j\.ttsLive\)\) progressIdleTicks = 0/u.test(PANEL_SRC)
   && /else progressIdleTicks \+= 1/u.test(PANEL_SRC))
+ok('★ TTS 首段早出声：消费 progress.ttsLive 且去重后播一次',
+  /playTtsLive\(j\.ttsLive\)/u.test(PANEL_SRC)
+  && /sig === ttsLiveSeen\) return/u.test(PANEL_SRC)
+  && /new Audio\(\)/u.test(PANEL_SRC))
 // ★ 2026-11-16 判据升级：失败后自动重试（'retry'）是新增能力，
 //   旧断言锁的「只有 force===true 能重入」写法已被有意替换。
 ok('lab /health 首次挂载拉一次（失败可重试）', /var briefLoaded = false/u.test(LAB_SRC)
@@ -270,8 +274,8 @@ ok('★ 本机请求失败文案已区分服务离线 vs 服务异常（不再�
   && !LAB_SRC.includes('本机请求失败（详见插件日志）'))
 ok('★ 区分文案不回吐 error.message（catch 里不拼 error）',
   /\.catch\(function \(\) \{\s*return \{ ok: false, reason: '连不上本机服务/u.test(LAB_SRC))
-ok('★ UI_BUILD 已 bump 到 2026-11-17.1（分组修复+错误文案，真机刷新可自证）',
-  /var UI_BUILD = '2026-11-17\.1'/u.test(PANEL_SRC)
+ok('★ UI_BUILD 已 bump 到 2026-11-17.2（TTS 首段早出声，真机刷新可自证）',
+  /var UI_BUILD = '2026-11-17\.2'/u.test(PANEL_SRC)
   && /data-cp-ui-build', UI_BUILD/u.test(PANEL_SRC))
 
 console.log(`\n结果：${pass} 通过 / ${fail} 失败`)

@@ -36,6 +36,24 @@ section('① 语义分块（抄通用思路，非任何项目代码）')
   ok('首块缩短到 firstChars', f.ok && f.firstChunk.length <= 3, JSON.stringify(f.firstChunk))
 }
 
+section('①b 两段式早出声规划 + 首段事件 store')
+{
+  const two = m.planTwoStageTts('今天天气真好啊我们一起去公园散步行不行呀然后顺便买点吃的东西回家吧。', { firstChars: 6 })
+  ok('两段式恰好切 2 段', two.ok && two.chunks.length === 2, JSON.stringify(two))
+  ok('两段拼接回原文（无丢字）', two.ok && two.chunks.join('') === '今天天气真好啊我们一起去公园散步行不行呀然后顺便买点吃的东西回家吧。')
+  ok('首段不超过 firstChars 附近（标点优先）', two.ok && two.firstChars <= 7, JSON.stringify(two.firstChars))
+  const punct = m.planTwoStageTts('你好。后面的内容还很长足以构成第二段并且超过首块长度限制没问题。', { firstChars: 24 })
+  ok('优先在句末标点断开', punct.ok && punct.chunks[0].endsWith('。'), JSON.stringify(punct.chunks[0]))
+  ok('空文本降级', m.planTwoStageTts('   ').ok === false)
+  const store = m.createTtsLiveStore({ ttlMs: 1000 })
+  ok('无事件时快照为 null', store.snapshot() === null)
+  store.publish('C:/out/p0.mp3', { bytes: 123, of: 1, total: 2 })
+  const snap = store.snapshot()
+  ok('publish 后带出 path/url/进度', !!snap && snap.path === 'C:/out/p0.mp3' && /api\/qwen-paint\/file\?path=/.test(snap.url) && snap.of === 1, JSON.stringify(snap))
+  store.clear()
+  ok('clear 后快照为 null', store.snapshot() === null)
+}
+
 section('② 回环围栏（数据只走本机）')
 {
   const gsv = m.EXTERNAL_TTS_SERVICES.find((s) => s.id === 'gsv_cpp')
@@ -116,10 +134,23 @@ section('⑥ 生产接线（非孤儿）')
   ok('设计注记含许可证边界', /PolyForm Noncommercial/.test(notes) && /3\.16 GB/.test(notes))
   const speech = read('lib/speech-tool.js')
   ok('★ lowLatencyChunks 默认 false（零漂移）', /lowLatencyChunks = false/.test(speech))
-  ok('分块走 planLowLatencyTts + synthOne 复用', /planLowLatencyTts\(body\)/.test(speech) && /synthOne\(/.test(speech))
+  ok('分块走 planTwoStageTts（首段短+剩余整段）+ synthOne 复用',
+    /planTwoStageTts\(body\)/.test(speech) && /synthOne\(/.test(speech))
   ok('分块产物拼接用 buildAudioConcatArgv', /buildAudioConcatArgv\(/.test(speech))
   ok('缓存键区分分块/整段（不撞键）', /lowLatencyChunks === true \? 'chunks' : 'whole'/.test(speech))
   ok('attention 参数透传三链', /prefix, attention \}\)/.test(speech) && /prefix, attention,/.test(speech))
+  // ★ 首段早出声链路（悬浮面板）
+  ok('speech 首段落盘即推 onFirstChunk', /i === 0 && typeof onFirstChunk === 'function'/.test(speech))
+  ok('★ 首段事件在整段 concat 之前推出（早出声时序）',
+    speech.indexOf("if (i === 0 && typeof onFirstChunk === 'function')") < speech.indexOf('const concat = buildAudioConcatArgv'))
+  const index = read('lib/index.js')
+  ok('index 建 ttsLiveStore 单例', /createTtsLiveStore\(\)/.test(index))
+  ok('makeSpeechDeps 注入 onFirstChunk', /onFirstChunk: \(filePath, meta\) => ttsLiveStore\.publish/.test(index))
+  ok('progress 响应带出 ttsLive', /const ttsLive = ttsLiveStore\.snapshot\(\)/.test(index) && /ttsLive \}/.test(index))
+  const panel = read('assets/panel.js')
+  ok('悬浮面板消费 ttsLive 播放', /playTtsLive\(j\.ttsLive\)/.test(panel) && /new Audio\(\)/.test(panel))
+  const fileRoute = read('lib/file-route.js')
+  ok('文件路由支持音频 MIME（含 m4a）', /'\.m4a': 'audio\/mp4'/.test(fileRoute))
   ok('ffmpeg 缺失明确报，不静默', /低延迟分块需要 ffmpeg/.test(speech))
   // 外置注释逐字可追溯
   for (const name of ['comfy-catalog', 'cpu-endpoints', 'media-convert-tool', 'job-tool']) {

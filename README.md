@@ -1,6 +1,6 @@
 # dsh-qwen-paint · (绘图)千问（优化版）
 
-DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（QQ 交流群 454707710）。★ 0.33.0 起许可改为 BSL 1.1（BUSL-1.1，非 OSI 开源许可）：除托管/代管服务与直接竞品捆绑两类「竞争性使用」外免费生产使用，2030-11-15 转 Apache-2.0；0.32.1 及更早仍 MIT、不追溯。★ 1.1.0：全面提速——内置 resvg 光栅 7.02× / 静态帧去重+VFR 合成 6.58× / 分镜缓存 34.2× / 草稿档 2.10×，TE-Speed 生图链真机 −17.3%，编码择优纠错（x264 排 AMF 前）、BGM 三缓存、Qwen3-TTS attention 可选 + 低延迟分块；未实测的一律不吹倍率。★ 1.0.0：选模型「假成功」根治（拒绝时如实回未生效 + 原因，不再无条件报已选）、优化面板与素材库白条同源修复（持久化缓存 + 占位 + 错误态）、历史筛选分页与重复请求收口、所有写参数拒绝统一 choiceResult。★ 0.35.0：口语入口别名（「风格卡」「批量出图」…）解析成真实工具、参考图色调取样写进提示词、建议时间轴 / 资源需求声明 / 数据流摘要 / 「刚才那张」产出短引用全部接进主链路。★ 0.34.0：SageAttention / Comfy-WaveSpeed 并入加速链并按真实 /object_info 探测、卡片常驻显示；GPT-SoVITS v5 / IndexTTS2 可选 TTS、拖音频零样本克隆、ACE-Step 1.5 / YuE2 音乐 BGM、手动超分、Worker 热温冷保活。0.33.0 新增媒体格式转换（图片 JPG/PNG/WebP、视频 MP4/MKV/MOV/WebM、音频 MP3/AAC/WAV/FLAC，生成物可指定输出格式、动图转视频、自有素材转换，Agent 可直接调用 convert_media）与加速链全景（生图/视频缓存后端 + TTS 加速 + 显存预算 + 配置裁决 + 结构化日志，只列探测到的、未实测不写倍率）、本机能力功能区内嵌进 Comfy 控制面板（展开页恒在悬浮球正上方、边框对齐 DSH 右边框、四事件点按兜底）、GIF 转换 / 运行期自诊断 / 优先级任务队列 / 单图迭代优化 / 自适应 DAG 编排 / 生成历史可删改与冷热分离等本机工具与端点；0.32.1 两轮审计加固：ASR 音频路径围栏（只认出图目录内文件）、按包名安装也能执行引导脚本、草图台四事件点按、错误响应消毒收口；视频链清单化 + 生图/TTS 契约对账（改图自动报差异）；生图/视频/混合三模式界面各不同；批量出图带幂等保护（重试不重出）；Qwen3-TTS 语音克隆与可接 ASR 自动字幕；本机实测秒数；会话级模型驻留、显存建议、参数来源表、预设绑定、加载器盘点等本机端点。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合、导入音频直接合进成片（音轨合成），文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech，参考音频可复刻音色），模型无关角色参考；草图台手绘参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。
+DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（QQ 交流群 454707710）。★ 0.33.0 起许可改为 BSL 1.1（BUSL-1.1，非 OSI 开源许可）：除托管/代管服务与直接竞品捆绑两类「竞争性使用」外免费生产使用，2030-11-15 转 Apache-2.0；0.32.1 及更早仍 MIT、不追溯。★ 1.1.1：TTS 首段早出声——悬浮面板两段式（首段落盘即播、剩余整段一次提交，省 N−2 次往返），默认关、非节点级流式、整段时长不变。★ 1.1.0：全面提速——内置 resvg 光栅 7.02× / 静态帧去重+VFR 合成 6.58× / 分镜缓存 34.2× / 草稿档 2.10×，TE-Speed 生图链真机 −17.3%，编码择优纠错（x264 排 AMF 前）、BGM 三缓存、Qwen3-TTS attention 可选 + 低延迟分块；未实测的一律不吹倍率。★ 1.0.0：选模型「假成功」根治（拒绝时如实回未生效 + 原因，不再无条件报已选）、优化面板与素材库白条同源修复（持久化缓存 + 占位 + 错误态）、历史筛选分页与重复请求收口、所有写参数拒绝统一 choiceResult。★ 0.35.0：口语入口别名（「风格卡」「批量出图」…）解析成真实工具、参考图色调取样写进提示词、建议时间轴 / 资源需求声明 / 数据流摘要 / 「刚才那张」产出短引用全部接进主链路。★ 0.34.0：SageAttention / Comfy-WaveSpeed 并入加速链并按真实 /object_info 探测、卡片常驻显示；GPT-SoVITS v5 / IndexTTS2 可选 TTS、拖音频零样本克隆、ACE-Step 1.5 / YuE2 音乐 BGM、手动超分、Worker 热温冷保活。0.33.0 新增媒体格式转换（图片 JPG/PNG/WebP、视频 MP4/MKV/MOV/WebM、音频 MP3/AAC/WAV/FLAC，生成物可指定输出格式、动图转视频、自有素材转换，Agent 可直接调用 convert_media）与加速链全景（生图/视频缓存后端 + TTS 加速 + 显存预算 + 配置裁决 + 结构化日志，只列探测到的、未实测不写倍率）、本机能力功能区内嵌进 Comfy 控制面板（展开页恒在悬浮球正上方、边框对齐 DSH 右边框、四事件点按兜底）、GIF 转换 / 运行期自诊断 / 优先级任务队列 / 单图迭代优化 / 自适应 DAG 编排 / 生成历史可删改与冷热分离等本机工具与端点；0.32.1 两轮审计加固：ASR 音频路径围栏（只认出图目录内文件）、按包名安装也能执行引导脚本、草图台四事件点按、错误响应消毒收口；视频链清单化 + 生图/TTS 契约对账（改图自动报差异）；生图/视频/混合三模式界面各不同；批量出图带幂等保护（重试不重出）；Qwen3-TTS 语音克隆与可接 ASR 自动字幕；本机实测秒数；会话级模型驻留、显存建议、参数来源表、预设绑定、加载器盘点等本机端点。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合、导入音频直接合进成片（音轨合成），文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech，参考音频可复刻音色），模型无关角色参考；草图台手绘参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。
 
 ## Features
 
@@ -36,7 +36,7 @@ DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS 全能 · 本机运行（Q
 dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 ```
 
-> 使用 `desktop` profile 时须**先完全退出 DSH**。本包在 npm 的包名为 `dsh-qwen-paint`（仓库当前 `1.1.0`），可直接 `dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式仅用于开发或试用未发布改动。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
+> 使用 `desktop` profile 时须**先完全退出 DSH**。本包在 npm 的包名为 `dsh-qwen-paint`（仓库当前 `1.1.1`），可直接 `dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式仅用于开发或试用未发布改动。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
 
 ## Usage
 
@@ -102,7 +102,7 @@ dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 
 > **QQ 交流群**：`454707710`　｜　**反馈 / 提问 / 提需求**都走这里，issue 也欢迎：<https://github.com/yanfei0725/dsh-qwen-paint/issues>
 
-> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：BSL 1.1（BUSL-1.1）　｜　**当前版本**：`1.1.0`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
+> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：BSL 1.1（BUSL-1.1）　｜　**当前版本**：`1.1.1`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
 
 ---
 
@@ -189,6 +189,45 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 
 刻意**不**把 `engines` 提到 `>=22.5`：那会把一批能正常出图的用户直接挡在门外，代价只是少一个可搜索的历史库。
 
+## 1.1.1 更新说明
+
+> 从 1.1.0 到 1.1.1：这是一个**只加不改**的小版本——唯一功能变更是 TTS 首段早出声（悬浮面板两段式），默认关闭、对既有用户零行为漂移；1.1.0 及此前全部能力与加速数字继续有效，API 与工具名零变更，升级只需替换插件目录。更新说明按发布护栏要求逐节列全，便于 Agent 与用户核对。
+
+### ★ 许可证：维持 BSL 1.1（BUSL-1.1），本版不改
+- 自 **0.33.0 起**许可为 **BSL 1.1**（`BUSL-1.1`，非 OSI 开源许可）：除托管 / 代管服务与直接竞品捆绑两类「竞争性使用」外免费生产使用；**Change Date 2030-11-15** 自动转 **Apache-2.0**。**0.32.1 及更早版本仍按 MIT 授权，永久、不可撤销、不追溯**。本版没有改动许可文本，也没有新增任何限制。
+- 外部 TTS 服务的合规边界不变：**GSV.CPP**（MIT，只做适配器 + 引导、不捆绑不代下）、**AnifLive-TTS**（原创代码 PolyForm Noncommercial 1.0.0 **禁商用**，只抄公开工程思路、不复制代码与二进制，商用须作者书面授权）。
+
+### ★ 新工具与端点：本版零新增工具，给 `generate_speech` 的 `lowLatencyChunks` 换更优实现
+- `lowLatencyChunks`（默认 false）由「N 块逐段提交 + N 段拼接」改为**两段式**：首段短切先落盘并通过 `progress.ttsLive` 推给悬浮面板自动播一次，剩余整段一次提交，最后 ffmpeg concat 拼 m4a——省掉中间 N−2 次往返。诚实边界：**非节点级流式、整段总时长不变**，只是更早听到首段；块间语气可能断裂；缓存键区分 chunks/whole 防串味。
+- 首段事件存单例 TTL store，只在面板开着时播放，自动播被浏览器拦则静默不报错；回环围栏不变（只认本机 127.0.0.1）。
+
+### ★ 加速链全景：承接 1.1.0，本版不改任何倍率结论
+- 1.1.0 的插件层实测数字继续有效：内置 resvg 光栅 **7.02×**、静态帧去重 + VFR + libx264 **6.58×**、草稿档 **2.10×**、分镜缓存命中 **34.2×**；ComfyUI 生图链 TE-Speed **−17.3%** 仍为唯一稳定正收益。
+- 本版 TTS 两段式**不宣称倍率**：目标是「首段更早落盘 + 更早听到」，整段总耗时的真实 A/B 需要模型常驻、固定单档、丢弃首轮后多轮测量，当前未做，不编数字。attention 真机样本离散与回退事实见 1.1.0 章节，不重复结论。
+
+### ★ 工作流清单层：承接 1.1.0
+- `chain-manifest` 与图结构指纹基准继续生效，后者只在回归里跑、不参与运行时构图。本版不改生成链，默认路径逐字节不变。
+
+### ★ 结构化运行日志：承接 1.1.0
+- `event-log` 落盘 + 生成完成钩子不变；细分耗时 `queue` / `total` 来自 ComfyUI `/history` 真实时间戳，`load/sample/decode` 官方不提供，保持 `null`（不编数字）。
+
+### ★ UI 与交互：`UI_BUILD` 升到 `2026-11-17.2` 供刷新自证
+- 悬浮面板新增首段音频自动播放（按 `path@at` 去重、一次事件只播一次）；`generate_speech` 面板开着才听得到首段。
+- 位置口径不变：功能区仍然**内嵌**进 Comfy 控制面板（不新开浮层），展开页恒在悬浮球**正上方**、**边框对齐** DSH 右边框、小屏**不变形**，四事件点按 + `pointerdown` 兜底。真机刷新后 hover 浮标应显示 `UI 2026-11-17.2`。
+
+### ★ 媒体格式转换：承接 1.1.0
+- 图片 JPG/PNG/WebP、视频 MP4/MKV/MOV/WebM、音频 MP3/AAC/WAV/FLAC 互转不变；`file` 路由补 `.m4a/.aac/.ogg/.opus` MIME 以便面板播放首段音频，转码路径不变。
+
+### ★ 联动护栏与回归
+- `test-tts-lowlatency.mjs` 扩展两段式规划、首段回调时序、`progress.ttsLive`、面板播放与 file MIME 断言，并做「改坏三处 → 精确变红 → 逐字恢复 md5 一致」反向核查；`test-ui-perf.mjs` 同步 build 断言。
+- 全量回归 **110 套，各套项全绿**；`lib/index.js` **224,521 B / 上限 262,144 B，余量 37,623 B**；体积曾因本版超 2,645 B，按纪律外置 4 个文件头注释到 `docs/tts-early-audio-design-notes.md`（逐字留锚点）后守卫恢复通过。
+
+### 文档
+- `package.json` / `meta.description` / README 首段 / 两份 llms 首段 / `pyproject.toml` / `docs/index.html` / `给DSH安装的话.md` 全部同步到 1.1.1，`scripts/test-release-metadata.mjs` 一处改、多处一起校验。
+- 两份 llms 以代码字体点名全部工具与端点；`TOOL_SUMMARIES` / `agent-guide` / 端点目录保持同步。
+- 当前 **136 个 `lib/*.js`** / 合计 **2,095,867 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径；Windows 工作树受 `core.autocrlf` 影响略高）。
+- 真机自证清单（如实列为未完成）：DSH 宿主启动后刷新页面 hover 自证 `UI 2026-11-17.2`、开面板跑 `lowLatencyChunks:true` 听首段是否先播、PPT 加速链档位按钮显示、`smoke.mjs --submit` 真出图、layout 中文可见性、8 GB 核显速度。
+
 ## 1.1.0 更新说明
 
 > 从 1.0.0 到 1.1.0：这一版**不改三大能力的生成链契约**，专治两件事——① 1.0.0 之后积压的全部工作树改动一次性收口（补缺模块 / hyperframes §13 四项 / UI 整改 / 体积根治）；② 把「说快了却没实测」的加速说法变成可复核的真机数字与诚实边界。1.0.0 及此前全部能力继续有效，API 与工具名零变更，升级只需替换插件目录。
@@ -199,7 +238,7 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 
 ### ★ 新工具与端点：承接 1.0.0，本版给已有工具补真实能力
 - 四个纯 JS 新工具（`plan_storyboard` / `render_frame` / `compose_video` / `layout_frame`）与补缺模块（队列端点、ControlNet 预处理纯逻辑、段级续跑账本、WS 渐进预览、外部工作流导入）全部接进生产链，非孤儿。
-- `generate_speech` 新增 `attention`（`auto / sage_attn / flash_attn / sdpa / eager`，默认不写 = 节点自身 auto 零漂移）与 `lowLatencyChunks`（默认 false：按语义切块逐块真提交、逐块落盘、ffmpeg concat 拼 m4a，**不是流式播放**，块间语气可能断裂、总耗时可能增加，缓存键区分 chunks/whole 防串味）。
+- `generate_speech` 新增 `attention`（`auto / sage_attn / flash_attn / sdpa / eager`，默认不写 = 节点自身 auto 零漂移）与 `lowLatencyChunks`（默认 false：两段式——首段短切先落盘并推给悬浮面板自动播一次、剩余整段一次提交、ffmpeg concat 拼 m4a；**非节点级流式，整段时长不变**，首段先听而已，块间语气可能断裂，缓存键区分 chunks/whole 防串味）。首段事件走 `progress.ttsLive`（单例 TTL 有界），面板开着才播、自动播被浏览器拦则静默不报错。
 - `list_tts_backends` 与 `/api/qwen-paint/tts/backends` 新增 `external_services`：对 127.0.0.1 上的外部 TTS 服务真实探活并回传在线状态、失败原因、许可证与引导，只许回环地址、不放行任意 host。
 
 ### ★ 加速链全景：从「列节点」升级到「有真机数字与诚实边界」
@@ -217,7 +256,7 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 ### ★ UI 与交互：档位可见 + 错误可诊断 + build 自证
 - 「本机能力 / 加速链」面板并入 Comfy 控制面板：SageAttention / WaveSpeed / 恢复默认三档按钮真存在；实验室独立浮层已删除，只挂 `cp-panel` 的插槽，找不到就不挂。
 - 「本机请求失败」一类笼统报错拆成「连不上本机服务：ComfyUI 可能未启动」与「本机服务返回异常（HTTP n）」两种可诊断文案；真宿主未启动导致的 404 由用户侧启动解决，插件不假装已连通。
-- 位置口径不变：功能区仍然**内嵌**进 Comfy 控制面板（不新开浮层），展开页恒在悬浮球**正上方**、**边框对齐** DSH 右边框、小屏**不变形**，四事件点按 + `pointerdown` 兜底。`UI_BUILD` 升到 `2026-11-17.1` 供刷新自证。
+- 位置口径不变：功能区仍然**内嵌**进 Comfy 控制面板（不新开浮层），展开页恒在悬浮球**正上方**、**边框对齐** DSH 右边框、小屏**不变形**，四事件点按 + `pointerdown` 兜底。`UI_BUILD` 升到 `2026-11-17.2`（TTS 首段早出声）供刷新自证。
 
 ### ★ 媒体格式转换：承接 1.0.0
 - 图片 JPG/PNG/WebP、视频 MP4/MKV/MOV/WebM、音频 MP3/AAC/WAV/FLAC 互转不变；本版不改转码路径。新增 ffmpeg concat 用于低延迟分块的音频顺序拼接。
@@ -225,12 +264,12 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 ### ★ 联动护栏与回归
 - 新增 `test-bgm-opt.mjs`（30 项，含假 ffmpeg 真链路：首次执行 / 二次跳过 / 关缓存强制重跑）、`test-tts-lowlatency.mjs`（48 项，含回环围栏反向核查）、`test-tts-workflow.mjs` attention 契约 7 条、`test-ui-perf.mjs` 3 条错误文案与 build 断言，全部登记 SUITES。
 - BGM 三块优化接进生产链：音乐计划缓存（`generate_music`）、ducking 缝合缓存（`mix_narration` / `av-stitch`，`stitchCache:false` 可关）、§7 装配计划（`/music/models`，模型 / 权重项标 blocked 不谎称）。
-- 全量回归 **110 套，各套项全绿**（断言总数刻意不写死；103 套 + 补缺批 `test-gap-fill.mjs` + 动画三件套 `test-animation-kit.mjs` + 动画四项优化 `test-anim-opt.mjs` + 渲染后端 `test-render-backends.mjs` + 版式/VFR/TTS 缓存 `test-layout-vfr-ttscache.mjs` + BGM 优化 `test-bgm-opt.mjs` + 外部 TTS 低延迟编排 `test-tts-lowlatency.mjs`）；`lib/index.js` **223,966 B / 上限 262,144 B，余量 38,178 B**；`lib/client.js` 217,489 B。
+- 全量回归 **110 套，各套项全绿**（断言总数刻意不写死；103 套 + 补缺批 `test-gap-fill.mjs` + 动画三件套 `test-animation-kit.mjs` + 动画四项优化 `test-anim-opt.mjs` + 渲染后端 `test-render-backends.mjs` + 版式/VFR/TTS 缓存 `test-layout-vfr-ttscache.mjs` + BGM 优化 `test-bgm-opt.mjs` + 外部 TTS 低延迟编排 `test-tts-lowlatency.mjs`）；`lib/index.js` **224,521 B / 上限 262,144 B，余量 37,623 B**；`lib/client.js` 217,489 B。
 
 ### 文档
 - `package.json` / `meta.description` / README 首段 / 两份 llms 首段 / `pyproject.toml` / `docs/index.html` / `给DSH安装的话.md` 全部同步到 1.1.0，`scripts/test-release-metadata.mjs` 一处改、多处一起校验。
 - 两份 llms 以代码字体点名全部工具与端点；`TOOL_SUMMARIES` / `agent-guide` / 端点目录保持同步。
-- 当前 **136 个 `lib/*.js`** / 合计 **2,095,804 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径；Windows 工作树受 `core.autocrlf` 影响略高）。体积根治靠「新功能走独立模块 + 零 index 增长注册 + 纯说明性文件头注释逐字外置到 docs」，逐字可逆；内置 `assets/bin/resvg.exe`（v0.50.0，双许可证随包分发）为默认光栅后端、stdin 送 SVG 收 PNG，探测不到一律降级保留 SVG，中文渲染依赖系统字体、缺字时自检判为不安全并降级。
+- 当前 **136 个 `lib/*.js`** / 合计 **2,095,867 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径；Windows 工作树受 `core.autocrlf` 影响略高）。体积根治靠「新功能走独立模块 + 零 index 增长注册 + 纯说明性文件头注释逐字外置到 docs」，逐字可逆；内置 `assets/bin/resvg.exe`（v0.50.0，双许可证随包分发）为默认光栅后端、stdin 送 SVG 收 PNG，探测不到一律降级保留 SVG，中文渲染依赖系统字体、缺字时自检判为不安全并降级。
 - 真机自证清单（本版如实列为未完成）：DSH 宿主启动后刷新页面 hover 自证 `UI 2026-11-17.1`、layout 中文可见性、混合四段回显、TTS 后端 / 音色在混合链真生效、ASR 真转写、编辑台 picker 点按、PPT 加速链档位按钮显示、`smoke.mjs --submit` 真出图、8 GB 核显速度。
 
 ## 1.0.0 更新说明
@@ -266,13 +305,13 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 ### ★ 联动护栏与回归
 - 新增 `scripts/test-white-bar.mjs`（48 项）：缓存纯函数与失败冷却是**真调用**（vm 拿 client factory / 真跑 mock fetchFn），其余锁关键分支；反向核查「改坏失败时间戳 → 2 项红」「改坏 total 拆分 → 1 项红」，恢复后 md5 一致。
 - 历史分页：`store.query()` 的**筛选后**总数与 `store.stats()` 的**全量**总数拆成 `total` / `allTotal`，stats 绝不碰分页基数 —— 修掉「筛选 3 条却显示 100 条、翻页全空白」的竞态。
-- 全量回归 **110 套，各套项全绿**（断言总数刻意不写死；103 套 + 补缺批 `test-gap-fill.mjs` + 动画三件套 `test-animation-kit.mjs` + 动画四项优化 `test-anim-opt.mjs` + 渲染后端 `test-render-backends.mjs` + 版式/VFR/TTS 缓存 `test-layout-vfr-ttscache.mjs` + BGM 优化 `test-bgm-opt.mjs` + 外部 TTS 低延迟编排 `test-tts-lowlatency.mjs`）；`lib/index.js` **223,966 B / 上限 262,144 B，余量 38,178 B**（1.0.0 发布时 206,499 B / 余 55,645 B；本轮补缺后经 slim-comments 外置长设计说明，仍走外置注册层）；`lib/client.js` 217,489 B。
+- 全量回归 **110 套，各套项全绿**（断言总数刻意不写死；103 套 + 补缺批 `test-gap-fill.mjs` + 动画三件套 `test-animation-kit.mjs` + 动画四项优化 `test-anim-opt.mjs` + 渲染后端 `test-render-backends.mjs` + 版式/VFR/TTS 缓存 `test-layout-vfr-ttscache.mjs` + BGM 优化 `test-bgm-opt.mjs` + 外部 TTS 低延迟编排 `test-tts-lowlatency.mjs`）；`lib/index.js` **224,521 B / 上限 262,144 B，余量 37,623 B**（1.0.0 发布时 206,499 B / 余 55,645 B；本轮补缺后经 slim-comments 外置长设计说明，仍走外置注册层）；`lib/client.js` 217,489 B。
 - 全项目假绿双向扫描：99 个套件的断言函数签名 vs 调用方式全查，两个方向均无参数颠倒；工作树新增行经隐私预检零命中。
 
 ### 文档
 - `package.json` / `meta.description` / README 首段 / 两份 llms 首段 / `pyproject.toml` / `docs/index.html` / `给DSH安装的话.md` 全部同步到 1.0.0，`scripts/test-release-metadata.mjs` 一处改、多处一起校验。
 - 两份 llms 以代码字体点名全部工具与端点；`TOOL_SUMMARIES` / `agent-guide` / 端点目录保持同步。
-- 当前 **136 个 `lib/*.js`** / 合计 **2,095,804 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径；Windows 工作树受 `core.autocrlf` 影响略高）。新增 `lib/anim-opt.js`（动画四项纯 JS 优化：静态帧去重 / 分镜级缓存 / 草稿定稿档 / 时序校验前置，hyperframes 清单 §13 可映射项）、`lib/render-backends.js`（硬件编码择优 + resvg 光栅探测，**内置优先**、未启用绝不谎称）、`lib/anim-cache.js`（静态瓦片缓存 + 可插拔渲染后端接口）；并把 1.0.0 后新增模块的纯设计注释外置到 `docs/added-modules-design-notes.md` 与 `docs/backend-headers-design-notes.md`（逐字可逆自检），根治了 40 改动造成的 lib 合计超 2 MB 红线问题。**★ 内置 resvg 光栅后端**：`assets/bin/resvg.exe`（官方 v0.50.0 Windows x86_64，zip 权威 1,717,055 B 校验、解压 3,994,624 B，随包分发，Apache-2.0 OR MIT 双许可证在 `assets/bin/LICENSE-resvg-*.txt`）为默认光栅后端，`render_frame` 经 stdin 送 SVG/收 PNG（绕开路径编码问题），探测不到或渲染异常一律降级保留 SVG；非 Windows 平台由 `RESVG_PATH`/`PATH` 发现模式兜底。中文渲染依赖系统字体，缺字时自检会判为不安全并降级（不谎称已启用）。本轮（1.0.0 后、未发布）补缺新增 `lib/job-endpoints.js`（队列前台端点）、`lib/cnet-preprocess.js`（ControlNet 预处理纯逻辑）、`lib/resume-store.js`（视频段级续跑账本）、`lib/ws-preview.js`（WS 渐进预览）、`lib/workflow-import.js` + `lib/workflow-import-endpoints.js`（外部工作流导入）、`lib/animation-kit.js`（自研轻量动画三件套）。为腾出体积，`schema-defaults.js` 里 10 段纯设计注释外置到 `docs/schema-design-notes.md`（逐字可逆自检，`scripts/extract-design-notes.mjs`，脚本幂等可重跑），功能零改动。
+- 当前 **136 个 `lib/*.js`** / 合计 **2,095,867 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径；Windows 工作树受 `core.autocrlf` 影响略高）。新增 `lib/anim-opt.js`（动画四项纯 JS 优化：静态帧去重 / 分镜级缓存 / 草稿定稿档 / 时序校验前置，hyperframes 清单 §13 可映射项）、`lib/render-backends.js`（硬件编码择优 + resvg 光栅探测，**内置优先**、未启用绝不谎称）、`lib/anim-cache.js`（静态瓦片缓存 + 可插拔渲染后端接口）；并把 1.0.0 后新增模块的纯设计注释外置到 `docs/added-modules-design-notes.md` 与 `docs/backend-headers-design-notes.md`（逐字可逆自检），根治了 40 改动造成的 lib 合计超 2 MB 红线问题。**★ 内置 resvg 光栅后端**：`assets/bin/resvg.exe`（官方 v0.50.0 Windows x86_64，zip 权威 1,717,055 B 校验、解压 3,994,624 B，随包分发，Apache-2.0 OR MIT 双许可证在 `assets/bin/LICENSE-resvg-*.txt`）为默认光栅后端，`render_frame` 经 stdin 送 SVG/收 PNG（绕开路径编码问题），探测不到或渲染异常一律降级保留 SVG；非 Windows 平台由 `RESVG_PATH`/`PATH` 发现模式兜底。中文渲染依赖系统字体，缺字时自检会判为不安全并降级（不谎称已启用）。本轮（1.0.0 后、未发布）补缺新增 `lib/job-endpoints.js`（队列前台端点）、`lib/cnet-preprocess.js`（ControlNet 预处理纯逻辑）、`lib/resume-store.js`（视频段级续跑账本）、`lib/ws-preview.js`（WS 渐进预览）、`lib/workflow-import.js` + `lib/workflow-import-endpoints.js`（外部工作流导入）、`lib/animation-kit.js`（自研轻量动画三件套）。为腾出体积，`schema-defaults.js` 里 10 段纯设计注释外置到 `docs/schema-design-notes.md`（逐字可逆自检，`scripts/extract-design-notes.mjs`，脚本幂等可重跑），功能零改动。
 
 ### 2026-11-17 补缺批次（1.0.0 后工作树，**未发布**）
 

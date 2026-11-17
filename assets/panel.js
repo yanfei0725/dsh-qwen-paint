@@ -53,6 +53,9 @@
   var saveSeq = 0
   var progressTimer = null
   var progressIdleTicks = 0
+  // TTS 首段早出声：记录已播过的 path+at，避免轮询重复播放；audio 元素懒建。
+  var ttsLiveSeen = ''
+  var ttsAudioEl = null
 
   /* ============================ 纯函数（可被回归直接测） ============================ */
 
@@ -379,6 +382,21 @@
     if (note) note.textContent = String(it.note || '')
   }
 
+  /** TTS 首段早出声：拿到新的首段事件就播一次，整段完成后宿主会呈现完整成品。 */
+  function playTtsLive(live) {
+    if (!live || !live.url || typeof Audio === 'undefined') return
+    var sig = String(live.path || live.url) + '@' + Number(live.at || 0)
+    if (sig === ttsLiveSeen) return
+    ttsLiveSeen = sig
+    try {
+      if (!ttsAudioEl) { ttsAudioEl = new Audio(); ttsAudioEl.preload = 'auto' }
+      ttsAudioEl.pause()
+      ttsAudioEl.src = live.url
+      var p = ttsAudioEl.play()
+      if (p && typeof p.catch === 'function') p.catch(function () { /* 自动播被浏览器拦：不报错，用户可点历史播放 */ })
+    } catch (e) { /* 播放失败不影响生成 */ }
+  }
+
   function pollProgress() {
     try {
       fetch(PROGRESS_PATH, { cache: 'no-store' })
@@ -386,9 +404,10 @@
         .then(function (j) {
           var items = j && j.ok && Array.isArray(j.items) ? j.items : []
           // 有进度就归零（回到快档）；连续空列表逐步降频，面板常开不白刷接口。
-          if (items.length > 0) progressIdleTicks = 0
+          // TTS 首段事件也算"有活动"，避免刚推出首段就被降频。
+          if (items.length > 0 || (j && j.ttsLive)) progressIdleTicks = 0
           else progressIdleTicks += 1
-          if (j && j.ok) paintProgress(j)
+          if (j && j.ok) { paintProgress(j); playTtsLive(j.ttsLive) }
         })
         .catch(function () { progressIdleTicks += 1 /* 进度拿不到就不显示，不报错弹窗 */ })
     } catch (err) { progressIdleTicks += 1 /* 同上 */ }
@@ -781,10 +800,11 @@
    * ★ 联动纪律：改了兜底层（setup-guide）必须核实消费端真的绑了它合成的事件，
    *   否则就是「白名单加了、按钮还是点不动」的孤儿接线。
    */
-  // ★ 2026-11-17.1：加速链卡片分组修复（强特征优先，档位三按钮不再被语音组折叠）+
+  // ★ 2026-11-17.2：TTS 首段早出声（悬浮面板轮询 progress.ttsLive 自动播一次）。
+  //   ★ 2026-11-17.1：加速链卡片分组修复（强特征优先，档位三按钮不再被语音组折叠）+
   //   错误文案区分（本机服务离线 vs 服务返回异常）。构建号必须 bump，否则 client.js
   //   按 PANEL_JS_ID 去重、真机不刷新 DSH 页面就永远加载旧脚本，用户自证无锚点。
-  var UI_BUILD = '2026-11-17.1'
+  var UI_BUILD = '2026-11-17.2'
   var TAP_EVENTS = ['click', 'pointerup', 'mouseup', 'touchend']
   var TAP_COOLDOWN_MS = 300
 
