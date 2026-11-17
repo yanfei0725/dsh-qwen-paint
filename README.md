@@ -225,7 +225,7 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 ### 文档
 - `package.json` / `meta.description` / README 首段 / 两份 llms 首段 / `pyproject.toml` / `docs/index.html` / `给DSH安装的话.md` 全部同步到 1.1.1，`scripts/test-release-metadata.mjs` 一处改、多处一起校验。
 - 两份 llms 以代码字体点名全部工具与端点；`TOOL_SUMMARIES` / `agent-guide` / 端点目录保持同步。
-- 当前 **136 个 `lib/*.js`** / 合计 **2,028,839 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径；Windows 工作树受 `core.autocrlf` 影响略高。2026-11-17 全量审计：config.js / client.js 纯设计注释外置到 docs（余量 550 B → 76 KB）；2026-11-18 第二轮整改 media-exec 超时透传后回落到 68.3 KB）。
+- 当前 **136 个 `lib/*.js`** / 合计 **2,031,074 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径；Windows 工作树受 `core.autocrlf` 影响略高。2026-11-17 全量审计：config.js / client.js 纯设计注释外置到 docs（余量 550 B → 76 KB）；2026-11-18 第二轮整改（job-queue 三件套等）后余量 64.5 KB）。
 - 真机自证清单（如实列为未完成）：DSH 宿主启动后刷新页面 hover 自证 `UI 2026-11-17.2`、开面板跑 `lowLatencyChunks:true` 听首段是否先播、PPT 加速链档位按钮显示、`smoke.mjs --submit` 真出图、layout 中文可见性、8 GB 核显速度。
 
 ## 1.1.0 更新说明

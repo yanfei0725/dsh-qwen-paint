@@ -121,6 +121,48 @@ async function main() {
     ok('重试耗尽后状态 failed、attempts=4', q.list()[0].state === 'failed' && q.list()[0].attempts === 4)
   }
 
+  // ★ 2026-11-18 审计修复 ①：退避封顶——无上限的 2^n 在 maxRetries 大时可钉死队列数天。
+  {
+    const sleeps = []
+    const q = createJobQueue({
+      now: fixedNow, maxRetries: 5, backoffMs: 60000,
+      sleep: async (ms) => { sleeps.push(ms) },
+    })
+    q.enqueue({ id: 'cap', run: () => { throw new Error('always') } })
+    await q.drain()
+    ok('退避封顶：后两拍被钳到 300000（原本 480000/960000）',
+      eq(sleeps, [60000, 120000, 240000, 300000, 300000]))
+  }
+
+  // ★ 2026-11-18 审计修复 ②：代次号——退避窗口内 cancel→retry 不得双执行。
+  {
+    let calls = 0
+    let burstFired = false
+    const q = createJobQueue({
+      now: fixedNow, maxRetries: 3, backoffMs: 5000,
+      // 第一拍退避的睡眠里同步注入 cancel→retry（复现原双执行窗口），随后立即 resolve。
+      sleep: async () => {
+        if (!burstFired) { burstFired = true; q.cancel('epoch'); q.retry('epoch') }
+      },
+    })
+    q.enqueue({ id: 'epoch', run: () => { calls += 1; if (calls === 1) throw new Error('first fails') } })
+    await q.drain()
+    ok('代次号防双执行：cancel+retry 后总执行数恰为 2（旧循环让位，不叠加）', calls === 2)
+    ok('代次号防双执行：终态 done 且无残留循环', q.list()[0].state === 'done')
+  }
+
+  // ★ 2026-11-18 审计修复 ③：终态 FIFO 淘汰——jobs Map 不再无界增长。
+  {
+    const q = createJobQueue({ now: fixedNow, sleep: instantSleep, concurrency: 1 })
+    for (let i = 1; i <= 205; i += 1) q.enqueue({ id: 'j' + i, run: () => i })
+    await q.drain()
+    ok('终态淘汰：list 收敛到 200 条（205 条终态挤掉最旧 5 条）', q.list().length === 200)
+    ok('终态淘汰：最旧 j1 已被逐出（retry 报 not found）', q.retry('j1').ok === false)
+    ok('终态淘汰：最新 j205 仍可 retry', q.retry('j205').ok === true)
+    q.cancel('j205')
+    await q.drain()
+  }
+
   // retryable:false 不重试。
   {
     const sleeps = []
