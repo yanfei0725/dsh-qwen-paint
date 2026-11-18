@@ -1114,10 +1114,22 @@
           var cur = typeof sel[p.def.pick] === 'string' ? sel[p.def.pick] : ''
           // 增量回填：选项集合没变就不重建 DOM，只改 value —— 切模式/重开面板不再卡。
           fillSelect(p.sel, opts, cur, p.def.empty, el)
+          // ★ 2026-11-19 外接后端选中前置提示：GSV.CPP v5 契约需参考音频+转写，
+          //   不提示的话用户生成时才撞「必须提供参考音频和它的转写文本」错误（惊讶感差）。
+          var extHint = ''
+          if (p.def.src === 'tts_backends' && Array.isArray(j.external_tts)) {
+            for (var eh = 0; eh < j.external_tts.length; eh += 1) {
+              if (j.external_tts[eh].online === true) {
+                extHint = '｜★ 外接后端需参考音频+转写（lab 音色样本登记时填「参考转写」，或 Agent 带 reference_text）'
+                break
+              }
+            }
+          }
           p.status.textContent = (opts.length > 0
             ? '共 ' + opts.length + ' 个本机可用候选'
             : (p.def.src === 'unet' ? 'ComfyUI 在线但没探到主模型文件（models/unet 为空？）' : '暂无候选（未探测到节点 / 未拖入音频样本）'))
-          // 外接服务已转正进下拉（在线状态在标签里），状态行不再重复展示。
+            + extHint
+          // 外接服务已转正进下拉（在线状态在标签里）。
         })
       }
       // 真正发请求：成功且在线才写两层缓存（内存 + localStorage），失败/离线不缓存留重试。
