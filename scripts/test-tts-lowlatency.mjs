@@ -135,6 +135,28 @@ section('③b 外接执行链 speakViaExternalTts（gsv 真契约，假 fetch �
       ? { ok: true, status: 200, text: async () => '{"engine":"ready","ok":true}' }
       : { ok: true, status: 200, headers: { get: () => 'audio/wav' }, arrayBuffer: async () => new ArrayBuffer(0) } })
   ok('空音频明确拒绝', empty.ok === false && /空音频/.test(empty.reason), JSON.stringify(empty))
+  // ★ 2026-11-19 调用方 signal 并入锁（隐患修复回归）：已取消的 signal → 请求立即
+  //   中止，绝不因「调用方有 signal 就不绑 abort」而永等挂死的外接服务。
+  {
+    const aborter = new AbortController()
+    aborter.abort(new Error('用户取消'))
+    const sigFetch = async (url, init = {}) => {
+      if (String(url).endsWith('/health')) {
+        return { ok: true, status: 200, text: async () => '{"engine":"ready","ok":true}' }
+      }
+      if (init.signal?.aborted) {
+        const e = new Error('This operation was aborted')
+        e.name = 'AbortError'
+        throw e
+      }
+      return { ok: true, status: 200, headers: { get: () => 'audio/wav' },
+        arrayBuffer: async () => new TextEncoder().encode('RIFF-x').buffer }
+    }
+    const ab = await speakViaExternalTts({ service: gsv, text: 'hi', filePathBase: tmpBase,
+      refAudioPath: 'K:/ref/a.wav', promptText: 'x', fetchFn: sigFetch, signal: aborter.signal })
+    ok('调用方 signal 已取消 → 请求立即中止不永等',
+      ab.ok === false && /取消|abort/i.test(ab.reason), JSON.stringify(ab))
+  }
   fs.rmSync(tmpBase + ".wav", { force: true })
 }
 
