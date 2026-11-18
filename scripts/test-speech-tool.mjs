@@ -22,6 +22,7 @@ import {
   slimResult, withDeclaredOutput, makeDeclaredOutputSchema,
 } from '../lib/tool-contracts.js'
 import { makeSpeechTool, makeSpeechRunner, SPEECH_OUTPUT_SCHEMA } from '../lib/speech-tool.js'
+import { getAudioSampleStore } from '../lib/audio-sample.js'
 import { EXTRA_TOOL_NAMES } from '../lib/tool-registry.js'
 
 let pass = 0, fail = 0
@@ -193,13 +194,15 @@ try {
     // ★ 2026-11-19 外接执行链锁：gsv_cpp 分支必须在 ensureComfyUp 之前（外接服务跟
     //   ComfyUI 死活无关）；缺参考音频/转写明确拒绝；成功路径走假 fetch 全离线。
     let comfyUpCalls = 0
+    const synthBodies = []
     const extDeps = {
       ...deps,
       ensureComfyUp: async () => { comfyUpCalls += 1 },
-      externalFetch: async (url) => {
+      externalFetch: async (url, init = {}) => {
         if (String(url).endsWith('/health')) {
           return { ok: true, status: 200, text: async () => '{"engine":"ready","ok":true}' }
         }
+        try { synthBodies.push(JSON.parse(init.body)) } catch { /* 非 JSON 不记 */ }
         return { ok: true, status: 200, headers: { get: () => 'audio/wav' },
           arrayBuffer: async () => new TextEncoder().encode('RIFF-FAKE-EXT').buffer }
       },
@@ -217,6 +220,20 @@ try {
     ok('外接路径在 outputDir 内', path.resolve(v.path).startsWith(path.resolve(tmpDir)))
     ok('外接分支全程没碰 ComfyUI', comfyUpCalls === 0, String(comfyUpCalls))
     ok('假字节确实落盘', (await fsp.readFile(v.path)).toString() === 'RIFF-FAKE-EXT')
+    ok('请求体带真契约字段', synthBodies.length === 1
+      && synthBodies[0].prompt_text === '参考转写' && synthBodies[0].text_lang === 'all_zh')
+    // ★ 2026-11-19 样本 transcript 兜底 prompt_text（面板音色下拉走外接链的路径）：
+    //   只给 voiceSample、不给 reference_text 时，登记时的 transcript 自动充当 prompt_text。
+    const store = getAudioSampleStore(tmpDir)
+    const reg = store.register({ name: 'voice-sample-test.wav', data: new Uint8Array([1, 2, 3]), size: 3,
+      transcript: '样本登记的参考转写' })
+    ok('样本登记带 transcript（供外接链消费）', reg.ok === true && reg.sample.transcript === '样本登记的参考转写')
+    const v2 = await extRunner({ text: '样本转写兜底', backend: 'gsv_cpp', voiceSample: reg.sample.cloneToken })
+    ok('无 reference_text 时样本 transcript 兜底成功',
+      v2.tier === 'external:gsv_cpp' && v2.format === 'wav', JSON.stringify(v2))
+    ok('兜底请求体 prompt_text = 样本 transcript，ref_audio_path = 样本真实路径',
+      synthBodies.length === 2 && synthBodies[1].prompt_text === '样本登记的参考转写'
+      && synthBodies[1].ref_audio_path.includes('.voice-samples'))
   }
 } finally {
   if (tmpDir !== '') await fsp.rm(tmpDir, { recursive: true, force: true })

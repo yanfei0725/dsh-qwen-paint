@@ -134,6 +134,9 @@ console.log('persistTtsChoice：白名单 + 音色令牌校验')
 ok('已知后端全部放行', TTS_BACKENDS.every((b) => isKnownTtsBackend(b.id)))
 ok('空后端放行（= 回默认）', isKnownTtsBackend(''))
 ok('未知后端拒绝', isKnownTtsBackend('evil_backend') === false)
+// ★ 2026-11-19 外接服务转正（generate_speech 执行链已接通 0b81445）：白名单放行外接 id
+ok('外接服务 id 放行（gsv_cpp/aniflive）',
+  isKnownTtsBackend('gsv_cpp') === true && isKnownTtsBackend('aniflive') === true)
 const ttsHome = mkdtempSync(path.join('\x4B:/ai/tmp', 'dsh-tts-'))
 process.env.DSH_HOME = ttsHome
 const tlogs = []
@@ -151,6 +154,12 @@ ok('未知后端拒绝 + 不改盘', persistTtsChoice({ backend: 'evil', voiceSa
 ok('路径形态音色拒绝（防手拼 URL 塞路径）', persistTtsChoice({ backend: 'qwen3_tts', voiceSample: '../x.wav', log: tlog }).ok === false)
 ok('空后端+空音色 → 清除两键', persistTtsChoice({ backend: '', voiceSample: '', log: tlog }).ok === true
   && readUiSync().ttsBackend === undefined && readUiSync().ttsVoiceSample === undefined)
+// ★ 2026-11-19 外接后端落盘转正（执行链已接通 0b81445，面板下拉可真选 gsv_cpp）；
+//   放在清空断言之后，不影响上面任何落盘状态的前置。
+ok('落盘外接后端真写盘', (() => {
+  const r = persistTtsChoice({ backend: 'gsv_cpp', voiceSample: '', log: tlog })
+  return r.ok === true && r.backend === 'gsv_cpp' && readUiSync().ttsBackend === 'gsv_cpp'
+})())
 
 // ---- ⑦ 端点在线形状补 TTS 候选 ----
 console.log('model-options 端点：TTS 候选随 /object_info 真机清单')

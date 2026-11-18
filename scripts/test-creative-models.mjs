@@ -116,6 +116,16 @@ console.log('=== 2. 音频样本 ===')
   ok('单例按 outputDir 共享', getAudioSampleStore('/tmp/qp-out') === getAudioSampleStore('/tmp/qp-out'))
   ok('非令牌原样透传', resolveSampleToken('input/a.wav', store).path === 'input/a.wav')
   ok('★ 不训练 / 不微调口径写进样本行', reg.sample.note.includes('不训练'))
+  // ★ 2026-11-19 transcript 位（GSV.CPP v5 契约 prompt_text 源）：登记可选、随行返回、
+  //   500 字截断、resolve 透传——面板音色下拉走外接链就靠它。
+  const regT = store.register({ name: '转写样本.wav', data: Buffer.from('RIFFfake'), size: 9, transcript: '  你好，这是参考转写。  ' })
+  ok('登记带 transcript（trim）', regT.ok === true && regT.sample.transcript === '你好，这是参考转写。')
+  ok('resolve 透传 transcript', store.resolve({ token: regT.sample.cloneToken }).transcript === '你好，这是参考转写。')
+  ok('非令牌 resolveSampleToken transcript 为空', resolveSampleToken('input/a.wav', store).transcript === '')
+  const regLong = store.register({ name: '长转写.wav', data: Buffer.from('RIFFfake'), size: 9, transcript: '长'.repeat(600) })
+  ok('transcript 500 字截断', regLong.ok === true && regLong.sample.transcript.length === 500)
+  const regEmpty = store.register({ name: '无转写.wav', data: Buffer.from('RIFFfake'), size: 9 })
+  ok('不填 transcript 为空串（不编造）', regEmpty.ok === true && regEmpty.sample.transcript === '')
 }
 
 /* ---------------- 3. 统一协议 ---------------- */

@@ -226,7 +226,7 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 
 ### 文档
 - `package.json` / `meta.description` / README 首段 / 两份 llms 首段 / `pyproject.toml` / `docs/index.html` / `给DSH安装的话.md` 全部同步到 1.2.1，`scripts/test-release-metadata.mjs` 一处改、多处一起校验。
-- 当前 **139 个 `lib/*.js`** / 合计 **2,087,777 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径）。
+- 当前 **139 个 `lib/*.js`** / 合计 **2,089,400 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径）。
 
 ## 1.2.0 更新说明
 

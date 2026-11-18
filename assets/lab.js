@@ -784,8 +784,12 @@
       vsFile.setAttribute('accept', '.mp3,.wav,.flac,.ogg,.m4a,.aac,.opus,.webm,.mp4,.aiff')
     } catch (err) { /* 忽略 */ }
     var vsId = labeledInput('样本 id（删除时填）', 'vs-...')
+    // ★ 2026-11-19 参考转写：GSV.CPP v5 契约合成必填 prompt_text——登记样本时把
+    //   「这段音频说了什么」一并填上，面板音色下拉走外接链才能真用这个样本。
+    var vsTranscript = labeledInput('参考转写（选填；外接 GSV.CPP 合成必填）', '这段音频说的内容…')
     vs.body.appendChild(vsDrop)
     vs.body.appendChild(vsFile)
+    vs.body.appendChild(vsTranscript.wrap)
     vs.body.appendChild(vsId.wrap)
     function loadSamples() {
       request('audio/samples').then(function (j) { renderResult(vs.result, j) })
@@ -801,7 +805,10 @@
           request('audio/samples', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ action: 'register', name: file.name, size: file.size, data_base64: b64 }),
+            body: JSON.stringify({
+              action: 'register', name: file.name, size: file.size, data_base64: b64,
+              transcript: String(vsTranscript.input.value || '').trim(),
+            }),
           }).then(function (j) { renderResult(vs.result, j); loadSamples() })
         }
         reader.readAsDataURL(file)

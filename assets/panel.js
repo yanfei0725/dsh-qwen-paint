@@ -900,7 +900,7 @@
   //   ★ 2026-11-17.1：加速链卡片分组修复（强特征优先，档位三按钮不再被语音组折叠）+
   //   错误文案区分（本机服务离线 vs 服务返回异常）。构建号必须 bump，否则 client.js
   //   按 PANEL_JS_ID 去重、真机不刷新 DSH 页面就永远加载旧脚本，用户自证无锚点。
-  var UI_BUILD = '2026-11-19.1'
+  var UI_BUILD = '2026-11-19.2'
   var TAP_EVENTS = ['click', 'pointerup', 'mouseup', 'touchend']
   var TAP_COOLDOWN_MS = 300
 
@@ -1095,6 +1095,18 @@
               var flag = bs[k].available ? '' : '（未探测到）'
               opts.push({ value: String(bs[k].id), label: String(bs[k].label) + flag })
             }
+            // ★ 2026-11-19 外接 TTS 转正进下拉（0b81445 执行链已通）：值=服务 id，
+            //   标签带本机回环探活的在线状态。离线也可选（与节点后端「未探测到」同款
+            //   诚实模式）——选中后生成时外接链探活给明确原因，绝不假成功；GSV.CPP
+            //   v5 契约需参考音频+转写（样本登记时填 transcript，或 Agent 带 reference_text）。
+            var ext = Array.isArray(j.external_tts) ? j.external_tts : []
+            for (var e = 0; e < ext.length; e += 1) {
+              opts.push({
+                value: String(ext[e].id),
+                label: '★ ' + String(ext[e].label || ext[e].id).split('（')[0]
+                  + (ext[e].online ? '（在线）' : '（离线）'),
+              })
+            }
           } else if (p.def.src === 'tts_voices') {
             var vs = Array.isArray(j.tts_voices) ? j.tts_voices : []
             for (var v = 0; v < vs.length; v += 1) opts.push({ value: String(vs[v].token), label: String(vs[v].name) + ' · ' + String(vs[v].format || '') })
@@ -1105,13 +1117,7 @@
           p.status.textContent = (opts.length > 0
             ? '共 ' + opts.length + ' 个本机可用候选'
             : (p.def.src === 'unet' ? 'ComfyUI 在线但没探到主模型文件（models/unet 为空？）' : '暂无候选（未探测到节点 / 未拖入音频样本）'))
-            // ★ 2026-11-19 外部 TTS 状态露出（只展示不进下拉：generate_speech 尚未直调
-            //   外接服务，列进下拉会假可选；在线数据来自 model-options 附带的回环探活）。
-            + (p.def.src === 'tts_backends' && Array.isArray(j.external_tts) && j.external_tts.length > 0
-              ? '｜外接：' + j.external_tts.map(function (s) {
-                return String(s.label || s.id).split('（')[0] + (s.online ? '·在线' : '·离线')
-              }).join(' ')
-              : '')
+          // 外接服务已转正进下拉（在线状态在标签里），状态行不再重复展示。
         })
       }
       // 真正发请求：成功且在线才写两层缓存（内存 + localStorage），失败/离线不缓存留重试。
