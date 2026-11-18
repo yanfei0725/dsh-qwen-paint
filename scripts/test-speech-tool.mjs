@@ -195,8 +195,10 @@ try {
     //   ComfyUI 死活无关）；缺参考音频/转写明确拒绝；成功路径走假 fetch 全离线。
     let comfyUpCalls = 0
     const synthBodies = []
+    const warnLogs = []
     const extDeps = {
       ...deps,
+      log: (lvl, msg) => { if (lvl === 'warn') warnLogs.push(String(msg)) },
       ensureComfyUp: async () => { comfyUpCalls += 1 },
       externalFetch: async (url, init = {}) => {
         if (String(url).endsWith('/health')) {
@@ -234,6 +236,17 @@ try {
     ok('兜底请求体 prompt_text = 样本 transcript，ref_audio_path = 样本真实路径',
       synthBodies.length === 2 && synthBodies[1].prompt_text === '样本登记的参考转写'
       && synthBodies[1].ref_audio_path.includes('.voice-samples'))
+    // ★ 2026-11-19 诚实边界锁：instruct（VoiceDesign 专用）外接链明确拒绝不静默；
+    //   lowLatencyChunks 忽略必须留 warn 痕迹。
+    let instrMsg = ''
+    try { await extRunner({ text: '带音色设计', backend: 'gsv_cpp', instruct: '低沉男声',
+      referenceAudio: 'K:/ref/a.wav', referenceText: '转写' }) } catch (e) { instrMsg = String(e.message ?? e) }
+    ok('instruct + 外接明确拒绝（不静默吞掉音色设计意图）',
+      instrMsg.includes('instruct') && instrMsg.includes('VoiceDesign'), instrMsg.slice(0, 120))
+    await extRunner({ text: '分块意图留痕', backend: 'gsv_cpp', lowLatencyChunks: true,
+      referenceAudio: 'K:/ref/a.wav', referenceText: '转写' })
+    ok('lowLatencyChunks 外接忽略但留 warn 痕迹',
+      warnLogs.some((m) => m.includes('lowLatencyChunks') && m.includes('忽略')))
   }
 } finally {
   if (tmpDir !== '') await fsp.rm(tmpDir, { recursive: true, force: true })
