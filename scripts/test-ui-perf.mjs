@@ -277,6 +277,10 @@ ok('★ 区分文案不回吐 error.message（catch 里不拼 error）',
 ok('★ UI_BUILD 已 bump 到 2026-11-19.2（外接 TTS 转正进下拉 + lab 样本登记带参考转写，真机刷新可自证）',
   /var UI_BUILD = '2026-11-19\.2'/u.test(PANEL_SRC)
   && /data-cp-ui-build', UI_BUILD/u.test(PANEL_SRC))
+// ★ 2026-11-19 外接后端选中前置提示锁：v5 契约必填语义在选择时就可见（防生成时才撞错误）
+ok('★ 外接后端状态行带「参考音频+转写」前置提示',
+  PANEL_SRC.includes('外接后端需参考音频+转写')
+  && /external_tts\[eh\]\.online === true/u.test(PANEL_SRC))
 
 console.log('\n=== 9. UI 全折叠 + 拖图（2026-11-18.2）===')
 ok('foldCard 折叠容器存在（details + toggle 重算几何）',
