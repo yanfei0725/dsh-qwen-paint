@@ -80,11 +80,14 @@ section('③ 两种 API 请求格式')
 section('④ 探活结构化降级')
 {
   const gsv = m.EXTERNAL_TTS_SERVICES.find((s) => s.id === 'gsv_cpp')
-  const okFetch = async () => ({ ok: true, status: 200 })
+  const anif = m.EXTERNAL_TTS_SERVICES.find((s) => s.id === 'aniflive')
+  // ★ 2026-11-19：真 GSV health 形状（本机实录 {"engine":"ready","ok":true,...}）。
+  const okFetch = async () => ({ ok: true, status: 200, text: async () => '{"engine":"ready","ok":true,"sidecar":true}' })
+  const otherFetch = async () => ({ ok: true, status: 200, text: async () => '{"status":"ok"}' })
   const badFetch = async () => ({ ok: false, status: 503 })
   const errFetch = async () => { throw new Error('ECONNREFUSED') }
   const p1 = await m.probeExternalTts(gsv, { fetch: okFetch })
-  ok('服务在线', p1.online === true && p1.ok === true)
+  ok('服务在线（health 含 engine 标记）', p1.online === true && p1.ok === true)
   const p2 = await m.probeExternalTts(gsv, { fetch: badFetch })
   ok('HTTP 异常报 offline 不抛', p2.online === false && /503/.test(p2.reason))
   const p3 = await m.probeExternalTts(gsv, { fetch: errFetch })
@@ -93,6 +96,13 @@ section('④ 探活结构化降级')
   ok('外部 host 直接拒绝不探', p4.online === false && /回环/.test(p4.reason))
   const p5 = await m.probeExternalTts(gsv, {})
   ok('无 fetch 明确降级', p5.online === false && /fetch/.test(p5.reason))
+  // ★ 2026-11-19 端口撞车标记校验（本机实录：GSV.CPP 在线后 AnifLive 误报在线）：
+  const p6 = await m.probeExternalTts(anif, { fetch: okFetch })
+  ok('aniflive 探到 GSV 应答（含 engine）判 offline 不误报',
+    p6.online === false && /已被另一外部 TTS/.test(p6.reason))
+  const p7 = await m.probeExternalTts(anif, { fetch: otherFetch })
+  ok('aniflive 探到自己的应答（无 engine）在线',
+    p7.online === true && p7.ok === true)
 }
 
 section('④b 分块音频拼接 argv（纯函数）')
