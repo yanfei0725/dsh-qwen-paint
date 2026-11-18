@@ -187,6 +187,37 @@ try {
   try { await runner({ text: '后端报错' }) } catch (e) { errMsg = String(e.message ?? e) }
   ok('ComfyUI 报 error 时抛出而非无限等', errMsg.includes('TTS 段执行失败'), errMsg.slice(0, 100))
   state.error = false
+
+  console.log('\n=== 3b. 外接 TTS 执行链（backend=gsv_cpp：分支先于 ensureComfyUp） ===')
+  {
+    // ★ 2026-11-19 外接执行链锁：gsv_cpp 分支必须在 ensureComfyUp 之前（外接服务跟
+    //   ComfyUI 死活无关）；缺参考音频/转写明确拒绝；成功路径走假 fetch 全离线。
+    let comfyUpCalls = 0
+    const extDeps = {
+      ...deps,
+      ensureComfyUp: async () => { comfyUpCalls += 1 },
+      externalFetch: async (url) => {
+        if (String(url).endsWith('/health')) {
+          return { ok: true, status: 200, text: async () => '{"engine":"ready","ok":true}' }
+        }
+        return { ok: true, status: 200, headers: { get: () => 'audio/wav' },
+          arrayBuffer: async () => new TextEncoder().encode('RIFF-FAKE-EXT').buffer }
+      },
+    }
+    const extRunner = makeSpeechRunner(extDeps)
+    let refMsg = ''
+    try { await extRunner({ text: '外接缺参考', backend: 'gsv_cpp' }) } catch (e) { refMsg = String(e.message ?? e) }
+    ok('缺参考音频+转写明确拒绝（v5 契约必填）',
+      refMsg.includes('参考音频') && refMsg.includes('prompt_text'), refMsg.slice(0, 140))
+    ok('拒绝发生在 ensureComfyUp 之前（外接不拉 ComfyUI）', comfyUpCalls === 0, String(comfyUpCalls))
+    const v = await extRunner({ text: '外接成功路径', backend: 'gsv_cpp',
+      referenceAudio: 'K:/ref/a.wav', referenceText: '参考转写' })
+    ok('外接合成成功落盘（tier=external:gsv_cpp，format=wav）',
+      v.tier === 'external:gsv_cpp' && typeof v.path === 'string' && v.format === 'wav', JSON.stringify(v))
+    ok('外接路径在 outputDir 内', path.resolve(v.path).startsWith(path.resolve(tmpDir)))
+    ok('外接分支全程没碰 ComfyUI', comfyUpCalls === 0, String(comfyUpCalls))
+    ok('假字节确实落盘', (await fsp.readFile(v.path)).toString() === 'RIFF-FAKE-EXT')
+  }
 } finally {
   if (tmpDir !== '') await fsp.rm(tmpDir, { recursive: true, force: true })
 }
