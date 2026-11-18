@@ -126,6 +126,37 @@ console.log('=== 2. 音频样本 ===')
   ok('transcript 500 字截断', regLong.ok === true && regLong.sample.transcript.length === 500)
   const regEmpty = store.register({ name: '无转写.wav', data: Buffer.from('RIFFfake'), size: 9 })
   ok('不填 transcript 为空串（不编造）', regEmpty.ok === true && regEmpty.sample.transcript === '')
+  // ★ 2026-11-19 重启恢复锁（真遗漏修复）：index.json 从不读回 → DSH 重启登记全丢。
+  //   修复后新实例从 index.json 恢复登记 + transcript；文件本体不在的条目作废；
+  //   越界/脏 id 条目跳过；索引缺失/损坏空库起步不抛。
+  {
+    const mem2 = {}
+    const fs2 = {
+      mkdirSync() {},
+      writeFileSync(p, b) { mem2[p] = Buffer.from(b) },
+      readFileSync(p) { if (!(p in mem2)) throw new Error('ENOENT'); return mem2[p] },
+      existsSync(p) { return p in mem2 },
+      unlinkSync(p) { delete mem2[p] },
+    }
+    const s1 = makeAudioSampleStore({ outputDir: '/tmp/qp-out2', fs: fs2, now: () => 1700000000000 })
+    const r1 = s1.register({ name: '重启样本.wav', data: Buffer.from('RIFFfake'), size: 9, transcript: '重启后仍在的转写' })
+    const s2 = makeAudioSampleStore({ outputDir: '/tmp/qp-out2', fs: fs2, now: () => 1700000001000 })
+    ok('重启恢复：新实例从 index.json 读回登记', s2.list().length === 1 && s2.list()[0].id === r1.sample.id)
+    ok('重启恢复：transcript 不丢', s2.resolve({ token: r1.sample.cloneToken }).transcript === '重启后仍在的转写')
+    // ★ key 必须与 lib 同款构造：lib 的 indexFile 基于 path.resolve(root, AUDIO_SAMPLE_DIR)
+    //   （win32 resolve 会补盘符），join 不补 → 用 join 当 key 会写进另一个 mem2 槽，
+    //   lib 读到的还是旧 index（本测试踩过的坑）。
+    const idxPath = path.resolve('/tmp/qp-out2', '.voice-samples', 'index.json')
+    fs2.writeFileSync(idxPath, JSON.stringify([{ id: 'vs-ghost', file: 'ghost.wav', name: 'ghost.wav', format: 'wav', size: 1, createdAt: 1, transcript: 'x' }]))
+    const s3 = makeAudioSampleStore({ outputDir: '/tmp/qp-out2', fs: fs2, now: () => 1700000002000 })
+    ok('重启恢复：音频本体已不在的条目作废（ghost 不复活）', s3.list().length === 0)
+    fs2.writeFileSync(idxPath, JSON.stringify([{ id: 'vs-evil', file: '..\\..\\evil.wav', name: 'evil.wav', format: 'wav', size: 1, createdAt: 1 }]))
+    const s4 = makeAudioSampleStore({ outputDir: '/tmp/qp-out2', fs: fs2, now: () => 1700000003000 })
+    ok('重启恢复：越界路径条目跳过（不越出围栏）', s4.list().length === 0)
+    fs2.writeFileSync(idxPath, 'not-json{{{')
+    const s5 = makeAudioSampleStore({ outputDir: '/tmp/qp-out2', fs: fs2, now: () => 1700000004000 })
+    ok('重启恢复：索引损坏空库起步不抛', s5.list().length === 0)
+  }
 }
 
 /* ---------------- 3. 统一协议 ---------------- */
