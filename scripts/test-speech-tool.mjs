@@ -90,6 +90,16 @@ console.log('\n=== 2. 结果回包按声明收口 ===')
   const wrapped = withDeclaredOutput(fake)
   const value = await wrapped.execute()
   ok('withDeclaredOutput 包装后仍声明 name / output', wrapped.name === 'fake' && wrapped.output === fake.output)
+  // ★ 2026-11-19 宿主 output 契约兜底：缺 render 的工具包装后自动合成（生产实录：
+  //   convert_to_gif 缺 render → register.extras 整组失败 → 44 条端点全没注册）。
+  const noRender = withDeclaredOutput({
+    name: 'no-render', output: { schema: { type: 'object', additionalProperties: true } },
+    async execute() { return { ok: true, note: 'x' } },
+  })
+  ok('withDeclaredOutput 对缺 render 的工具按宿主契约合成兜底',
+    typeof noRender.output?.render === 'function'
+    && Array.isArray(noRender.output.render(null, { ok: true }))
+    && noRender.output.render(null, { ok: true })[0]?.type === 'text')
   ok('withDeclaredOutput 保留自测方法 planWorkflow', typeof wrapped.planWorkflow === 'function')
   ok('withDeclaredOutput 把回包收口到声明字段', value.a === 'ok' && !('junk' in value))
   ok('withDeclaredOutput 对无 execute 的对象原样返回', withDeclaredOutput({ name: 'x' }).name === 'x')

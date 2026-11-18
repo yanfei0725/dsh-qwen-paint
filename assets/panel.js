@@ -21,18 +21,43 @@
 (function () {
   'use strict'
 
+  /** ★ 2026-11-18.2：无头浏览器面板的 baseURI 与插件宿主 origin 可能不同，
+   *  相对路径 api/... 会被解析到 ComfyUI origin ⇒ 所有探测统一 404。
+   *  以加载本插件脚本的 <script src> origin 为准拼绝对地址；
+   *  拿不到（vm 假 DOM / 老宿主）时原样退回，行为零变化。 */
+  function qpApiUrl(rel) {
+    var p = String(rel || '')
+    if (p.indexOf('//') === 0 || p.indexOf('://') > 0) return p
+    var origin = ''
+    try {
+      var doc = (typeof document !== 'undefined') ? document : null
+      var ss = (doc && typeof doc.getElementsByTagName === 'function')
+        ? doc.getElementsByTagName('script') : []
+      for (var i = 0; i < ss.length; i += 1) {
+        var s = String(ss[i].src || '')
+        if (s.indexOf('qwen-paint/') < 0 && s.indexOf('comfy-pipeline/') < 0) continue
+        var u = new URL(s, (typeof location !== 'undefined' && location.href) || undefined)
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') continue
+        if (u.hostname !== '127.0.0.1' && u.hostname !== 'localhost' && u.hostname !== '[::1]') continue
+        origin = u.origin; break
+      }
+    } catch (e) {}
+    return origin ? (origin + '/' + p.replace(/^\/+/, '')) : p
+  }
+
+
   var existing = window.ComfyPipelinePanel
   if (existing && existing.__cp === true) return
 
-  var SCHEMA_PATH = 'api/comfy-pipeline/schema'
-  var CONTROLS_PATH = 'api/comfy-pipeline/controls'
-  var PROGRESS_PATH = 'api/comfy-pipeline/progress'
-  var LIBRARY_PATH = 'api/comfy-pipeline/library'
-  var MODES_PATH = 'api/comfy-pipeline/modes'
-  var MODEL_OPTIONS_PATH = 'api/comfy-pipeline/model-options'
-  var REFERENCE_PATH = 'api/comfy-pipeline/reference'
-  var REFERENCE_PREFER_PATH = 'api/comfy-pipeline/reference/prefer'
-  var REFERENCE_SEARCH_PATH = 'api/comfy-pipeline/reference/search'
+  var SCHEMA_PATH = qpApiUrl('api/comfy-pipeline/schema')
+  var CONTROLS_PATH = qpApiUrl('api/comfy-pipeline/controls')
+  var PROGRESS_PATH = qpApiUrl('api/comfy-pipeline/progress')
+  var LIBRARY_PATH = qpApiUrl('api/comfy-pipeline/library')
+  var MODES_PATH = qpApiUrl('api/comfy-pipeline/modes')
+  var MODEL_OPTIONS_PATH = qpApiUrl('api/comfy-pipeline/model-options')
+  var REFERENCE_PATH = qpApiUrl('api/comfy-pipeline/reference')
+  var REFERENCE_PREFER_PATH = qpApiUrl('api/comfy-pipeline/reference/prefer')
+  var REFERENCE_SEARCH_PATH = qpApiUrl('api/comfy-pipeline/reference/search')
   var FALLBACK_TIERS = [25, 50, 75, 100]
 
   // 默认与「本地没探到 modes 端点」一致：图/视频可用、混合禁用。
@@ -875,7 +900,7 @@
   //   ★ 2026-11-17.1：加速链卡片分组修复（强特征优先，档位三按钮不再被语音组折叠）+
   //   错误文案区分（本机服务离线 vs 服务返回异常）。构建号必须 bump，否则 client.js
   //   按 PANEL_JS_ID 去重、真机不刷新 DSH 页面就永远加载旧脚本，用户自证无锚点。
-  var UI_BUILD = '2026-11-18.2'
+  var UI_BUILD = '2026-11-19.1'
   var TAP_EVENTS = ['click', 'pointerup', 'mouseup', 'touchend']
   var TAP_COOLDOWN_MS = 300
 
@@ -1017,7 +1042,7 @@
           var payload = {}
           payload[def.key] = String(mSel.value)
           mStatus.textContent = '正在保存…'
-          fetch('api/qwen-paint/status.json', {
+          fetch(qpApiUrl('api/qwen-paint/status.json'), {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify(payload),
@@ -1154,7 +1179,7 @@
           })
         }
         pStatus.textContent = '正在生成 PPTX（纯 JS' + (dropped.length && !hasExplicit ? ' + ' + dropped.length + ' 张图' : '') + '）…'
-        fetch('api/qwen-paint/pptx', {
+        fetch(qpApiUrl('api/qwen-paint/pptx'), {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ title: String(pt.value || '').trim(), slides: slides }),
@@ -1214,7 +1239,7 @@
         var box = { x: nums[0], y: nums[1], w: nums[2], h: nums[3] }
         swStatus.textContent = '① 登记两张素材…'
         var register = function (item, kind) {
-          return fetch('api/qwen-paint/portrait/register', {
+          return fetch(qpApiUrl('api/qwen-paint/portrait/register'), {
             method: 'POST', headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ kind: kind, data_url: item.data_url }),
           }).then(function (r) { return r.json() })
@@ -1224,7 +1249,7 @@
             if (!rs[0].ok || !rs[1].ok) throw new Error('素材登记失败：' + ((rs[0].reason || rs[1].reason) || '未知'))
             swStatus.textContent = '② 本机 CPU 合成预演…'
             var target = String(rs[0].path || '').replace(/\.[^.]+$/, '') + '_swap.png'
-            return fetch('api/qwen-paint/portrait/compose', {
+            return fetch(qpApiUrl('api/qwen-paint/portrait/compose'), {
               method: 'POST', headers: { 'content-type': 'application/json' },
               body: JSON.stringify({ base: rs[0].path, person: rs[1].path, out: target, box: box, feather: 8 }),
             }).then(function (r) { return r.json() })

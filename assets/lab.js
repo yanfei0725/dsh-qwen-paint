@@ -24,6 +24,32 @@
   if (window.DshQpLab && window.DshQpLab.__lab === true) return
 
   var API = 'api/qwen-paint/'
+
+  /** ★ 2026-11-18.2：无头浏览器把面板注入到页面时，插件脚本常以绝对地址从 DSH 宿主
+   *  加载，但宿主 document 的 baseURI 指向别处（如 ComfyUI 8188）⇒ 相对路径
+   *  api/... 被解析到错误 origin，所有探测统一 HTTP 404（文案却误导为「ComfyUI 未启动」）。
+   *  这里以「加载本插件脚本的 <script src>」的 origin 为准拼绝对地址；
+   *  拿不到（vm 假 DOM / 老宿主）时原样退回相对路径，行为零变化。 */
+  function qpApiUrl(rel) {
+    var p = String(rel || '')
+    if (p.indexOf('//') === 0 || p.indexOf('://') > 0) return p
+    var origin = ''
+    try {
+      var doc = (typeof document !== 'undefined') ? document : null
+      var ss = (doc && typeof doc.getElementsByTagName === 'function')
+        ? doc.getElementsByTagName('script') : []
+      for (var i = 0; i < ss.length; i += 1) {
+        var s = String(ss[i].src || '')
+        if (s.indexOf('qwen-paint/') < 0 && s.indexOf('comfy-pipeline/') < 0) continue
+        var u = new URL(s, (typeof location !== 'undefined' && location.href) || undefined)
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') continue
+        if (u.hostname !== '127.0.0.1' && u.hostname !== 'localhost' && u.hostname !== '[::1]') continue
+        origin = u.origin; break
+      }
+    } catch (e) {}
+    return origin ? (origin + '/' + p.replace(/^\/+/, '')) : p
+  }
+
   var TAP_UP = ['click', 'pointerup', 'mouseup', 'touchend']
   var COOLDOWN_MS = 300
   var MAX_RESULT_CHARS = 4000
@@ -126,12 +152,36 @@
       ? window.fetch
       : (typeof fetch === 'function' ? fetch : null)
     if (!f) return Promise.resolve({ ok: false, reason: '本机 fetch 不可用' })
-    var url = API + pathPart
+    var url = qpApiUrl(API + pathPart)
     // ★ 2026-11-17.1：区分「连不上本机服务」与「服务返回异常」，
     //   旧版两种都吞成「本机请求失败」掩盖了 ComfyUI 没启动这一真因。
     //   只回固定文案，不回吐 error.message（防泄露本机路径/凭据）。
-    return f(url, init || {}).then(function (r) {
-      if (!r || r.ok === false) return { ok: false, reason: '本机服务返回异常（HTTP ' + ((r && r.status) || '?') + '），请确认 ComfyUI 已启动' }
+    // ★ 2026-11-19：宿主鉴权墙按路径挡掉部分 /api/* 端点（401/404），但**无 /api 前缀的
+    //   /qwen-paint/* 段不过墙**（后端 registerExtras 已把全部 extras 路由在该前缀注册了
+    //   同一 handler）。所以 401/404 时自动换别名路径重试一次——只重试一次、只在
+    //   qwen-paint 自己的路径上换，绝不改语义、绝不静默吞结果。
+    function aliasUrl(u) {
+      if (typeof u !== 'string' || u.indexOf('qwen-paint/') < 0) return ''
+      if (u.indexOf('/api/qwen-paint/') >= 0) return u.replace('/api/qwen-paint/', '/qwen-paint/')
+      if (u.indexOf('api/qwen-paint/') === 0) return 'qwen-paint/' + u.slice('api/qwen-paint/'.length)
+      return ''
+    }
+    function fetchOnce(u) {
+      return f(u, init || {}).then(function (r) {
+        if (r && r.ok === false && (r.status === 401 || r.status === 404)) {
+          var alt = aliasUrl(u)
+          if (alt) {
+            return f(alt, init || {}).then(function (r2) {
+              return (r2 && r2.ok !== false && typeof r2.json === 'function') ? r2 : r
+            }).catch(function () { return r })
+          }
+        }
+        return r
+      })
+    }
+    return fetchOnce(url).then(function (r) {
+      // ★ 2026-11-18.2：404 不再误导为「ComfyUI 未启动」——那是宿主路径没对准。
+      if (!r || r.ok === false) return { ok: false, reason: '本机服务返回异常（HTTP ' + ((r && r.status) || '?') + '），请确认插件面板由 DSH 宿主打开' }
       return (r && typeof r.json === 'function') ? r.json() : null
     }).catch(function () {
       return { ok: false, reason: '连不上本机服务：ComfyUI 可能未启动（请启动后重试）' }

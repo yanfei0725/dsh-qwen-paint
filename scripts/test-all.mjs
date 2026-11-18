@@ -188,6 +188,8 @@ const SUITES = [
   { file: '_cordis_proxy_test.mjs', note: 'cordis ctx Proxy 裸读未声明服务属性（静态扫描；有 _vendor 时升级为真机加载）' },
   // ★ 2026-11-16：白条同源 + 选模型假成功（P0/P1/P2）联动护栏
   { file: 'test-white-bar.mjs', note: '假成功与白条：choiceResult 拒绝回传 / 权重下拉持久化缓存（真调纯函数）/ 风格下拉错误态 / 假就绪 / health 重试 / object_info 失败冷却（真跑 fetchFn）' },
+  // ★ 2026-11-18.2：无头浏览器面板 baseURI 错位导致全探测 404 —— API 基址护栏
+  { file: 'test-api-base.mjs', note: '前端 API 基址：qpApiUrl 以插件脚本 src 的回环 origin 钉死宿主地址（vm 真跑错位/兜底/拒外部劫持）+ 七个脚本一致性 + 404 文案不甩锅 ComfyUI' },
   { file: 'test-gap-fill.mjs', note: '2026-11-17 补缺批：队列端点 / 历史 LoRA 筛选与单条读 / 参数包导出与重画 / 前缀模板 / 视频尾帧双轨对称 / ControlNet 预处理纯逻辑与缓存' },
   // ★ 2026-11-17：自研轻量代码动画三件套（不依赖 manim/Remotion）。
   { file: 'test-animation-kit.mjs', note: '自研动画三件套：分镜切句与画面类型 / SVG 五种渲染 / image 降级 draw_image / 合成 argv（字幕+配音）/ 路径围栏 / 执行器降级' },

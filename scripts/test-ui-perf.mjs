@@ -265,7 +265,7 @@ ok('完全没缓存时放占位 option（不是空 select 白条）',
 ok('silent 刷新失败不覆盖已显示状态',
   /if \(!silent\)[\s\S]{0,120}模型清单读取失败/u.test(PANEL_SRC))
 
-console.log('\n=== 6. 错误文案可诊断 + UI_BUILD 自证（2026-11-18.1） ===')
+console.log('\n=== 6. 错误文案可诊断 + UI_BUILD 自证（2026-11-19.1） ===')
 // ★ 2026-11-17.1：旧版把「连不上服务」和「服务返回异常」都吞成
 //   「本机请求失败（详见插件日志）」，掩盖了 ComfyUI 没启动这一真因。
 ok('★ 本机请求失败文案已区分服务离线 vs 服务异常（不再笼统一句）',
@@ -274,8 +274,8 @@ ok('★ 本机请求失败文案已区分服务离线 vs 服务异常（不再�
   && !LAB_SRC.includes('本机请求失败（详见插件日志）'))
 ok('★ 区分文案不回吐 error.message（catch 里不拼 error）',
   /\.catch\(function \(\) \{\s*return \{ ok: false, reason: '连不上本机服务/u.test(LAB_SRC))
-ok('★ UI_BUILD 已 bump 到 2026-11-18.2（UI 全折叠 + PPT/人物拖拽，真机刷新可自证）',
-  /var UI_BUILD = '2026-11-18\.2'/u.test(PANEL_SRC)
+ok('★ UI_BUILD 已 bump 到 2026-11-19.1（宿主墙 401/404 回退别名 + lab 体检卡修复，真机刷新可自证）',
+  /var UI_BUILD = '2026-11-19\.1'/u.test(PANEL_SRC)
   && /data-cp-ui-build', UI_BUILD/u.test(PANEL_SRC))
 
 console.log('\n=== 9. UI 全折叠 + 拖图（2026-11-18.2）===')

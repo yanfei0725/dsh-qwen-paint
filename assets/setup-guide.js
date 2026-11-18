@@ -13,9 +13,34 @@
  */
 (function () {
   'use strict'
+
+  /** ★ 2026-11-18.2：无头浏览器面板的 baseURI 与插件宿主 origin 可能不同，
+   *  相对路径 api/... 会被解析到 ComfyUI origin ⇒ 所有探测统一 404。
+   *  以加载本插件脚本的 <script src> origin 为准拼绝对地址；
+   *  拿不到（vm 假 DOM / 老宿主）时原样退回，行为零变化。 */
+  function qpApiUrl(rel) {
+    var p = String(rel || '')
+    if (p.indexOf('//') === 0 || p.indexOf('://') > 0) return p
+    var origin = ''
+    try {
+      var doc = (typeof document !== 'undefined') ? document : null
+      var ss = (doc && typeof doc.getElementsByTagName === 'function')
+        ? doc.getElementsByTagName('script') : []
+      for (var i = 0; i < ss.length; i += 1) {
+        var s = String(ss[i].src || '')
+        if (s.indexOf('qwen-paint/') < 0 && s.indexOf('comfy-pipeline/') < 0) continue
+        var u = new URL(s, (typeof location !== 'undefined' && location.href) || undefined)
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') continue
+        if (u.hostname !== '127.0.0.1' && u.hostname !== 'localhost' && u.hostname !== '[::1]') continue
+        origin = u.origin; break
+      }
+    } catch (e) {}
+    return origin ? (origin + '/' + p.replace(/^\/+/, '')) : p
+  }
+
   if (window.DshQpSetupGuide && window.DshQpSetupGuide.__guide === true) return
 
-  var GUIDE_PATH = 'api/qwen-paint/setup-guide'
+  var GUIDE_PATH = qpApiUrl('api/qwen-paint/setup-guide')
   var STORE_KEY = 'dshqp.setupGuide.seen'
   var HIDE_KEY = 'dshqp.setupGuide.hidden'
   var state = null
@@ -474,7 +499,7 @@
     var toCap = el('button', 'sg-btn sg-btn-ghost', '查看能力状态')
     toCap.type = 'button'
     onTap(toCap, function () {
-      fetch('api/qwen-paint/integration/state', { headers: { accept: 'application/json' } })
+      fetch(qpApiUrl('api/qwen-paint/integration/state'), { headers: { accept: 'application/json' } })
         .then(function (r) { return r.json() })
         .then(function (j) {
           var d = el('pre', 'sg-json', JSON.stringify(j, null, 2))

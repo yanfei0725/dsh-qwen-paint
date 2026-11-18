@@ -351,6 +351,19 @@ console.log('\n=== 6. host 接线静态锁 + 端点目录 ⊆ 真实注册 ===')
     for (const f of fs.readdirSync(path.join(ROOT, 'lib'))) if (f.endsWith('.js')) t += sizeOf('lib/' + f)
     return t <= 2097152
   })())
+
+  // ★★ 2026-11-19 宿主 output 契约锁（生产实录）：DSH 的工具注册要求每个工具
+  //   output = { schema, render, presentationMeta? }，缺一个 → registerTool 抛错 →
+  //   step('register.extras') 整组吞掉 → extras 的 44 条端点 + 全部 extras 工具在生产
+  //   **永远不注册**（diag 实录：convert_to_gif 缺 render，lab/doctor/tts/creative 全 401/404）。
+  //   按**生产口径**验证：registerTool 会先包 withDeclaredOutput（render 缺失在那里兜底），
+  //   所以这里验的是包装后的成品 —— 新增工具既漏 schema 又绕过包装才会在这里红。
+  const { createExtras } = await import('../lib/tool-registry.js')
+  const { withDeclaredOutput } = await import('../lib/tool-contracts.js')
+  const extrasTools = (createExtras({}).tools ?? []).map((t) => withDeclaredOutput(t))
+  const contractBad = extrasTools.filter((t) => !(t?.output?.schema && typeof t.output.render === 'function'))
+  ok('★★ extras 全部工具满足宿主 output 契约（schema + render，缺一个整组全灭）',
+    contractBad.length === 0, contractBad.map((t) => t?.name ?? '(无名)').join(','))
 }
 
 console.log(`\n结果：${pass} 通过 / ${fail} 失败`)

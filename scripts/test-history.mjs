@@ -443,8 +443,12 @@ console.log('\n=== 6. 前端与宿主接线 ===')
   // 嵌套括号就断在 buildQuery( 里，断言永远打不到点上 —— 那等于没测）。
   const fetchTargets = [...hs.matchAll(/fetch\(\s*(buildQuery\(\)|[A-Za-z_$][\w$.]*)/gu)].map((m) => m[1])
   ok(fetchTargets.length >= 3, '前端至少有 3 个 fetch（列表 / 汇总 / 删除）', fetchTargets.join(','))
-  ok(fetchTargets.every((t) => ['buildQuery()', 'DEL_API', 'STATS_API', 'LIST_API'].includes(t)),
-    '★★ 每个 fetch 只打本机历史端点（不接受外部 URL）', fetchTargets.join(','))
+  // 2026-11-19 锁追意图而非字面：LIST_API 派生族（LIST_API_URL / LIST_API_ALT）是同一
+  // 本机端点的「宿主墙回退别名」请求（后端在无 api 前缀处注册了同一 handler），
+  // 与 LIST_API 一样只打本机历史端点，故放行 LIST_API* 前缀。
+  ok(fetchTargets.every((t) => ['buildQuery()', 'DEL_API', 'STATS_API', 'LIST_API', 'qpApiUrl'].includes(t)
+    || t.indexOf('LIST_API') === 0),
+    '★★ 每个 fetch 只打本机历史端点（不接受外部 URL；qpApiUrl 为主机基址包装）', fetchTargets.join(','))
   ok(/'api\/qwen-paint\/history'/.test(hs) && /'api\/qwen-paint\/history\/delete'/.test(hs),
     '端点字符串是相对路径（跟随当前页 origin，不写死主机）')
   ok(!/https?:\/\//u.test(hs), '★★ 前端脚本里没有任何绝对外网 URL')

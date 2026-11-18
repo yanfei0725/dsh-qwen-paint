@@ -25,12 +25,37 @@
  */
 (function () {
   'use strict'
+
+  /** ★ 2026-11-18.2：无头浏览器面板的 baseURI 与插件宿主 origin 可能不同，
+   *  相对路径 api/... 会被解析到 ComfyUI origin ⇒ 所有探测统一 404。
+   *  以加载本插件脚本的 <script src> origin 为准拼绝对地址；
+   *  拿不到（vm 假 DOM / 老宿主）时原样退回，行为零变化。 */
+  function qpApiUrl(rel) {
+    var p = String(rel || '')
+    if (p.indexOf('//') === 0 || p.indexOf('://') > 0) return p
+    var origin = ''
+    try {
+      var doc = (typeof document !== 'undefined') ? document : null
+      var ss = (doc && typeof doc.getElementsByTagName === 'function')
+        ? doc.getElementsByTagName('script') : []
+      for (var i = 0; i < ss.length; i += 1) {
+        var s = String(ss[i].src || '')
+        if (s.indexOf('qwen-paint/') < 0 && s.indexOf('comfy-pipeline/') < 0) continue
+        var u = new URL(s, (typeof location !== 'undefined' && location.href) || undefined)
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') continue
+        if (u.hostname !== '127.0.0.1' && u.hostname !== 'localhost' && u.hostname !== '[::1]') continue
+        origin = u.origin; break
+      }
+    } catch (e) {}
+    return origin ? (origin + '/' + p.replace(/^\/+/, '')) : p
+  }
+
   if (window.DshQpHistory && window.DshQpHistory.__hs === true) return
 
-  var LIST_API = 'api/qwen-paint/history'
-  var STATS_API = 'api/qwen-paint/history/stats'
+  var LIST_API = qpApiUrl('api/qwen-paint/history')
+  var STATS_API = qpApiUrl('api/qwen-paint/history/stats')
   var statsCache = null
-  var DEL_API = 'api/qwen-paint/history/delete'
+  var DEL_API = qpApiUrl('api/qwen-paint/history/delete')
   var TAP_UP = ['click', 'pointerup', 'mouseup', 'touchend']
   var PAGE = 20
 
@@ -88,7 +113,7 @@
   }
 
   function fileUrl(p) {
-    return 'api/qwen-paint/file?path=' + encodeURIComponent(String(p || ''))
+    return qpApiUrl('api/qwen-paint/file?path=') + encodeURIComponent(String(p || ''))
   }
 
   /**
@@ -142,7 +167,7 @@
 
   function postThumb(id, dataUrl) {
     try {
-      fetch('api/qwen-paint/history/thumb', {
+      fetch(qpApiUrl('api/qwen-paint/history/thumb'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: id, data_url: dataUrl }),
@@ -150,7 +175,7 @@
         if (!j || !j.ok) return
         for (var i = 0; i < state.items.length; i += 1) {
           if (String(state.items[i].id) === String(id)) {
-            state.items[i].thumb_url = 'api/qwen-paint/file?path='
+            state.items[i].thumb_url = qpApiUrl('api/qwen-paint/file?path=')
               + encodeURIComponent(joinOut(state.items[i], j.thumb))
           }
         }
@@ -253,7 +278,27 @@
     var mine = ++seq
     state.busy = true
     paintState('正在读取历史…')
-    fetch(buildQuery(), { headers: { accept: 'application/json' }, cache: 'no-store' })
+    // ★ 2026-11-19：宿主鉴权墙会按路径挡掉部分 /api/* 端点（history/query 实测 401），
+    //   而无 /api 前缀的 /qwen-paint/* 段不过墙（后端已注册同一 handler 的别名）。
+    //   401/404 时自动换别名重试一次；别名是 LIST_API 纯派生（去掉「/api」前缀），
+    //   绝不引入外部 URL；只重试一次，绝不静默吞结果。
+    var LIST_API_ALT = (function () {
+      var u = LIST_API
+      if (typeof u !== 'string' || u.indexOf('api/qwen-paint/') < 0) return ''
+      return (u.indexOf('/api/qwen-paint/') >= 0)
+        ? u.replace('/api/qwen-paint/', '/qwen-paint/')
+        : u.replace('api/qwen-paint/', 'qwen-paint/')
+    })()
+    function fetchListOrAlias(LIST_API_URL) {
+      return fetch(LIST_API_URL, { headers: { accept: 'application/json' }, cache: 'no-store' }).then(function (r) {
+        if (r && (r.status === 401 || r.status === 404) && LIST_API_ALT) {
+          return fetch(LIST_API_ALT, { headers: { accept: 'application/json' }, cache: 'no-store' })
+            .then(function (r2) { return (r2 && r2.ok) ? r2 : r }).catch(function () { return r })
+        }
+        return r
+      })
+    }
+    fetchListOrAlias(buildQuery())
       .then(function (r) { return r.json().catch(function () { return null }) })
       .then(function (j) {
         if (mine !== seq) return   // 连点查询时只认最后一次，避免旧结果覆盖新结果
@@ -447,7 +492,7 @@
       bRedraw.title = '按这条记录的提示词 / 尺寸 / 步数 / seed 原样再画一张（面板当前风格与模型设置会照常参与）'
       tap(bRedraw, function () {
         paintState('正在按记录参数重画…（完整生成，出图完成后自动进历史）')
-        fetch('api/qwen-paint/history/redraw', {
+        fetch(qpApiUrl('api/qwen-paint/history/redraw'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: it.id }),
@@ -466,7 +511,7 @@
       bParams.type = 'button'
       bParams.title = '复制这条记录的可复用参数包（draw_image 入参 JSON，可直接发给 Agent）'
       tap(bParams, function () {
-        fetch('api/qwen-paint/history/export?id=' + encodeURIComponent(it.id))
+        fetch(qpApiUrl('api/qwen-paint/history/export?id=') + encodeURIComponent(it.id))
           .then(function (r) { return r.json() }).then(function (j) {
             if (j && j.ok && j.draw_args) {
               copyText(JSON.stringify(j.draw_args, null, 2), '参数包已复制（draw_args JSON）')

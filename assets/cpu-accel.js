@@ -14,10 +14,35 @@
  */
 (function () {
   'use strict'
+
+  /** ★ 2026-11-18.2：无头浏览器面板的 baseURI 与插件宿主 origin 可能不同，
+   *  相对路径 api/... 会被解析到 ComfyUI origin ⇒ 所有探测统一 404。
+   *  以加载本插件脚本的 <script src> origin 为准拼绝对地址；
+   *  拿不到（vm 假 DOM / 老宿主）时原样退回，行为零变化。 */
+  function qpApiUrl(rel) {
+    var p = String(rel || '')
+    if (p.indexOf('//') === 0 || p.indexOf('://') > 0) return p
+    var origin = ''
+    try {
+      var doc = (typeof document !== 'undefined') ? document : null
+      var ss = (doc && typeof doc.getElementsByTagName === 'function')
+        ? doc.getElementsByTagName('script') : []
+      for (var i = 0; i < ss.length; i += 1) {
+        var s = String(ss[i].src || '')
+        if (s.indexOf('qwen-paint/') < 0 && s.indexOf('comfy-pipeline/') < 0) continue
+        var u = new URL(s, (typeof location !== 'undefined' && location.href) || undefined)
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') continue
+        if (u.hostname !== '127.0.0.1' && u.hostname !== 'localhost' && u.hostname !== '[::1]') continue
+        origin = u.origin; break
+      }
+    } catch (e) {}
+    return origin ? (origin + '/' + p.replace(/^\/+/, '')) : p
+  }
+
   if (window.DshQpCpuAccel && window.DshQpCpuAccel.__cpu === true) return
 
-  var PROFILE_PATH = 'api/qwen-paint/cpu-profile'
-  var SET_PATH = 'api/qwen-paint/cpu-accel'
+  var PROFILE_PATH = qpApiUrl('api/qwen-paint/cpu-profile')
+  var SET_PATH = qpApiUrl('api/qwen-paint/cpu-accel')
   var SLOT_ID = 'dshqp-cpu-accel-slot'
   var state = null
   var busy = false

@@ -54,8 +54,9 @@ console.log('=== 1. draft.js 指针 / 点按 / 隐私静态契约 ===')
     .filter((l) => !/^\s*(\*|\/\/|\/\*)/.test(l)).join('\n')
   ok(!codeOnly.includes('innerHTML'), '★ 非注释代码里不用 innerHTML（杜绝注入面）')
   ok(!/https?:\/\//.test(DRAFT), '★ 不加载任何外部 URL')
-  ok(DRAFT.includes("var SAVE_API = 'api/qwen-paint/draft'"),
-    '★ 只发本机相对路径请求')
+  ok(DRAFT.includes("var SAVE_API = 'api/qwen-paint/draft'")
+    || DRAFT.includes("var SAVE_API = qpApiUrl('api/qwen-paint/draft')"),
+    '★ 只发本机相对路径请求（qpApiUrl 仅解析宿主 origin，不引入外部主机）')
   ok(DRAFT.includes('草稿**不进生成历史**'), '★ 草稿不进生成历史的设计约束仍写在文件头')
 }
 
