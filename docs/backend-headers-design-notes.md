@@ -939,3 +939,31 @@
  *   只在**入口**拷一次，语义清楚。
  */
 ```
+
+## backend-note-tts-workflow-dialogue（多角色对话链，2026-11-19）
+
+### 节点事实（本机 custom_nodes/ComfyUI-Qwen-TTS/nodes.py 白纸黑字，非猜）
+- `FB_Qwen3TTSVoiceClonePrompt`：required `ref_audio(AUDIO)`+`ref_text`+`model_choice(0.6B/1.7B)`+
+  `device`+`precision`+`attention`，optional `x_vector_only`/`unload_model_after_generate`
+  → `VOICE_CLONE_PROMPT`。
+- `FB_Qwen3TTSRoleBank`：optional `role_name_1..8` + `prompt_1..8` → `QWEN3_ROLE_BANK`
+  （**上限 8 角色**；名字非空且有 prompt 才入银行）。
+- `FB_Qwen3TTSDialogueInference`：required `script`（`角色名: 台词` 每行）+ `role_bank` +
+  五个停顿旋钮（linebreak/period/comma/question/hyphen）+ `merge_outputs`/`batch_size`
+  → `AUDIO`（接 SaveAudioMP3/SaveAudio）。**脚本行解析先试半角 `:` 再试全角 `：`**
+  （nodes.py:1241-1243）；**角色名对不上 bank 的行被静默跳过**，全跳光时报
+  "No valid dialogue lines found matching Role Bank"。
+
+### 为什么刻意不放进 TTS_FALLBACK_CHAINS
+与 VoiceClone 同理：必须先上传各角色参考音频才能构造，混进自动兜底会在
+「用户没给参考音频」时被选中 → 探测放行、构造失败。
+
+### buildDialogueWorkflow 的先验纪律
+- 角色表先验：非空、唯一、都带 referenceFile（uploadRefAudio 产物），1..8 个；
+- **脚本行角色名提前对账**：对不上的行在插件侧明确报错（列出错行+已知角色），绝不放进
+  ComfyUI 让它静默跳过；
+- 每个角色一条 VoiceClonePrompt：referenceText 给了就精确对齐（x_vector_only=false），
+  没给只取说话人嵌入（x_vector_only=true，同克隆链纪律——空 ref_text 对齐会静默塌质量）；
+- attention 只在显式合法值（TTS_ATTENTION_CHOICES）时写入，默认不写 ⇒ 节点 auto（零漂移）；
+- batch_size 钳制 1..32（节点上限）；pauses 未覆盖的键保持节点默认值；
+- 驻留记账与克隆链同款（ttsResidency）。

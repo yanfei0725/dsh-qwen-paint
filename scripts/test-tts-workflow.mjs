@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url'
 import {
   TTS_FALLBACK_CHAINS, TTS_WEIGHT_NOTE, probeTts, ttsMissingReport, buildTtsWorkflow,
   buildVoiceCloneWorkflow, TTS_ATTENTION_CHOICES,
+  DIALOGUE_CHAIN, probeDialogue, buildDialogueWorkflow,
 } from '../lib/tts-workflow.js'
 import { catalogForTts } from '../lib/comfy-catalog.js'
 
@@ -24,11 +25,14 @@ const ok = (name, fn) => { fn(); n += 1; console.log('  ✓ ' + name) }
 console.log('tts-workflow 回归（真实节点类名）')
 
 // 本机 /object_info 实测存在的类名（1684 节点中挑出的 TTS 族）
+// ★ 值一律 true：hasNode() 的判定就是 nodes[name] === true（catalogForTts 生产口径），
+//   之前用 {} 只因旧断言全用 `in` 检查；对话链 probe 走 hasNode 后必须用真值。
 const REAL_NODES = {
-  FB_Qwen3TTSCustomVoice: {}, FB_Qwen3TTSVoiceDesign: {},
-  FB_Qwen3TTSDialogueInference: {}, FB_Qwen3TTSVoiceClone: {},
-  SaveAudio: {}, SaveAudioMP3: {}, SaveAudioOpus: {}, SaveAudioAdvanced: {},
-  VHS_LoadAudio: {},
+  FB_Qwen3TTSCustomVoice: true, FB_Qwen3TTSVoiceDesign: true,
+  FB_Qwen3TTSDialogueInference: true, FB_Qwen3TTSVoiceClone: true,
+  FB_Qwen3TTSVoiceClonePrompt: true, FB_Qwen3TTSRoleBank: true,
+  SaveAudio: true, SaveAudioMP3: true, SaveAudioOpus: true, SaveAudioAdvanced: true,
+  VHS_LoadAudio: true,
 }
 
 ok('★ 兜底链全部用 /object_info 里真实存在的类名（不再是猜名）', () => {
@@ -206,6 +210,97 @@ ok('★ generate_speech schema 暴露 attention 枚举', () => {
   const s = src('lib/speech-tool.js')
   assert.ok(s.includes("enum: ['auto', 'sage_attn', 'flash_attn', 'sdpa', 'eager']"))
   assert.ok(s.includes('attention: typeof args?.attention'))
+})
+
+console.log('\n多角色对话链（A1，2026-11-19：本机已装 FB_Qwen3TTSRoleBank/DialogueInference）')
+ok('DIALOGUE_CHAIN 节点类名全部真实存在（本机 /object_info 口径）', () => {
+  assert.equal(DIALOGUE_CHAIN.maxRoles, 8)
+  for (const n of DIALOGUE_CHAIN.nodes) assert.ok(n in REAL_NODES, `不存在：${n}`)
+  assert.ok(probeDialogue({ nodes: REAL_NODES }).available === true)
+  const p = probeDialogue({ nodes: { FB_Qwen3TTSRoleBank: {} } })
+  assert.equal(p.available, false)
+  assert.ok(p.reason.includes('FB_Qwen3TTSDialogueInference') && p.reason.includes('ComfyUI-Qwen-TTS'), p.reason)
+})
+ok('buildDialogueWorkflow：两角色两提示词一银行一对话一保存', () => {
+  const r = buildDialogueWorkflow({ nodes: REAL_NODES }, {
+    script: '小明: 你好呀。\n小红：很高兴见到你！',
+    roles: [
+      { name: '小明', referenceFile: 'dshqp-ref-audio-x.wav', referenceText: '你好' },
+      { name: '小红', referenceFile: 'dshqp-ref-audio-y.wav' },
+    ],
+    seed: 7, prefix: 'x/tts',
+  })
+  const byClass = Object.values(r.payload).map((n) => n.class_type)
+  assert.deepEqual(byClass.filter((c) => c === 'VHS_LoadAudio').length ? byClass : byClass, byClass)
+  assert.equal(r.roleCount, 2)
+  assert.equal(r.format, 'mp3')
+  // 银行槽位：role_name_1/2 + prompt_1/2 指向各自的 VoiceClonePrompt 节点
+  const bank = r.payload.bank
+  assert.equal(bank.class_type, 'FB_Qwen3TTSRoleBank')
+  assert.equal(bank.inputs.role_name_1, '小明')
+  assert.equal(bank.inputs.role_name_2, '小红')
+  const p1 = r.payload[bank.inputs.prompt_1[0]]
+  const p2 = r.payload[bank.inputs.prompt_2[0]]
+  assert.equal(p1.class_type, 'FB_Qwen3TTSVoiceClonePrompt')
+  assert.equal(p1.inputs.ref_text, '你好')
+  assert.equal(p1.inputs.x_vector_only, false)
+  assert.equal(p2.inputs.ref_text, '')
+  assert.equal(p2.inputs.x_vector_only, true) // 没转写=只取说话人嵌入（同克隆链纪律）
+  // 加载器走 input/ 前缀（真机实测 VHS_LoadAudio 要 input/文件名）
+  assert.ok(r.payload['1'].inputs.audio_file.startsWith('input/'))
+  assert.ok(r.payload['2'].inputs.audio_file.startsWith('input/'))
+  // 对话节点：脚本原样透传、全角冒号行也保留（节点 nodes.py:1241-1243 双冒号都认）
+  const dlg = r.payload.dlg
+  assert.equal(dlg.class_type, 'FB_Qwen3TTSDialogueInference')
+  assert.ok(dlg.inputs.script.includes('你好呀。') && dlg.inputs.script.includes('很高兴见到你！'))
+  assert.deepEqual(dlg.inputs.role_bank, ['bank', 0])
+  assert.equal(dlg.inputs.merge_outputs, true)
+  assert.equal(dlg.inputs.batch_size, 4)
+  assert.equal(dlg.inputs.pause_linebreak, 0.5)
+  assert.equal(dlg.inputs.seed, 7)
+  assert.equal(dlg.inputs.unload_model_after_generate, true)
+  assert.equal(dlg.inputs.attention, undefined) // 默认不写 attention（零漂移）
+  assert.equal(r.payload.save.class_type, 'SaveAudioMP3')
+  assert.deepEqual(r.payload.save.inputs.audio, ['dlg', 0])
+})
+ok('buildDialogueWorkflow：显式 sage_attn 写入 + pauses 覆盖 + batch 钳制', () => {
+  const r = buildDialogueWorkflow({ nodes: REAL_NODES }, {
+    script: '甲: 你好', roles: [{ name: '甲', referenceFile: 'a.wav' }],
+    attention: 'sage_attn', batchSize: 99,
+    pauses: { linebreak: 1.2, comma: 0.1 },
+  })
+  const dlg = r.payload.dlg
+  assert.ok(Object.values(r.payload).some((n) => n.class_type === 'FB_Qwen3TTSVoiceClonePrompt'
+    && n.inputs.attention === 'sage_attn'))
+  assert.equal(dlg.inputs.pause_linebreak, 1.2)
+  assert.equal(dlg.inputs.comma_pause, 0.1)
+  assert.equal(dlg.inputs.period_pause, 0.4) // 未覆盖的保持默认
+  assert.equal(dlg.inputs.batch_size, 32) // 99 → 钳到节点上限
+})
+ok('buildDialogueWorkflow：角色名对不上脚本行提前报（节点会静默跳过，不能让它糊脸）', () => {
+  assert.throws(
+    () => buildDialogueWorkflow({ nodes: REAL_NODES }, {
+      script: '路人甲: 你好', roles: [{ name: '小明', referenceFile: 'a.wav' }],
+    }),
+    (e) => /角色名不在角色表里/.test(e.message) && /小明/.test(e.message),
+  )
+  assert.throws(() => buildDialogueWorkflow({ nodes: REAL_NODES }, {
+    script: '', roles: [{ name: '小明', referenceFile: 'a.wav' }],
+  }), /script 不能为空/)
+  assert.throws(() => buildDialogueWorkflow({ nodes: REAL_NODES }, {
+    script: '小明: 你好', roles: [],
+  }), /至少要给一个角色/)
+  assert.throws(() => buildDialogueWorkflow({ nodes: REAL_NODES }, {
+    script: '小明: 你好', roles: [{ name: '小明', referenceFile: '' }],
+  }), /缺参考音频/)
+  assert.throws(() => buildDialogueWorkflow({ nodes: REAL_NODES }, {
+    script: '小明: 你好',
+    roles: Array.from({ length: 9 }, (_, i) => ({ name: 'r' + i, referenceFile: 'a.wav' })),
+  }), /最多 8 个角色/)
+  assert.throws(() => buildDialogueWorkflow({ nodes: REAL_NODES }, {
+    script: '小明: 你好',
+    roles: [{ name: '小明', referenceFile: 'a.wav' }, { name: '小明', referenceFile: 'b.wav' }],
+  }), /角色名重复/)
 })
 
 console.log(`\n✓ 全部通过（${n} 项）`)
