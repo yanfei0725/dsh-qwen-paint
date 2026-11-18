@@ -8,19 +8,22 @@
  *   于是**整个优化面板永远打不开**（用户看到的就是"点了没反应"）。
  *   崩溃日志：`client.js:1813 Uncaught ReferenceError: data is not defined`。
  *
- * ## 它怎么查
+ * ## 它怎么查（2026-11-18 升级：正则 → 零依赖词法分析）
  *   1. 取出 `openPanel` 的函数体（从定义处到下一个同级 `const update =`）
- *   2. 收集该范围内**声明过**的标识符（const/let/var/function/参数）
- *   3. 收集所有 `X.` 形式的**取值根**，逐个核对是否声明过或在已知全局白名单里
- *   4. 有漏网的就报 FAIL —— 这类错一旦漏出，代价是整个面板打不开
+ *   2. 用 `scripts/js-lexer.mjs` 把函数体切成 token 流（字符串/注释/正则/模板
+ *      都是独立 token，不再靠正则 replace 去抹）—— 纯 JS 标准库，零依赖、不进包
+ *   3. 基于 token 类型收集声明（const/let/var/function/参数/解构）与引用根（`X.`）
+ *   4. 模板插值 `${X}` 的裸根单独从 template token 提取（历史 bug：${API} 未定义）
+ *   5. 有漏网的就报 FAIL —— 这类错一旦漏出，代价是整个面板打不开
  *
- * ⚠ 这是**启发式**静态检查（不是完整作用域分析）：白名单只放浏览器/宿主已知全局。
+ * ⚠ 这是**启发式**静态检查（不是完整作用域树）：白名单只放浏览器/宿主已知全局。
  *   新增合法全局时往 GLOBALS 里补，别为了让它变绿而把变量名加进去。
  *
  * 用法：node scripts/_client_scope_test.mjs
  */
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
+import { tokenize, templateInterpolationRoots } from './js-lexer.mjs'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const SRC = readFileSync(path.join(ROOT, 'lib', 'client.js'), 'utf8')
@@ -56,53 +59,164 @@ const GLOBALS = new Set([
   'payloadNow',
 ])
 
-// ---- 3. 收集声明过的名字 ----
+// ---- 3 & 4. 基于 token 流收集声明与引用根 ----
+// ★ 2026-11-18 升级：不再用正则在源码字符串上「抹字符串→抹注释→抹模板→抓 X.」，
+//   那套做法对转义/嵌套/正则字面量天生脆弱（正则盲区曾炸出 config.js 语法错误）。
+//   现在词法分析器先把源码切成带类型 token，这里只做 token 层的模式匹配。
+const tokens = tokenize(body)
+const DECL_KW = new Set(['const', 'let', 'var'])
 const declared = new Set()
-const declRe = /\b(?:const|let|var|function)\s+([A-Za-z_$][\w$]*)/g
-// 参数：`(a, b) =>` / `function f(a, b)` / `async (a) =>`
-const paramRe = /(?:\(([^()]*)\)\s*=>|function\s*[A-Za-z_$]*\s*\(([^()]*)\))/g
-// 解构：`const { a, b } = ` / `const [a, b] = `
-const destructRe = /\b(?:const|let|var)\s*[{[]([^}\]]*)[}\]]/g
-
-for (const m of body.matchAll(declRe)) declared.add(m[1])
-for (const m of body.matchAll(paramRe)) {
-  for (const grp of [m[1], m[2]]) {
-    if (!grp) continue
-    for (const p of grp.split(',')) {
-      const name = p.trim().split(/[=:]/)[0].trim().replace(/^\.\.\./, '')
-      if (/^[A-Za-z_$][\w$]*$/.test(name)) declared.add(name)
-    }
-  }
-}
-for (const m of body.matchAll(destructRe)) {
-  for (const p of m[1].split(',')) {
-    const name = p.trim().split(/[=:]/)[0].trim().replace(/^\.\.\./, '')
-    if (/^[A-Za-z_$][\w$]*$/.test(name)) declared.add(name)
-  }
-}
-
-// ---- 4. 收集所有 `X.` 取值根（排除属性链中段与字符串/注释里的）----
-const codeOnly = body
-  .replace(/\/\*[\s\S]*?\*\//g, '')      // 块注释
-  .replace(/^\s*\/\/.*$/gm, '')          // 整行注释
-  .replace(/'(?:[^'\\]|\\.)*'/g, "''")   // 单引号串
-  .replace(/"(?:[^"\\]|\\.)*"/g, '""')   // 双引号串
 const used = new Set()
-// 取值根只在「抹掉模板串后」的文本上抓，避免插值里的 `X.y` 被重复误报。
-
-// ★ 2026-11-17：模板插值 `${API}` 这类未定义标识符——原扫描器把模板串整体抹掉，
-//   正好漏掉这类真事故（历史 bug：`${API}/status.json` 里 API 从未定义 → undefined/status.json，
-//   还被 window.prompt 拦后的提前 return 掩盖）。这里在抹模板串**之前**先抓插值根一并核对。
-//   只取紧跟 `${` 的简单标识符；`typeof`/`new` 等运算符不算变量，排除。
-const OPS = new Set(['typeof', 'new', 'void', 'delete', 'await', 'yield', 'in', 'of', 'instanceof'])
 let interpolationRoots = 0
-for (const m of codeOnly.matchAll(/\$\{([A-Za-z_$][\w$]*)/g)) {
-  if (!OPS.has(m[1])) { used.add(m[1]); interpolationRoots += 1 }
+
+/** 把形如 `a` / `a = 1` / `...a` / `{k: a}` 的 token 段里的「绑定名」加入 declared。 */
+function addBindingName(seq) {
+  // 取 `=` 之前、去掉剩余 `:` 右侧…；这里 seq 已是不含分隔符的单段
+  const names = seq.filter((t) => t.type === 'id')
+  // 跳过属性名：`{ k: a }` 里 k 是属性名、a 才是绑定名；`{ a }` 里 a 是绑定名。
+  const colonIdx = seq.findIndex((t) => t.type === 'punct' && t.value === ':')
+  const bindTokens = colonIdx >= 0 ? names.filter((t) => t.start > seq[colonIdx].start) : names
+  for (const t of bindTokens) declared.add(t.value)
 }
-// 抹掉模板串（含插值内容），避免插值里的 `X.` 被重复当成取值根误报。
-const noTemplates = codeOnly.replace(/`(?:[^`\\]|\\.)*`/g, '``')
-// 取值根只在抹模板后的文本上抓；插值根已经单独进 used。
-for (const m of noTemplates.matchAll(/(?<![.\w$])([A-Za-z_$][\w$]*)\s*\./g)) used.add(m[1])
+
+/**
+ * 消费一个「声明符列表」：const/let/var 之后到语句结束（`;` 或行尾语义）之前的绑定。
+ * 支持 `a, b = 1`、`{a, b: c}`、`[a, b]`、`...rest`。
+ */
+function collectDeclFrom(startIdx) {
+  let k = startIdx
+  // 跳过 async（function 前缀）等非绑定 token 已在调用处处理
+  if (k >= tokens.length) return
+  const first = tokens[k]
+  const isDestructure = first.type === 'punct' && (first.value === '{' || first.value === '[')
+  if (isDestructure) {
+    const open = first.value
+    const close = open === '{' ? '}' : ']'
+    let depth = 0
+    let seg = []
+    k += 1
+    while (k < tokens.length) {
+      const t = tokens[k]
+      if (t.type === 'punct' && t.value === open) depth += 1
+      if (t.type === 'punct' && t.value === close) {
+        if (depth === 0) { addBindingName(seg); break }
+        depth -= 1
+      }
+      if ((t.type === 'punct' && (t.value === ',' )) && depth === 0) { addBindingName(seg); seg = []; k += 1; continue }
+      seg.push(t)
+      k += 1
+    }
+    return
+  }
+  // 简单声明：每隔逗号取一个绑定名；遇到 `=` 跳过初始化表达式到下一个顶层逗号
+  let depth = 0
+  let wantName = true
+  while (k < tokens.length) {
+    const t = tokens[k]
+    if (t.type === 'punct') {
+      if (['{', '[', '('].includes(t.value)) depth += 1
+      else if (['}', ']', ')'].includes(t.value)) depth -= 1
+      else if (t.value === ',' && depth === 0) { wantName = true }
+      else if (t.value === '=' && depth === 0) { wantName = false }
+      else if ((t.value === ';' || t.value === '}' || t.value === ')') && depth <= 0) break
+    }
+    if (wantName && t.type === 'id') { declared.add(t.value); wantName = false }
+    k += 1
+  }
+}
+
+/** 收集一对括号内的箭头函数参数（括号已定位到右括号）。 */
+function collectParams(fromIdx, toIdx) {
+  let depth = 0
+  let seg = []
+  const flush = () => {
+    const names = seg.filter((t) => t.type === 'id')
+    const colonIdx = seg.findIndex((t) => t.type === 'punct' && t.value === ':')
+    const bind = colonIdx >= 0 ? names.filter((t) => t.start > seg[colonIdx].start) : names
+    for (const t of bind) declared.add(t.value)
+    seg = []
+  }
+  for (let k = fromIdx; k < toIdx; k += 1) {
+    const t = tokens[k]
+    if (t.type === 'punct') {
+      if (['{', '[', '('].includes(t.value)) depth += 1
+      else if (['}', ']', ')'].includes(t.value)) depth -= 1
+      else if (t.value === ',' && depth === 0) { flush(); continue }
+    }
+    seg.push(t)
+  }
+  flush()
+}
+
+for (let i = 0; i < tokens.length; i += 1) {
+  const t = tokens[i]
+  if (t.type !== 'id' && t.type !== 'punct') continue
+
+  // ★ 箭头函数参数：`(r) =>` / `(ev) =>` / `(s) =>`。
+  //   遇到 '(' 找匹配 ')'，若其后紧跟 '=>' 则括号内是参数表。
+  //   （这段必须在 `X.` 取值根判断之前，纯 '(' 不参与下面的引用收集。）
+  if (t.type === 'punct' && t.value === '(') {
+    let depth = 0
+    let q = i
+    for (; q < tokens.length; q += 1) {
+      if (tokens[q].type === 'punct' && tokens[q].value === '(') depth += 1
+      else if (tokens[q].type === 'punct' && tokens[q].value === ')') {
+        depth -= 1
+        if (depth === 0) break
+      }
+    }
+    if (tokens[q + 1]?.type === 'punct' && tokens[q + 1].value === '=>') {
+      collectParams(i + 1, q)
+    }
+    continue
+  }
+
+  if (t.type !== 'id') continue
+
+  // 声明关键字
+  if (DECL_KW.has(t.value)) { collectDeclFrom(i + 1); continue }
+  // function foo(...) / async function foo / class Foo：函数名
+  if (t.value === 'function' || t.value === 'class') {
+    const nm = tokens[i + 1]
+    if (nm?.type === 'id') declared.add(nm.value)
+    // function 的参数表：找到函数名后的 '(' 与匹配 ')'
+    if (t.value === 'function') {
+      let p = i + 1
+      if (tokens[p]?.type === 'id') p += 1
+      if (tokens[p]?.type === 'punct' && tokens[p].value === '(') {
+        let depth = 0
+        let q = p
+        for (; q < tokens.length; q += 1) {
+          if (tokens[q].type === 'punct' && tokens[q].value === '(') depth += 1
+          else if (tokens[q].type === 'punct' && tokens[q].value === ')') { depth -= 1; if (depth === 0) break }
+        }
+        collectParams(p + 1, q)
+      }
+    }
+    continue
+  }
+
+  // ★ 单参数无括号箭头：`x => ...`，当前 id 后紧跟 '=>' 即为参数。
+  if (tokens[i + 1]?.type === 'punct' && tokens[i + 1].value === '=>') {
+    declared.add(t.value)
+    continue
+  }
+
+  // 引用根：`X.` —— 当前 id 后面紧跟一个 `.` punct，且这个 id 不是属性名（前一个 token 不是 `.`）
+  if (tokens[i + 1]?.type === 'punct' && tokens[i + 1].value === '.') {
+    const prevT = tokens[i - 1]
+    if (!(prevT?.type === 'punct' && prevT.value === '.')) used.add(t.value)
+  }
+}
+
+// 模板插值的裸根：从 template token 的 value 中提取（历史 bug ${API} 未定义）
+for (const t of tokens) {
+  if (t.type !== 'template') continue
+  for (const { root } of templateInterpolationRoots(t)) {
+    used.add(root)
+    interpolationRoots += 1
+  }
+}
 
 // ---- 5. 核对 ----
 const unknown = [...used].filter((n) => !declared.has(n) && !GLOBALS.has(n)).sort()

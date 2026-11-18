@@ -236,5 +236,52 @@ console.log('=== 5. 外置接线与体积红线 ===')
     read('lib/tool-registry.js').includes('空闲自动关停 ComfyUI'))
 }
 
+// ★ 2026-11-18（社区调研 A 类）：doctor 探针真注入回归。
+// 诚实口径：能真检测的接上，检测不了的保持 undetected，绝不假装 pass。
+{
+  const extras = createExtras({
+    log: () => {},
+    cfg: { comfyUrl: 'http://127.0.0.1:8188' },
+    outputDir: '',
+    objectInfoProbe: async () => ({
+      ok: true, reason: '',
+      nodes: ['QwenImage21Cache', 'TESpeedQwenImage21', 'SageAttention', 'TextEncodeQwenImage21'],
+    }),
+    probes: { ffmpeg: async () => ({ ok: true, detail: 'ffmpeg 可用（测试注入）' }) },
+  })
+  ok('★ doctor 注入了 6 个探针（原 2 + 新 4）',
+    ['comfyOnline', 'accelPacks', 'attentionBackend', 'ffmpeg', 'historyDb', 'outputDir']
+      .every((k) => typeof extras.probes[k] === 'function'),
+    Object.keys(extras.probes).join(','))
+  const doctor = extras.tools.find((t) => t.name === 'doctor')
+  ok('doctor 工具已注册', Boolean(doctor))
+  if (doctor) {
+    const r = await doctor.execute({ detail: true })
+    const report = r.summary ? r : (r.output ?? {})
+    const details = report.details ?? []
+    const byId = new Map(details.map((d) => [d.id, d]))
+    ok('comfy_online 真检测为 pass', byId.get('comfy_online')?.status === 'pass',
+      JSON.stringify(byId.get('comfy_online')))
+    ok('accel_packs 真检测为 pass 且报出节点名',
+      byId.get('accel_packs')?.status === 'pass'
+      && String(byId.get('accel_packs')?.detail).includes('QwenImage21Cache'))
+    ok('ffmpeg 真检测为 pass', byId.get('ffmpeg')?.status === 'pass')
+    ok('★ attention_backend 只报未检测（没验证显卡匹配就不假装 pass）',
+      byId.get('attention_backend')?.status === 'undetected'
+      && String(byId.get('attention_backend')?.detail).includes('未验证'),
+      JSON.stringify(byId.get('attention_backend')))
+    ok('★ model_integrity / tts_backend 仍老实标未检测',
+      byId.get('model_integrity')?.status === 'undetected'
+      && byId.get('tts_backend')?.status === 'undetected')
+    ok('无外部能力时报告不谎称 pass（undetected 诚实保留）',
+      report.checked === 8
+      && details.filter((d) => d.status === 'undetected').length >= 2
+      && /项待检查/u.test(String(report.summary)))
+    ok('★ doctor 报告带 probe_contract（每项 needs / injected 状态可见）',
+      Array.isArray(report.probe_contract) && report.probe_contract.length === 8
+      && report.probe_contract.every((p) => typeof p.injected === 'boolean'))
+  }
+}
+
 console.log(`=== test-accel-config：${pass} 项通过，${fail} 项失败 ===`)
 if (fail > 0) process.exit(1)

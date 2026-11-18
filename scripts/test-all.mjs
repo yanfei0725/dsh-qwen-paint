@@ -116,7 +116,8 @@ const SUITES = [
   // —— 契约 / 面板 / 步骤 ——
   { file: '_tool_contract_test.mjs', note: '工具契约' },
   { file: '_step4_dry_test.mjs', note: '4 步干跑' },
-  { file: '_client_scope_test.mjs', note: '面板作用域无未声明标识符' },
+  { file: '_client_scope_test.mjs', note: '面板作用域无未声明标识符（token 流引擎）' },
+  { file: 'test-js-lexer.mjs', note: '零依赖 JS 词法分析器（四类隔离/模板插值根/运算符排除）' },
   { file: '_opt_status_test.mjs', note: '状态机与状态端点' },
   { file: '_portability_test.mjs', note: '可移植性' },
   { file: '_launch_args_test.mjs', note: '启动参数' },

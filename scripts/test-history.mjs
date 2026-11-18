@@ -168,6 +168,73 @@ const outDir = path.join(tmp, 'out')
   eq(store.record({ file_path: path.join(outDir, 'after-close.png') }), false, 'close 后写入返回 false 不抛错')
 }
 
+// ── 2b. FTS5 关键词索引（2026-11-18）────────────────────────────────────────
+console.log('\n=== 2b. FTS5 全文索引（零依赖 / 旧库迁移 / 降级） ===')
+{
+  const { DatabaseSync } = await import('node:sqlite')
+  const ftsDir = fs.mkdtempSync(path.join(tmp, 'fts-'))
+  const ftsLogs = []
+  const ftsLog = (lv, msg) => ftsLogs.push({ lv, msg })
+  const s = createHistoryStore({ outputDir: ftsDir, log: ftsLog })
+  for (const r of [
+    { file_path: 'a.png', prompt: '星空下的柴犬', kind: 'image', created_at: '2026-11-18T01:00:00Z' },
+    { file_path: 'b.png', prompt: '星空下的猫', kind: 'image', created_at: '2026-11-18T02:00:00Z' },
+    { file_path: 'clip.mp4', prompt: '柴犬剪辑', kind: 'video', created_at: '2026-11-18T03:00:00Z' },
+  ]) eq(s.record(r), true, `FTS 库写入 ${r.file_path}`)
+
+  {
+    const raw = new DatabaseSync(s.db_path)
+    const names = raw.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((x) => x.name)
+    ok(names.includes('images_fts'), '★ FTS5 虚拟表已建（零新依赖）')
+    eq(Number(raw.prepare('SELECT count(*) n FROM images_fts').get().n), 3, '★★ 触发器同步：3 条记录索引 3 行')
+    raw.close()
+  }
+  eq((await s.query({ keyword: '星空下的' })).total, 2, '★ ≥3 字符关键词走 FTS 命中 2 条')
+  eq((await s.query({ keyword: 'clip' })).total, 1, '★ 文件名关键词走 FTS 命中 1 条')
+  eq((await s.query({ keyword: '柴犬' })).total, 2, '★ 2 字符回落 LIKE 仍命中 2 条（trigram 边界）')
+  // 软删除边界：FTS 外部内容表不含 deleted 列，必须靠主表 deleted=0 过滤——
+  // 漏了就会让已删记录从搜索里"复活"，属隐私 bug，专门钉住。
+  const delId = (await s.query({ keyword: '星空下的' })).items[0].id
+  eq(s.remove(delId), true, 'FTS 库软删除一条')
+  eq((await s.query({ keyword: '星空下的' })).total, 1, '★★ 软删除后 FTS 搜索不返回已删记录')
+  eq((await s.query({ keyword: '星空' })).total, 1, '★★ 软删除后 LIKE 回落也不返回已删记录')
+  const inj = await s.query({ keyword: '" OR 1=1 --' })
+  eq(inj.ok, true, '★★ FTS phrase 包裹下注入串不报错')
+  eq(inj.total, 0, '注入串不误命中全部')
+  ok(ftsLogs.every((x) => !x.msg.includes('回落 LIKE')), 'FTS 可用时无降级告警')
+  s.close()
+
+  // 旧库迁移：先造一个「有数据、无 FTS 表」的老库，重开 store 应自动建表 + rebuild 回填。
+  const oldDir = fs.mkdtempSync(path.join(tmp, 'old-'))
+  {
+    const raw = new DatabaseSync(path.join(oldDir, HISTORY_DB_NAME))
+    raw.exec(`CREATE TABLE images (id INTEGER PRIMARY KEY AUTOINCREMENT, file_path TEXT NOT NULL UNIQUE,
+      prompt TEXT NOT NULL DEFAULT '', tool_name TEXT NOT NULL DEFAULT '', model TEXT NOT NULL DEFAULT '',
+      steps INTEGER, cfg REAL, seed INTEGER, width INTEGER, height INTEGER,
+      kind TEXT NOT NULL DEFAULT 'image', created_at TEXT NOT NULL, parent_id INTEGER,
+      deleted INTEGER NOT NULL DEFAULT 0, extra TEXT NOT NULL DEFAULT '{}')`)
+    raw.prepare('INSERT INTO images(file_path,prompt,created_at) VALUES(?,?,?)')
+      .run('legacy.png', '旧库里的星空下的猫', '2026-10-01T00:00:00Z')
+    raw.close()
+  }
+  const migrated = createHistoryStore({ outputDir: oldDir, log: () => {} })
+  eq((await migrated.query({ keyword: '星空下的' })).total, 1, '★★ 旧库迁移：rebuild 回填后 FTS 命中历史数据')
+  migrated.close()
+
+  // FTS 不可用降级：注入一个不认识 FTS5 的假 sqliteModule，查询必须回落 LIKE 且不崩。
+  {
+    const noFts = createHistoryStore({
+      outputDir: path.join(tmp, 'nofks'), log: () => {},
+      sqliteModule: { DatabaseSync: class extends DatabaseSync {
+        exec(sql) { if (/fts5|images_fts/u.test(sql)) throw new Error('FTS5 disabled'); return super.exec(sql) }
+      } },
+    })
+    // 触发写入会走被拦截的 exec？写库本身不用 exec，只有建表受影响——这里主要验证不崩。
+    eq(noFts.available, true, 'FTS5 建表失败时 store 仍可用（整体不崩）')
+    noFts.close()
+  }
+}
+
 // ── 3. 无 node:sqlite 的降级 ────────────────────────────────────────────────
 console.log('\n=== 3. 降级（Node < 22.5 没有 node:sqlite） ===')
 {

@@ -241,6 +241,16 @@ console.log('\n=== 4. C17 错误可操作化 ===')
   ok(oom.fixes.some((f) => f.action.includes('--lowvram')), '修法里点名 --lowvram')
   ok(oom.fixes.some((f) => f.gain.includes('从 OOM 变成可跑')), '★ 给的是条件式收益，不是编出来的百分比')
   ok(!/\d+\.\d+%/.test(oom.fixes.map((f) => f.gain).join('')), '★★ 收益里没有假精确的百分比')
+  // ★ 2026-11-18（社区调研 A 类）：OOM 建议跟上 v0.37 + 8G 抄作业档，仍守诚实边界。
+  ok(oom.fixes.some((f) => f.action.includes('INT8') && f.action.includes('nvfp4')),
+    '★ OOM 建议含社区 8G 抄作业档（INT8 + nvfp4）')
+  ok(oom.fixes.some((f) => (f.action + f.why).includes('Q4_K_M') && (f.action + f.why).includes('768')),
+    '★ OOM 建议含 GGUF 起步档 + 768² 试水')
+  ok(oom.fixes.some((f) => f.action.includes('v0.37') && f.why.includes('动态显存')),
+    '★ OOM 建议点名 v0.37 动态显存策略变化')
+  ok(oom.fixes.some((f) => f.gain.includes('15×') && f.gain.includes('别用别人的秒数')),
+    '★★ 速度差标为社区实测量级并附预期管理，不承诺固定倍率')
+  ok(!oom.fixes.some((f) => /\d+\.\d+%/.test(f.gain)), '新增建议依旧没有假精确百分比')
 
   const node = diagnoseError('Cannot execute because node VHS_VideoCombine does not exist.')
   eq(node.code, 'missing_node', '★ 识别缺节点')
