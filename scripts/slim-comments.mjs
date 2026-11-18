@@ -161,7 +161,10 @@ export function buildPlan(src, minBytes = MIN_BYTES, opts = targetOpts()) {
   let restored = out
   for (const m of markers) {
     if (!restored.includes(m.marker)) return { ok: false, reason: 'marker 缺失: ' + m.marker, blocks, picked, markers }
-    restored = restored.replace(m.marker, m.text)
+    // ★ 2026-11-19 修复：必须用**函数式替换**。注释文本里带 shell 语法（`$$` 写 pid、
+    //   `$!`、`$0`——comfy-launch 实录）时，字符串替换会把 `$$` 当替换模式解释成单个
+    //   `$`，污染回填 → 零漂移自检恒红，可外置的块全被冤枉拒掉。
+    restored = restored.replace(m.marker, () => m.text)
   }
   if (restored !== src) return { ok: false, reason: '逐字重组与原文不一致', blocks, picked, markers }
   return {
