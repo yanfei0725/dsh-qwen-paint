@@ -230,3 +230,32 @@
  *   启动失败自动回状态、健康检查失败标 error 而不是静默继续。
  */
 ```
+
+
+---
+
+<!-- 由 scripts/slim-comments.mjs 自动外置；源码只留锚点，逐字内容见此。 -->
+
+### tts-lowlatency-note-001（原 lib/tts-lowlatency.js L66-75）
+
+```js
+/**
+ * 构造统一合成请求：gsv=/tts 平铺（★ 2026-11-19 真机实测的 GSV.CPP V5 契约）；
+ * openai=/v1/audio/speech 嵌套。
+ *
+ * ★ gsv 契约细节（服务端 400/403 白纸黑字，别再用旧字段）：
+ *   · 必填 text / text_lang / ref_audio_path / prompt_text / prompt_lang；
+ *   · 原版 GPT-SoVITS API 的 refer_wav_path / text_language 字段名它不认（拒收 400）；
+ *   · 开关字段是 streaming_mode，不是 stream；
+ *   · ref_audio_path 必须落在服务端 --allow-path 白名单目录里，否则 403。
+ */
+```
+
+### tts-lowlatency-note-002（原 lib/tts-lowlatency.js L90-93）
+
+```js
+/** 服务健康探测：fetch 必须注入；任何失败都返回结构化降级，不抛。
+ *  ★ 2026-11-19：healthIncludes 响应体标记校验——两个外部服务默认端口同为 9880，
+ *  先跑起来的会把另一个的探活也"喂饱"（本机实录：GSV.CPP 在线后 AnifLive 误报在线）。
+ *  配了 healthIncludes 的服务必须响应体含该标记才算在线；没配的维持原状。 */
+```
