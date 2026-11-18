@@ -1102,9 +1102,16 @@
           var cur = typeof sel[p.def.pick] === 'string' ? sel[p.def.pick] : ''
           // 增量回填：选项集合没变就不重建 DOM，只改 value —— 切模式/重开面板不再卡。
           fillSelect(p.sel, opts, cur, p.def.empty, el)
-          p.status.textContent = opts.length > 0
+          p.status.textContent = (opts.length > 0
             ? '共 ' + opts.length + ' 个本机可用候选'
-            : (p.def.src === 'unet' ? 'ComfyUI 在线但没探到主模型文件（models/unet 为空？）' : '暂无候选（未探测到节点 / 未拖入音频样本）')
+            : (p.def.src === 'unet' ? 'ComfyUI 在线但没探到主模型文件（models/unet 为空？）' : '暂无候选（未探测到节点 / 未拖入音频样本）'))
+            // ★ 2026-11-19 外部 TTS 状态露出（只展示不进下拉：generate_speech 尚未直调
+            //   外接服务，列进下拉会假可选；在线数据来自 model-options 附带的回环探活）。
+            + (p.def.src === 'tts_backends' && Array.isArray(j.external_tts) && j.external_tts.length > 0
+              ? '｜外接：' + j.external_tts.map(function (s) {
+                return String(s.label || s.id).split('（')[0] + (s.online ? '·在线' : '·离线')
+              }).join(' ')
+              : '')
         })
       }
       // 真正发请求：成功且在线才写两层缓存（内存 + localStorage），失败/离线不缓存留重试。

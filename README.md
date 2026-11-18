@@ -226,7 +226,7 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 
 ### 文档
 - `package.json` / `meta.description` / README 首段 / 两份 llms 首段 / `pyproject.toml` / `docs/index.html` / `给DSH安装的话.md` 全部同步到 1.2.1，`scripts/test-release-metadata.mjs` 一处改、多处一起校验。
-- 当前 **138 个 `lib/*.js`** / 合计 **2,076,671 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径）。
+- 当前 **138 个 `lib/*.js`** / 合计 **2,077,512 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径）。
 
 ## 1.2.0 更新说明
 
@@ -265,7 +265,7 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 
 ### 文档
 - `package.json` / `meta.description` / README 首段 / 两份 llms 首段 / `pyproject.toml` / `docs/index.html` / `给DSH安装的话.md` 全部同步到 1.2.0，`scripts/test-release-metadata.mjs` 一处改、多处一起校验。
-- 当前 **138 个 `lib/*.js`** / 合计 **2,076,671 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径；Windows 工作树受 `core.autocrlf` 影响略高；设计注释外置到 docs 后维持健康余量）。
+- 当前 **138 个 `lib/*.js`** / 合计 **2,077,512 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径；Windows 工作树受 `core.autocrlf` 影响略高；设计注释外置到 docs 后维持健康余量）。
 - Rust CPU 底座源码与锁文件在 `tools-rust/dshqp-portrait/`，产物 `assets/bin/dshqp-portrait.exe` 随 `assets/` 走打包分发；本机 cargo 路径已做等长中性化，不夹带真实用户目录。
 - **历史库关键词搜索升级到 SQLite FTS5**（零新依赖）：`history-store.js` 用 FTS5 外部内容表 + trigram tokenizer + AFTER INSERT 触发器，关键词走 MATCH 索引（1 万条实测 0.023ms vs LIKE 全表 1.012ms，44×）。短词（<3 字符）与 FTS 不可用时自动回落 LIKE；旧库首次打开自动 rebuild 回填；phrase 包裹防查询语法注入。`test-history.mjs` 补 16 项（索引同步/旧库迁移/软删除边界/降级）。
 - **运行期自诊断与 OOM 建议补齐**（社区调研 A 类）：`doctor.js` 原有 8 项检查里 6 项探针空转，现用现有 deps 真接上 4 项（comfyOnline / accelPacks / ffmpeg / attentionBackend，后两者基于 `/object_info` 与 `mediaExec.probe`），模型完整性与 TTS 权重仍如实标未检测；`attention_backend` 只查到节点存在时不谎报 pass。`diagnose-error.js` 的 OOM 建议补上社区 8G 抄作业档（INT8 + nvfp4 + 低显存 / GGUF Q4_K_M + 768²起步）与 ComfyUI v0.37 动态显存策略提示，15× 速度差标为社区量级、不承诺固定倍率。
@@ -2483,6 +2483,6 @@ MIT 授权的旧版本，见 LICENSE 文末。
 - 折叠 `toggle` 后调用 `syncPanelPos(nodes.fab, nodes.panel)`，面板高度变化仍保持底缘贴浮标上缘，不翻下方、不变形。`UI_BUILD = 2026-11-18.2`。
 
 ### ★ 验证口径与未闭环项
-- 专项：`test-local-portrait.mjs` 48/0、`test-pptx-lite.mjs` 47/0、`test-ui-perf.mjs` 81/0、`test-js-lexer.mjs` 22/0、`test-history.mjs` 195/0；全量回归 **113 套 / 0 失败 / 7,418 项断言 / 32.0 s**。`check-size` 实采 **138 个 lib / 2,067,256 B（stat）**，规范化 LF 口径 **2,076,671 B**。
+- 专项：`test-local-portrait.mjs` 48/0、`test-pptx-lite.mjs` 47/0、`test-ui-perf.mjs` 81/0、`test-js-lexer.mjs` 22/0、`test-history.mjs` 195/0；全量回归 **113 套 / 0 失败 / 7,418 项断言 / 32.0 s**。`check-size` 实采 **138 个 lib / 2,067,256 B（stat）**，规范化 LF 口径 **2,077,512 B**。
 - 反向核查：PPT media 写入、人物路径围栏 / 结果解析 / 节点发现、UI_BUILD 与折叠几何均做过「改坏 → 精确变红 → 逐字恢复 md5 一致」。Rust exe 路径中和后复验了进程启动与 JSON 协议层结构化失败；当前沙箱禁止派生 exe 读取本地文件（未中和的原始 exe 同样报 `OS Error 5`），所以合成真跑不在本轮复验内，沿用先前实采，不冒称本轮重新跑通。
 - **真机仍未自证**：DSH 页面刷新后 hover 显示 `UI 2026-11-18.2`、PPT 拖图真生成带图 PPT、人物替换双拖拽区真跑登记 + CPU 预演、本机 ComfyUI 是否已有身份保持节点。代码与离线回归已随 1.2.0 交付，上述真机项待用户侧验证。
