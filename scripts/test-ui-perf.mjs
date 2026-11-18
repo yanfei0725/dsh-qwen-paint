@@ -274,9 +274,40 @@ ok('★ 本机请求失败文案已区分服务离线 vs 服务异常（不再�
   && !LAB_SRC.includes('本机请求失败（详见插件日志）'))
 ok('★ 区分文案不回吐 error.message（catch 里不拼 error）',
   /\.catch\(function \(\) \{\s*return \{ ok: false, reason: '连不上本机服务/u.test(LAB_SRC))
-ok('★ UI_BUILD 已 bump 到 2026-11-18.1（假成功回流面板 + 路径自愈，真机刷新可自证）',
-  /var UI_BUILD = '2026-11-18\.1'/u.test(PANEL_SRC)
+ok('★ UI_BUILD 已 bump 到 2026-11-18.2（UI 全折叠 + PPT/人物拖拽，真机刷新可自证）',
+  /var UI_BUILD = '2026-11-18\.2'/u.test(PANEL_SRC)
   && /data-cp-ui-build', UI_BUILD/u.test(PANEL_SRC))
+
+console.log('\n=== 9. UI 全折叠 + 拖图（2026-11-18.2）===')
+ok('foldCard 折叠容器存在（details + toggle 重算几何）',
+  /function foldCard\(/u.test(PANEL_SRC)
+  && /el\('details', 'cp-card cp-fold'/u.test(PANEL_SRC)
+  && /addEventListener\('toggle'/u.test(PANEL_SRC))
+ok('★ toggle 回调里真调 syncPanelPos（折叠后底缘仍贴浮标上缘）',
+  /addEventListener\('toggle', function \(\) \{[\s\S]{0,180}syncPanelPos\(nodes\.fab, nodes\.panel\)/u.test(PANEL_SRC))
+ok('素材库/角色参考/混合链已折叠',
+  /foldCard\('素材库'/u.test(PANEL_SRC)
+  && /foldCard\('角色参考（模型无关）'/u.test(PANEL_SRC)
+  && /foldCard\('混合链：生图/u.test(PANEL_SRC))
+ok('hybrid 四段模型卡收进折叠区', /foldCard\('四段模型选择/u.test(PANEL_SRC))
+ok('通用拖拽区 dropZone（dragover/drop/FileReader + 点击选择）',
+  /function dropZone\(/u.test(PANEL_SRC)
+  && /addEventListener\('dragover'/u.test(PANEL_SRC)
+  && /new FileReader\(/u.test(PANEL_SRC)
+  && /readAsDataURL/u.test(PANEL_SRC))
+ok('PPT 卡有讲解图拖拽 + images 分配（agent 精确指定优先）',
+  /dropZone\('讲解图片'/u.test(PANEL_SRC)
+  && /hasExplicit/u.test(PANEL_SRC)
+  && /target\.images\.push/u.test(PANEL_SRC))
+ok('人物替换双拖拽区（参考图 + 人物图）',
+  /dropZone\('参考图 \/ 场景图'/u.test(PANEL_SRC)
+  && /dropZone\('选定人物图'/u.test(PANEL_SRC))
+ok('人物替换调 portrait 登记+合成端点（不假装换脸）',
+  /api\/qwen-paint\/portrait\/register/u.test(PANEL_SRC)
+  && /api\/qwen-paint\/portrait\/compose/u.test(PANEL_SRC))
+ok('CSS 有折叠/拖拽样式',
+  readFileSync(path.join(ROOT, 'assets', 'panel.css'), 'utf8').includes('.cp-fold > summary')
+  && readFileSync(path.join(ROOT, 'assets', 'panel.css'), 'utf8').includes('.cp-drop'))
 
 console.log(`\n结果：${pass} 通过 / ${fail} 失败`)
 if (fail > 0) process.exit(1)

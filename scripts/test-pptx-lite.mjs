@@ -98,6 +98,39 @@ ok('panel UI 有 PPT 卡（第四模式）+ lab 不再重复放一份',
   && !read('assets/lab.js').includes('cp-ppt-'))
 ok('本套件已登记 SUITES', read('scripts/test-all.mjs').includes('test-pptx-lite.mjs'))
 
+/* ---------------- §5b 拖图插页（2026-11-18：用户拖几张图，agent 决定插哪页） ---------------- */
+
+import { imageExtOf, imageBytesOf } from '../lib/pptx-lite.js'
+// 1x1 合法 PNG / 最小 JPEG 魔数
+const PNG1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8AAAwAB/AF9zX0AAAAASUVORK5CYII=', 'base64')
+ok('imageExtOf：PNG 魔数', imageExtOf(PNG1) === 'png')
+ok('imageExtOf：JPEG 魔数', imageExtOf(Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46, 0, 1, 1, 0, 0, 1, 0, 1])) === 'jpeg')
+ok('imageExtOf：非图片返回空', imageExtOf(Buffer.from('not an image at all')) === '')
+ok('imageBytesOf：data URL 解码', (() => { const b = imageBytesOf('data:image/png;base64,' + PNG1.toString('base64')); return b && b.equals(PNG1) })())
+ok('imageBytesOf：裸 base64', (() => { const b = imageBytesOf(PNG1.toString('base64')); return b && b.equals(PNG1) })())
+ok('imageBytesOf：Buffer 直通', imageBytesOf(PNG1) === PNG1)
+ok('imageBytesOf：空/非法返回 null', imageBytesOf('') === null && imageBytesOf('@@@') === null)
+
+const imgDeck = buildPptxDeck({ title: '旅游', slides: [
+  { title: '风景页', bullets: ['雪山'], images: [{ data: PNG1, name: '雪山', x: 0.5, y: 0.5, w: 0.4, h: 0.4 }] },
+  { title: '美食页', bullets: ['火锅'], images: [{ data: 'data:image/png;base64,' + PNG1.toString('base64'), name: '火锅' }] },
+  { title: '纯文字页', bullets: ['无图'] },
+] })
+ok('带图 deck 构建成功且 imageCount=2', imgDeck.ok === true && imgDeck.imageCount === 2)
+const imgs = imgDeck.buffer.toString('latin1')
+ok('ppt/media/image1.png 真写入 ZIP', imgs.includes('ppt/media/image1.png'))
+ok('ppt/media/image2.png 真写入 ZIP（跨页全局唯一编号）', imgs.includes('ppt/media/image2.png'))
+ok('图片字节真进包（PNG 签名出现在 media 条目）', imgs.includes('IHDR') && imgs.includes('IDAT'))
+ok('slide1 rels 指向 image1.png', /slide1\.xml\.rels[\s\S]{0,400}image1\.png/u.test(imgs) || imgs.includes('../media/image1.png'))
+ok('Content_Types 声明 png Default', /<Default Extension="png" ContentType="image\/png"/u.test(imgs))
+ok('含 p:pic 图形元素（图片真挂到幻灯片）', imgs.includes('<p:pic>') && imgs.includes('<a:blip r:embed='))
+ok('纯文字页无图（agent 决定插哪页）', (imgs.match(/<p:pic>/gu) || []).length === 2)
+ok('坏图跳过不伪造（魔数不符的 images 被忽略）', (() => {
+  const d = buildPptxDeck({ slides: [{ title: 'x', images: [{ data: Buffer.from('fake-fake-fake-fake') }] }] })
+  return d.ok === true && d.imageCount === 0 && !d.buffer.toString('latin1').includes('ppt/media/')
+})())
+ok('工具输出 schema 含 images 字段', read('lib/pptx-lite.js').includes('slides: NUM, images: NUM, bytes: NUM'))
+
 /* ---------------- §6 体积红线 ---------------- */
 
 ok('lib/pptx-lite.js 未超 DSH Store 单文件上限', fs.statSync(path.join(ROOT, 'lib', 'pptx-lite.js')).size <= 262144)

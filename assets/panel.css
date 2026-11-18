@@ -347,15 +347,15 @@
 }
 .cp-ref-query::placeholder { color: var(--cp-dim); }
 .cp-ref-query:focus { border-color: var(--cp-accent-line); }
-.cp-ref-search {
+.cp-ref-search, .cp-pptx-go, .cp-swap-go {
   display: inline-block; min-height: 32px; padding: 7px 13px;
   border: 1px solid var(--cp-accent-line); border-radius: var(--cp-r-ctl);
   background: var(--cp-accent-wash); color: var(--cp-text);
   font: 500 12px/1.3 var(--cp-font); cursor: pointer;
   transition: color 140ms var(--cp-ease), background 140ms var(--cp-ease), border-color 140ms var(--cp-ease);
 }
-.cp-ref-search:hover:not(:disabled) { border-color: var(--cp-accent); }
-.cp-ref-search:disabled { opacity: .55; cursor: default; }
+.cp-ref-search:hover:not(:disabled), .cp-pptx-go:hover:not(:disabled), .cp-swap-go:hover:not(:disabled) { border-color: var(--cp-accent); }
+.cp-ref-search:disabled, .cp-pptx-go:disabled, .cp-swap-go:disabled { opacity: .55; cursor: default; }
 .cp-hint.cp-ref-status { color: var(--cp-muted); }
 .cp-hint.cp-ref-result { color: var(--cp-warn); word-break: break-word; }
 .cp-hint.cp-ref-candidates {
@@ -388,7 +388,7 @@
   .cp-fab, .cp-fab-dot, .cp-tab, .cp-x, .cp-reset,
   .cp-field input[type="range"]::-webkit-slider-thumb,
   .cp-select, .cp-textarea, .cp-field input[type="number"],
-  .cp-ref-query, .cp-ref-search,
+  .cp-ref-query, .cp-ref-search, .cp-pptx-go, .cp-swap-go,
   .cp-ticks span, .cp-skill-tag, .cp-skill-dot, .cp-progress-fill {
     transition: none;
   }
@@ -456,3 +456,36 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* ★ 2026-11-18.2：可折叠卡片（素材库/角色参考/混合链/四段模型/人物替换）。
+ *   与 .cp-adv 同一视觉语言；summary 复用箭头，不新增图标资源。 */
+.cp-fold > summary {
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  opacity: .92;
+}
+.cp-fold > summary::-webkit-details-marker { display: none; }
+.cp-fold > summary::before { content: '▸ '; }
+.cp-fold[open] > summary::before { content: '▾ '; }
+.cp-fold > summary:focus-visible { outline: 2px solid var(--cp-accent, #2563EB); outline-offset: 2px; }
+.cp-fold > * + * { margin-top: 14px; }
+
+/* 拖拽区（PPT 讲解图 / 人物替换参考图+人物图）。 */
+.cp-drop {
+  border: 1.5px dashed var(--cp-line, #9CA3AF);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.cp-drop.is-over { border-color: var(--cp-accent, #2563EB); background: rgba(37, 99, 235, .08); }
+.cp-drop-hint { font-size: 12px; opacity: .8; }
+.cp-drop-list { font-size: 12px; margin-top: 6px; overflow-wrap: anywhere; opacity: .7; }
+.cp-input {
+  width: 100%; padding: 6px 8px; border-radius: 8px;
+  border: 1px solid var(--cp-line, #9CA3AF); background: transparent; color: inherit;
+}
+.cp-swap-box { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cp-swap-box .cp-field-label { margin-bottom: 4px; }

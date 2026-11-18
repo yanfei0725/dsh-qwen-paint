@@ -189,6 +189,9 @@ console.log('=== 5. 外置接线与体积红线 ===')
     '/api/qwen-paint/cutout/image', '/api/qwen-paint/split/audio',
     // ★ 2026-11-16：音频转文字 2 端点。
     '/api/qwen-paint/audio/transcribe/capabilities', '/api/qwen-paint/audio/transcribe',
+    // ★ 2026-11-18 未发布批次：人物替换 3 端点（能力发现 / 素材登记 / CPU 预演合成）。
+    '/api/qwen-paint/portrait/capabilities', '/api/qwen-paint/portrait/register',
+    '/api/qwen-paint/portrait/compose',
   ]
   ok('★ 端点集合逐字等于白名单（新增端点必须显式登记）',
     extras.routes.map((r) => r.path).sort().join(',') === [...NEW_ROUTE_PATHS].sort().join(','),

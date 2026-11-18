@@ -353,6 +353,76 @@
     return c
   }
 
+  /** 可折叠卡片：用 <details> 包住，默认收起，点标题展开；展开后重算面板几何。
+   *  ★ 折叠改变面板高度 → 必须 syncPanelPos，否则面板底缘不再贴浮标上缘。 */
+  function foldCard(title, cls, open) {
+    var d = el('details', 'cp-card cp-fold' + (cls ? ' ' + cls : ''))
+    if (open === true) d.open = true
+    d.appendChild(el('summary', 'cp-fold-summary', title))
+    d.addEventListener('toggle', function () {
+      if (nodes && nodes.fab && nodes.panel && !nodes.panel.hidden) syncPanelPos(nodes.fab, nodes.panel)
+    })
+    return d
+  }
+
+  /** 通用拖拽区：拖图片进来 → FileReader 读成 data URL → 回调 items=[{name,data_url}]。
+   *  也支持点击选择（input file），拖/选同一路径。只接受图片，超大文件如实拦下。 */
+  function dropZone(label, opts) {
+    opts = opts || {}
+    var maxMb = opts.maxMb || 24
+    var multi = opts.multi === true
+    var items = [] // [{name, data_url}]
+    var box = el('div', 'cp-drop')
+    var hint = el('div', 'cp-drop-hint', label + '（拖入图片' + (multi ? '，可多张' : '') + '，或点击选择）')
+    box.appendChild(hint)
+    var list = el('div', 'cp-drop-list', '（暂无）')
+    box.appendChild(list)
+    function paint() {
+      list.textContent = items.length ? items.map(function (x) { return x.name }).join('、') : '（暂无）'
+      if (typeof opts.onChange === 'function') opts.onChange(items.slice())
+    }
+    function accept(files) {
+      var arr = Array.prototype.slice.call(files || []).filter(function (f) {
+        return /^image\//u.test(f.type || '') || /\.(png|jpe?g|webp|gif|bmp)$/iu.test(f.name || '')
+      })
+      if (!multi) arr = arr.slice(0, 1)
+      if (!arr.length) { hint.textContent = label + '：只接受图片文件'; return }
+      var pending = arr.length
+      var next = multi ? items.slice() : []
+      arr.forEach(function (f) {
+        if (f.size > maxMb * 1024 * 1024) { pending -= 1; return }
+        var fr = new FileReader()
+        fr.onload = function () {
+          next.push({ name: f.name, data_url: String(fr.result || '') })
+          pending -= 1
+          if (pending === 0) { items = next; paint() }
+        }
+        fr.onerror = function () { pending -= 1 }
+        fr.readAsDataURL(f)
+      })
+    }
+    box.addEventListener('dragover', function (ev) { if (ev.preventDefault) ev.preventDefault(); box.className = 'cp-drop is-over' })
+    box.addEventListener('dragleave', function () { box.className = 'cp-drop' })
+    box.addEventListener('drop', function (ev) {
+      if (ev.preventDefault) ev.preventDefault()
+      box.className = 'cp-drop'
+      if (ev.dataTransfer && ev.dataTransfer.files) accept(ev.dataTransfer.files)
+    })
+    var input = el('input', 'cp-drop-input')
+    input.type = 'file'
+    input.accept = 'image/png,image/jpeg,image/webp,image/gif,image/bmp'
+    if (multi) input.multiple = true
+    input.style.display = 'none'
+    input.addEventListener('change', function () { if (input.files) accept(input.files) })
+    box.appendChild(input)
+    box.addEventListener('click', function (ev) {
+      if (ev.target === input) return
+      if (typeof input.click === 'function') input.click()
+    })
+    return { node: box, getItems: function () { return items.slice() },
+      clear: function () { items = []; paint() } }
+  }
+
   function setStatus(text, kind) {
     if (!nodes || !nodes.status) return
     nodes.status.textContent = text
@@ -800,11 +870,12 @@
    * ★ 联动纪律：改了兜底层（setup-guide）必须核实消费端真的绑了它合成的事件，
    *   否则就是「白名单加了、按钮还是点不动」的孤儿接线。
    */
+  // ★ 2026-11-18.2：UI 全折叠（素材库/角色参考/混合链/四段模型/PPT 讲解图拖入/人物替换双拖区）。
   // ★ 2026-11-17.2：TTS 首段早出声（悬浮面板轮询 progress.ttsLive 自动播一次）。
   //   ★ 2026-11-17.1：加速链卡片分组修复（强特征优先，档位三按钮不再被语音组折叠）+
   //   错误文案区分（本机服务离线 vs 服务返回异常）。构建号必须 bump，否则 client.js
   //   按 PANEL_JS_ID 去重、真机不刷新 DSH 页面就永远加载旧脚本，用户自证无锚点。
-  var UI_BUILD = '2026-11-18.1'
+  var UI_BUILD = '2026-11-18.2'
   var TAP_EVENTS = ['click', 'pointerup', 'mouseup', 'touchend']
   var TAP_COOLDOWN_MS = 300
 
@@ -934,6 +1005,10 @@
         modelDefs = [{ label: '生图主模型（清空 = 自动挑）', key: 'mainmodel', pick: 'image', src: 'unet', empty: '（自动挑）' }]
       }
       var modelPicks = []
+      // ★ 2026-11-18：hybrid 四段模型卡收进一个可折叠区（默认展开，模型选择常用）。
+      //   单模式只有一张卡，不折（折了反而多一步）。
+      var modelHost = state.mode === 'hybrid'
+        ? foldCard('四段模型选择（可展开）', 'cp-model-group', true) : panel
       modelDefs.forEach(function (def) {
         var mc = card(def.label, 'cp-model-card')
         var mSel = el('select', 'cp-select cp-model-select')
@@ -970,9 +1045,10 @@
         })
         mc.appendChild(mSel)
         mc.appendChild(mStatus)
-        panel.appendChild(mc)
+        modelHost.appendChild(mc)
         modelPicks.push({ def: def, sel: mSel, status: mStatus })
       })
+      if (state.mode === 'hybrid') panel.appendChild(modelHost)
       function applyModelOptions(j) {
         if (!j || j.ok !== true) {
           modelPicks.forEach(function (p) { p.status.textContent = '模型清单读取失败' })
@@ -1053,8 +1129,12 @@
       var pj = el('textarea', 'cp-textarea cp-ppt-slides')
       pj.rows = 6
       pj.placeholder = '[{"title":"章节一","bullets":["要点 A","要点 B"]}]'
-      var pStatus = el('p', 'cp-hint cp-ppt-status', '大纲级草稿；排版美化请走标准/质量档。')
-      var pBtn = el('button', 'cp-ref-search', '生成 PPTX')
+      var pStatus = el('p', 'cp-hint cp-ppt-status', '大纲级草稿；图片可拖入，agent 决定插哪页。')
+      // ★ 2026-11-18：PPT 拖图——拖几张讲解图（风景/美食/历史）进来，图片真写进 PPT。
+      //   agent 在 slides JSON 里给某页写 images:[{name,x,y,w,h}] 可精确指定；
+      //   没写就把拖入的图按顺序轮流分配到各页（都在 slides 里，由 agent 决定页内容）。
+      var pptDrop = dropZone('讲解图片', { multi: true, maxMb: 16 })
+      var pBtn = el('button', 'cp-pptx-go', '生成 PPTX')
       pBtn.type = 'button'
       pBtn.addEventListener('click', function () {
         var slides = []
@@ -1062,7 +1142,18 @@
           pStatus.textContent = 'slides JSON 解析失败：' + (e && e.message ? e.message : e) + '（未发起请求）'
           return
         }
-        pStatus.textContent = '正在生成 PPTX（纯 JS）…'
+        if (!slides.length) { pStatus.textContent = '至少给一页 slides（未发起请求）'; return }
+        var dropped = pptDrop.getItems()
+        // 精确指定优先：任一页已有 images 就不再自动分配，完全听 agent 的。
+        var hasExplicit = slides.some(function (s) { return Array.isArray(s.images) && s.images.length })
+        if (dropped.length && !hasExplicit) {
+          dropped.forEach(function (im, idx) {
+            var target = slides[idx % slides.length]
+            if (!Array.isArray(target.images)) target.images = []
+            target.images.push({ name: im.name, data: im.data_url, x: 0.5, y: 0.5, w: 0.42, h: 0.46 })
+          })
+        }
+        pStatus.textContent = '正在生成 PPTX（纯 JS' + (dropped.length && !hasExplicit ? ' + ' + dropped.length + ' 张图' : '') + '）…'
         fetch('api/qwen-paint/pptx', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -1071,18 +1162,83 @@
           .then(function (r) { return r.json() })
           .then(function (j) {
             pStatus.textContent = j && j.ok === true
-              ? '已生成：' + (j.output_path || '') + '（' + (j.slides || 0) + ' 页 / ' + (j.bytes || 0) + ' B）'
+              ? '已生成：' + (j.output_path || '') + '（' + (j.slides || 0) + ' 页 / ' + (j.images || 0) + ' 图 / ' + (j.bytes || 0) + ' B）'
               : '未生成：' + ((j && j.reason) || '未知原因')
           })
           .catch(function (err) { pStatus.textContent = '请求失败：' + (err && err.message ? err.message : err) })
       })
       pc.appendChild(el('div', 'cp-field-label', 'PPT 标题'))
       pc.appendChild(pt)
-      pc.appendChild(el('div', 'cp-field-label', '幻灯片大纲 JSON [{title,bullets[]}]'))
+      pc.appendChild(el('div', 'cp-field-label', '幻灯片大纲 JSON [{title,bullets[],images?}]'))
       pc.appendChild(pj)
+      pc.appendChild(pptDrop.node)
       pc.appendChild(pBtn)
       pc.appendChild(pStatus)
       panel.appendChild(pc)
+    }
+
+    // ★ 2026-11-18：人物替换（身份保持重绘编排）。两个拖拽区：参考图 + 选定人物图。
+    //   诚实边界：本地 CPU 合成 = 贴图预演（把人物贴到底图框选处），不是像素级换脸；
+    //   身份保持重绘要本机 ComfyUI 装 InstantID/PuLID 等模型节点，探到才可用。
+    if (!(plan.cards && plan.cards.ppt === true)) {
+      var swap = foldCard('人物替换（身份保持 · 拖图）', 'cp-swap-card', false)
+      var swHint = el('p', 'cp-hint',
+        '拖入参考图（要被替换的场景）+ 选定人物图，本机 CPU 合成预演；'
+        + '真·身份保持重绘需 ComfyUI 装 InstantID / PuLID 等模型节点（能力页会如实探测并给安装引导）。')
+      swap.appendChild(swHint)
+      var refDrop = dropZone('参考图 / 场景图', { multi: false })
+      var perDrop = dropZone('选定人物图', { multi: false })
+      swap.appendChild(refDrop.node)
+      swap.appendChild(perDrop.node)
+      function fld(label, value) {
+        var wrap = el('div', 'cp-field')
+        wrap.appendChild(el('label', 'cp-field-label', label))
+        var inp = el('input', 'cp-input')
+        inp.type = 'number'; inp.step = '0.01'; inp.min = '0'; inp.max = '1'; inp.value = value
+        wrap.appendChild(inp)
+        return inp
+      }
+      var swapBox = el('div', 'cp-swap-box')
+      swapBox.appendChild(fld('框选 X（0-1）', '0.3'))
+      swapBox.appendChild(fld('框选 Y（0-1）', '0.2'))
+      swapBox.appendChild(fld('框选宽（0-1）', '0.4'))
+      swapBox.appendChild(fld('框选高（0-1）', '0.6'))
+      swap.appendChild(swapBox)
+      var swStatus = el('p', 'cp-hint cp-swap-status', '准备就绪。')
+      var swBtn = el('button', 'cp-swap-go', '登记素材并合成预演')
+      swBtn.type = 'button'
+      swBtn.addEventListener('click', function () {
+        var refs = refDrop.getItems(), pers = perDrop.getItems()
+        if (!refs.length || !pers.length) { swStatus.textContent = '请先拖入参考图和人物图各一张（未发起请求）'; return }
+        var nums = Array.prototype.map.call(swapBox.querySelectorAll('input'), function (i) { return Number(i.value) })
+        var box = { x: nums[0], y: nums[1], w: nums[2], h: nums[3] }
+        swStatus.textContent = '① 登记两张素材…'
+        var register = function (item, kind) {
+          return fetch('api/qwen-paint/portrait/register', {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ kind: kind, data_url: item.data_url }),
+          }).then(function (r) { return r.json() })
+        }
+        Promise.all([register(refs[0], 'reference'), register(pers[0], 'person')])
+          .then(function (rs) {
+            if (!rs[0].ok || !rs[1].ok) throw new Error('素材登记失败：' + ((rs[0].reason || rs[1].reason) || '未知'))
+            swStatus.textContent = '② 本机 CPU 合成预演…'
+            var target = String(rs[0].path || '').replace(/\.[^.]+$/, '') + '_swap.png'
+            return fetch('api/qwen-paint/portrait/compose', {
+              method: 'POST', headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ base: rs[0].path, person: rs[1].path, out: target, box: box, feather: 8 }),
+            }).then(function (r) { return r.json() })
+          })
+          .then(function (j) {
+            swStatus.textContent = j && j.ok === true
+              ? '合成完成：' + (j.path || '') + '（' + (j.width || 0) + '×' + (j.height || 0) + '，CPU 贴图预演，非换脸）'
+              : '未合成：' + ((j && j.reason) || '未知原因')
+          })
+          .catch(function (err) { swStatus.textContent = '失败：' + (err && err.message ? err.message : err) })
+      })
+      swap.appendChild(swBtn)
+      swap.appendChild(swStatus)
+      panel.appendChild(swap)
     }
 
     var note = el('p', 'cp-note', '')
@@ -1133,7 +1289,7 @@
     // ★ 混合模式专属：三段链说明卡。旁白文本与音色由 Agent 按素材库风格包生成，
     //   面板没有可调参数 —— 只讲清链路与边界，不装假滑块。
     if (plan.cards && plan.cards.tts === true) {
-      var ttsCard = card('混合链：生图 → TTS → 视频', 'cp-tts-group')
+      var ttsCard = foldCard('混合链：生图 → TTS → 视频', 'cp-tts-group', false)
       ttsCard.appendChild(el('p', 'cp-hint',
         '三段各自出活：先生成首帧图，Qwen3-TTS 合成旁白音频，Wan22 把图变成视频。'
         + '音频与 mp4 不自动合流 —— 拿到两个文件后用剪辑工具拼接。'))
@@ -1144,7 +1300,7 @@
     }
 
     // ★ 素材库（用户定义：设计风格 + 用户指令 + 自行装载的 skill）
-    var library = card('素材库', 'cp-library')
+    var library = foldCard('素材库', 'cp-library', false)
     library.appendChild(el('div', 'cp-field-label', '设计风格'))
     var styleSel = el('select', 'cp-select')
     // ★ 2026-11-16 P1：创建时零 option + 空 catch = 请求失败永久白条。先放禁用占位。
@@ -1167,7 +1323,7 @@
 
     // ★ 角色参考：独立卡片，刻意不用 .cp-field / checkbox —— 面板回归锁的是
     //   「13 个 .cp-field + 6 个 disabled input」，新 UI 不能挤进那套计数里。
-    var reference = card('角色参考（模型无关）', 'cp-reference')
+    var reference = foldCard('角色参考（模型无关）', 'cp-reference', false)
     reference.appendChild(el('p', 'cp-hint',
       '默认不启用 = 生成路径与升级前逐字节一致。启用后按后端 /object_info 的真实节点能力协商；'
       + '协商不到需配套权重的专属适配器（IP-Adapter / ControlNet Reference 等）就自动落到只用基础节点的通用兜底。'))

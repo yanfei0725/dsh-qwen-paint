@@ -169,7 +169,7 @@ const SUITES = [
   { file: 'test-blockswap.mjs', note: '极限低显存 Block 交换：目录事实（MIT / repo / 四态机制 / 不代装）/ 发现（模式匹配 + 未装如实）/ accel-chain 集成消费（低显存提示）/ 文档同步（全离线）' },
   { file: 'test-hw-route.mjs', note: '硬件感知路由：架构解析（NVIDIA 四代 / AMD 三系 + 核显 / Intel / unknown）/ Sage 变体建议（FP8/INT8/unsupported）/ 量化内核保守提示（memory-only/unverified）/ stable-fast 跳过声明 / accel-chain 集成消费 / 文档同步（全离线）' },
   { file: 'test-av-stitch.mjs', note: '轻量缝合：围栏 / 时间轴 / SRT（复用 subtitle-plan）/ ducking argv / ffmpeg 不可用诚实降级 / video-post 头部声明更新 / 注册层与文档点名同步（全离线假 execFile）' },
-  { file: 'test-pptx-lite.mjs', note: '轻量档 PPTX：ZIP 结构（PK 签名 / EOCD / store）/ OOXML 组成与转义 / 围栏（.pptx + 出图目录）/ 工具成功与拒绝路径 / 注册层与文档点名同步（全离线）' },
+  { file: 'test-pptx-lite.mjs', note: '轻量档 PPTX：ZIP 结构（PK 签名 / EOCD / store）/ OOXML 组成与转义 / 每页讲解图片真写进 ppt/media 与 p:pic·rels·content-types / 坏图跳过 / 围栏（.pptx + 出图目录）/ 工具成功与拒绝路径 / 注册层与文档点名同步（全离线）' },
   { file: 'test-media-fx.mjs', note: '内置最小实现：音频后处理（speechnorm/loudnorm/EQ/去齿音）/ 无模型抠图（键控+蒙版）/ 中置相消声源分离；argv 纯构建 / 双围栏 / 诚实降级 / 端点 / 七处接线孤儿扫描（全离线假执行器）' },
   { file: 'test-transcribe.mjs', note: '音频转文字：能力探测诚实分支 / schema / 未配 ASR 先报缺件 / 路径围栏 / 成功收口白名单（不吐 key/路径）/ 端点围栏 / 七处接线孤儿扫描（全离线假 fetch）' },
   { file: 'test-vulkan-upscale.mjs', note: 'Vulkan 直跑超分：资产与许可事实（MIT / 权威字节数）/ argv 构造与逐项 clamp / 探测诚实降级 / 计划与执行边界（未安装绝不谎称）/ 文档与描述点名同步（全离线）' },
@@ -195,6 +195,7 @@ const SUITES = [
   { file: 'test-render-backends.mjs', note: '渲染后端发现模式+动画缓存最小版：硬件编码择优(真跑探测/降级/不谎称) / resvg光栅探测 / 中文字体空白帧自检 / 瓦片缓存+可插拔后端接口 / tool-registry生产接线（全离线假执行器）' },
   { file: 'test-bgm-opt.mjs', note: 'BGM三块优化：音乐计划缓存(指纹/往返/字节自校验/篡改降级) + ducking缝合缓存(文件身份指纹/命中跳过ffmpeg/关缓存强制真跑) + §7装配计划(缓存键/ducking/断点续推/blocked诚实) + 三处生产接线非孤儿（全离线假执行器）' },
   { file: 'test-tts-lowlatency.mjs', note: '外部TTS低延迟编排（抄通用思路非抄代码）：语义分块降首音延迟 / 回环围栏(拒外部host) / gsv+openai两种API格式 / 探活结构化降级 / 许可证合规边界(GSV=MIT,AnifLive=禁商用) / 工具+端点+UI生产接线非孤儿（全离线假fetch）' },
+  { file: 'test-local-portrait.mjs', note: '人物替换：Rust CPU 合成底座存在性 / 路径围栏 / box 归一化 / 请求组装与结果解析 / 身份保持节点发现 / 假执行器行为级成功与降级 / 二次围栏 / 端点注册与生产接线非孤儿（全离线）' },
   // —— 最重的一套放最后 ——
   { file: 'selftest.mjs', note: '全量自测（最重，项数最多）', heavy: true },
 ]
