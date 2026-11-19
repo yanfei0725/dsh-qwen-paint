@@ -1671,3 +1671,20 @@
  * @returns {Promise<Set<number>|null>} 4D 卷积的 in_channels 集合；读不出返回 null
  */
 ```
+
+### config-note-044（attention 槽位为什么是 43，2026-11-20 虫修复）
+
+```js
+    // ---- 2026-11-15：注意力 / 编译加速后端（SageAttention / Comfy-WaveSpeed）----
+    //   接在模型链最末端、KSampler 之前。第三方节点：没探测到就整段 delete，
+    //   否则 ComfyUI 会 "node type not found" 拒收整单。
+    //   ★ 槽位必须是 43：30..41 属 ControlNet（4 路 stack 的 loaderId 最高到 40），
+    //     42 是 EasyCache —— 2026-11-20 实锤旧值 40 会被 4 路 stack 的
+    //     ControlNetLoader 覆盖（test-gap-fill「attention × 4 路 ControlNet」防线）。
+```
+
+旧值 40 的后果：4 路 stack（`loaderId = 30 + i*3 + 1`，i=3 → 40）后执行，`workflow[40]` 被写成
+ControlNetLoader，attention 节点被顶掉，而 KSampler.model 仍指向 '40' —— 整图坏。
+两开关默认皆关故从未在真机爆过；EasyCache 当年特意避开 30..41 选 42（L1318 注释），attention 漏避让属疏忽。
+防线：test-gap-fill「attention × 4 路 ControlNet（2026-11-20 虫修复）」节 5 条断言 + test-attention-wiring
+源码锁同步迁到 43（意图不变原则：锁的是链末端接线与删除表卫生，不是槽位数字本身）。

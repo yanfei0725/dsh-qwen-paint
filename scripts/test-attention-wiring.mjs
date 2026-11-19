@@ -149,10 +149,13 @@ console.log('\n=== 5. 两条真实工作流构造路径都接上了 ===')
   const turbo = read('lib/turbo-workflow.js')
   ok('★ config.js import 了 attention-workflow',
     config.includes("import { buildAttentionWorkflowPatch } from './attention-workflow.js'"))
-  ok('★ config.js 真的调用并把节点 40 接进模型链末端',
+  ok('★ config.js 真的调用并把节点 43 接进模型链末端',
     config.includes('const attentionPlan = buildAttentionWorkflowPatch(')
-    && config.includes('40: withAttention') && config.includes("[7, 11, 12, 13, 14, 16, 17, 18, 19, 42, 40]"))
-  ok('★ modelRef 在启用时指向 40', config.includes("withAttention ? '40'"))
+    && config.includes('43: withAttention') && config.includes("[7, 11, 12, 13, 14, 16, 17, 18, 19, 42, 43]"))
+  // ★ 2026-11-20 虫修复：槽位 40→43 —— 旧值 40 与 4 路 ControlNet 的 loaderId 相撞
+  //   （30+i*3+1，i=3 → 40），stack 后写覆盖 attention；锁的意图不变（链末端 + KSampler 直吃），
+  //   防线测试在 test-gap-fill「attention × 4 路 ControlNet」节。
+  ok('★ modelRef 在启用时指向 43', config.includes("withAttention ? '43'"))
   ok('★ turbo-workflow.js 也接上了',
     turbo.includes('buildAttentionWorkflowPatch') && turbo.includes('applyAttentionNodes'))
   ok('★ 默认关：两条路径都读 cfg.attentionBackend（未配置即零节点）',
@@ -207,7 +210,7 @@ console.log('\n=== 7. ★ 真机误报复盘：通用编译节点 / 超分节点
 console.log('\n=== 8. ★ 反向核查：改坏必须变红（内存改串，不落盘） ===')
 {
   const checks = [
-    ['lib/config.js', '40: withAttention'],
+    ['lib/config.js', '43: withAttention'],
     ['lib/turbo-workflow.js', 'applyAttentionNodes'],
     ['lib/comfy-accel.js', 'attentionBackends:'],
     ['assets/lab.js', 'function paintAccelLine'],

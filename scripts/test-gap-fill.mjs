@@ -610,6 +610,33 @@ section('EasyCache 步级复用（本机真实节点契约 / 默认零漂移）'
     read('lib/config.js').includes('model: [nodeAfterEasyCache, 0]'))
 }
 
+/* ------------------- 节点号冲突防线第二刀：attention（43）× 4 路 ControlNet（30..41）---- */
+section('attention 后端 × 4 路 ControlNet（2026-11-20 虫修复：旧值 40 被 stack 覆盖）')
+{
+  const { buildWorkflow } = await imp('lib/config.js')
+  const base = { prompt: 'a fox', width: 512, height: 512, steps: 8, seed: 1 }
+  const caps = { nodes: { QwenImage21SageAttentionT8: true, cnetLoader: true, cnetApply: true } }
+  const stack4 = Array.from({ length: 4 }, (_, i) => ({ image: `i${i}.png`, name: 'n.safetensors' }))
+  // ★ 2026-11-20 实锤的潜伏虫：attention 曾占 40 号，而 4 路 ControlNet 的第 4 路
+  //   loaderId 也是 40（30+i*3+1，i=3）—— stack 块后执行会把它写成 ControlNetLoader，
+  //   attention 节点被顶掉、KSampler.model 还指着 40（指向了错误节点）。
+  //   两开关默认皆关所以从未在真机爆过；EasyCache 当年特意避开 30..41 选 42，attention 漏避让。
+  const w = buildWorkflow({ attentionBackend: 'sage_attention' }, { ...base, controlStack: stack4 }, caps)
+  ok('★ 4 路 stack 占满 30..41 时 attention 在 43（不再撞 40）',
+    w[40]?.class_type === 'ControlNetLoader' && w[43]?.class_type === 'QwenImage21SageAttentionT8',
+    JSON.stringify({ n40: w[40]?.class_type, n43: w[43]?.class_type }))
+  ok('★ KSampler 的 model 指向 43（attention 真的在链末端）',
+    JSON.stringify(w[8].inputs.model) === '["43",0]', JSON.stringify(w[8].inputs.model))
+  ok('全图没有无 class_type 的空节点',
+    !Object.values(w).some((n) => n && n.class_type === undefined))
+  const wOff = buildWorkflow({}, { ...base, controlStack: stack4 }, caps)
+  ok('attention 关闭时 43 不出现（不留幽灵槽位）', wOff[43] === undefined)
+  const wNoStack = buildWorkflow({ attentionBackend: 'sage_attention' }, base, caps)
+  ok('不带 stack 时 attention 照常在 43 且接 EasyCache 之后的链尾',
+    wNoStack[43]?.class_type === 'QwenImage21SageAttentionT8'
+    && JSON.stringify(wNoStack[43].inputs.model).startsWith('["'))
+}
+
 /* ----------------------------------------------- 分块重绘 tile_inpaint（默认关） ---- */
 section('分块重绘：核心节点逐块采样 + 正弦羽化合并（默认零漂移）')
 {
