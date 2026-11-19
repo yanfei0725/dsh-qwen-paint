@@ -216,7 +216,7 @@ try {
       refMsg.includes('参考音频') && refMsg.includes('prompt_text'), refMsg.slice(0, 140))
     ok('拒绝发生在 ensureComfyUp 之前（外接不拉 ComfyUI）', comfyUpCalls === 0, String(comfyUpCalls))
     const v = await extRunner({ text: '外接成功路径', backend: 'gsv_cpp',
-      referenceAudio: 'K:/ref/a.wav', referenceText: '参考转写' })
+      referenceAudio: 'X:/ref/a.wav', referenceText: '参考转写' })
     ok('外接合成成功落盘（tier=external:gsv_cpp，format=wav）',
       v.tier === 'external:gsv_cpp' && typeof v.path === 'string' && v.format === 'wav', JSON.stringify(v))
     ok('外接路径在 outputDir 内', path.resolve(v.path).startsWith(path.resolve(tmpDir)))
@@ -240,11 +240,11 @@ try {
     //   lowLatencyChunks 忽略必须留 warn 痕迹。
     let instrMsg = ''
     try { await extRunner({ text: '带音色设计', backend: 'gsv_cpp', instruct: '低沉男声',
-      referenceAudio: 'K:/ref/a.wav', referenceText: '转写' }) } catch (e) { instrMsg = String(e.message ?? e) }
+      referenceAudio: 'X:/ref/a.wav', referenceText: '转写' }) } catch (e) { instrMsg = String(e.message ?? e) }
     ok('instruct + 外接明确拒绝（不静默吞掉音色设计意图）',
       instrMsg.includes('instruct') && instrMsg.includes('VoiceDesign'), instrMsg.slice(0, 120))
     await extRunner({ text: '分块意图留痕', backend: 'gsv_cpp', lowLatencyChunks: true,
-      referenceAudio: 'K:/ref/a.wav', referenceText: '转写' })
+      referenceAudio: 'X:/ref/a.wav', referenceText: '转写' })
     ok('lowLatencyChunks 外接忽略但留 warn 痕迹',
       warnLogs.some((m) => m.includes('lowLatencyChunks') && m.includes('忽略')))
   }

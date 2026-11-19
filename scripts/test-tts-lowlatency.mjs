@@ -71,12 +71,12 @@ section('③ 两种 API 请求格式')
   const anif = m.EXTERNAL_TTS_SERVICES.find((s) => s.id === 'aniflive')
   // ★ 2026-11-19 真机实测契约（GSV.CPP V5 /tts 必填五件套，别再用原版 API 的旧字段名）：
   const r1 = m.buildSynthRequest(gsv, { text: '你好', language: 'zh',
-    refAudioPath: 'K:/ref/voice.wav', promptText: '这是参考音频的转写。' })
+    refAudioPath: 'X:/ref/voice.wav', promptText: '这是参考音频的转写。' })
   const b1 = JSON.parse(r1.body)
   ok('gsv 走 /tts', r1.path === '/tts' && r1.method === 'POST')
   ok('gsv body 含 text/text_lang（all_zh）', b1.text === '你好' && b1.text_lang === 'all_zh')
   ok('gsv body 含 ref_audio_path/prompt_text/prompt_lang',
-    b1.ref_audio_path === 'K:/ref/voice.wav' && b1.prompt_text === '这是参考音频的转写。'
+    b1.ref_audio_path === 'X:/ref/voice.wav' && b1.prompt_text === '这是参考音频的转写。'
     && b1.prompt_lang === 'all_zh')
   ok('gsv 开关字段是 streaming_mode（非 stream）', b1.streaming_mode === false && !('stream' in b1))
   ok('gsv 不再带原版 API 旧字段 refer_wav_path/text_language',
@@ -98,10 +98,10 @@ section('③b 外接执行链 speakViaExternalTts（gsv 真契约，假 fetch �
   // ★ gsv 契约必填件缺一明确拒绝（绝不静默降级默认音色假装克隆）
   const missRef = await speakViaExternalTts({ service: gsv, text: 'hi', filePathBase: tmpBase })
   ok('缺 ref_audio_path 明确拒绝', missRef.ok === false && /参考音频/.test(missRef.reason), JSON.stringify(missRef))
-  const missPrompt = await speakViaExternalTts({ service: gsv, text: 'hi', filePathBase: tmpBase, refAudioPath: 'K:/ref/a.wav' })
+  const missPrompt = await speakViaExternalTts({ service: gsv, text: 'hi', filePathBase: tmpBase, refAudioPath: 'X:/ref/a.wav' })
   ok('缺 prompt_text 明确拒绝', missPrompt.ok === false && /prompt_text/.test(missPrompt.reason), JSON.stringify(missPrompt))
   const off = await speakViaExternalTts({ service: gsv, text: 'hi', filePathBase: tmpBase,
-    refAudioPath: 'K:/ref/a.wav', promptText: 'x',
+    refAudioPath: 'X:/ref/a.wav', promptText: 'x',
     fetchFn: async () => { throw new Error('ECONNREFUSED') } })
   ok('离线给明确原因不抛', off.ok === false && /不在线/.test(off.reason), JSON.stringify(off))
   // 成功路径：探活 health 含 engine 标记 + /tts 回 wav 字节 → 落盘
@@ -115,22 +115,22 @@ section('③b 外接执行链 speakViaExternalTts（gsv 真契约，假 fetch �
       arrayBuffer: async () => new TextEncoder().encode('RIFFfake-audio-bytes').buffer }
   }
   const good = await speakViaExternalTts({ service: gsv, text: '你好世界', filePathBase: tmpBase,
-    refAudioPath: 'K:/ref/a.wav', promptText: '转写', fetchFn: fetcher })
+    refAudioPath: 'X:/ref/a.wav', promptText: '转写', fetchFn: fetcher })
   ok('成功落盘 path/format/bytes/tier（扩展名按 content-type 追加 .wav）',
     good.ok === true && good.path === tmpBase + '.wav'
     && good.format === 'wav' && good.bytes > 0 && good.tier === 'external:gsv_cpp', JSON.stringify(good))
   ok('落盘文件真实存在且字节一致', fs.existsSync(tmpBase + '.wav') && fs.readFileSync(tmpBase + '.wav').length === good.bytes)
-  ok('请求体带真契约五件套', synthBodies.length === 1 && synthBodies[0].ref_audio_path === 'K:/ref/a.wav'
+  ok('请求体带真契约五件套', synthBodies.length === 1 && synthBodies[0].ref_audio_path === 'X:/ref/a.wav'
     && synthBodies[0].prompt_text === '转写' && synthBodies[0].text_lang === 'all_zh'
     && synthBodies[0].prompt_lang === 'all_zh')
   const bad = await speakViaExternalTts({ service: gsv, text: 'hi', filePathBase: tmpBase,
-    refAudioPath: 'K:/ref/a.wav', promptText: 'x',
+    refAudioPath: 'X:/ref/a.wav', promptText: 'x',
     fetchFn: async (url) => String(url).endsWith('/health')
       ? { ok: true, status: 200, text: async () => '{"engine":"ready","ok":true}' }
       : { ok: false, status: 500, text: async () => 'boom' } })
   ok('HTTP 500 给明确原因', bad.ok === false && /500/.test(bad.reason), JSON.stringify(bad))
   const empty = await speakViaExternalTts({ service: gsv, text: 'hi', filePathBase: tmpBase,
-    refAudioPath: 'K:/ref/a.wav', promptText: 'x',
+    refAudioPath: 'X:/ref/a.wav', promptText: 'x',
     fetchFn: async (url) => String(url).endsWith('/health')
       ? { ok: true, status: 200, text: async () => '{"engine":"ready","ok":true}' }
       : { ok: true, status: 200, headers: { get: () => 'audio/wav' }, arrayBuffer: async () => new ArrayBuffer(0) } })
@@ -153,7 +153,7 @@ section('③b 外接执行链 speakViaExternalTts（gsv 真契约，假 fetch �
         arrayBuffer: async () => new TextEncoder().encode('RIFF-x').buffer }
     }
     const ab = await speakViaExternalTts({ service: gsv, text: 'hi', filePathBase: tmpBase,
-      refAudioPath: 'K:/ref/a.wav', promptText: 'x', fetchFn: sigFetch, signal: aborter.signal })
+      refAudioPath: 'X:/ref/a.wav', promptText: 'x', fetchFn: sigFetch, signal: aborter.signal })
     ok('调用方 signal 已取消 → 请求立即中止不永等',
       ab.ok === false && /取消|abort/i.test(ab.reason), JSON.stringify(ab))
   }

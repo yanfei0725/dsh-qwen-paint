@@ -31,7 +31,7 @@ const pkgText = read('package.json')
 const pkg = JSON.parse(pkgText)
 const V = pkg.version
 const DESC = pkg.description
-const HEADLINE = '视频 / 生图 / TTS 全能'
+const HEADLINE = '视频 / 生图 / TTS / PPT 全能'
 
 const readme = read('README.md')
 const llms = read('llms.txt')
@@ -163,7 +163,7 @@ console.log('\n=== 5. 审计补漏：安装层标识与工具清单也得跟着�
   const describeSrc = read('lib/describe.js')
   ok('★ 面板摘要也不出现「不支持视频」类误读措辞', !/不支持视频|不提供视频/u.test(describeSrc))
   ok('headline 常量在 setup-guide 里只有一处定义（口径唯一真相源）',
-    (read('lib/setup-guide.js').match(/视频 \/ 生图 \/ TTS 全能/gu) ?? []).length === 1)
+    (read('lib/setup-guide.js').match(/视频 \/ 生图 \/ TTS \/ PPT 全能/gu) ?? []).length === 1)
 }
 
 console.log('\n=== 6. ★ 2026-11-15 发布前审计补漏：时态 / 许可 / 更新说明不许说谎 ===')

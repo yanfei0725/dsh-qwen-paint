@@ -253,7 +253,7 @@
     els.fab.textContent = state && state.ready ? '安装引导 · 已就绪'
       : (state && state.probed ? '一键安装引导 · ' + done + '/' + total : '一键安装引导')
     els.fab.setAttribute('data-ready', state && state.ready ? '1' : '0')
-    els.headline.textContent = (state && state.headline) || '视频 / 生图 / TTS 全能 · 本机运行'
+    els.headline.textContent = (state && state.headline) || '视频 / 生图 / TTS / PPT 全能 · 本机运行'
     if (els.pack) {
       els.pack.textContent = state && state.videoDownloadPack && state.videoDownloadPack.available
         ? '✓ 视频模型自动下载包：已提供（--video-models，默认不装、需你同意、按权威 size+sha256 校验）'
@@ -398,7 +398,7 @@
     var head = el('div', 'sg-head')
     var hb = el('div', 'sg-head-box')
     hb.appendChild(el('h3', 'sg-h3', '装好这个插件，只要 7 步'))
-    var headline = el('div', 'sg-headline', '视频 / 生图 / TTS 全能 · 本机运行')
+    var headline = el('div', 'sg-headline', '视频 / 生图 / TTS / PPT 全能 · 本机运行')
     hb.appendChild(headline)
     els.headline = headline
     head.appendChild(hb)
