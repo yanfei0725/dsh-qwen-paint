@@ -143,6 +143,7 @@ const SUITES = [
   { file: '_opt_status_test.mjs', note: '状态机与状态端点' },
   { file: '_portability_test.mjs', note: '可移植性' },
   { file: '_perf_tweaks_test.mjs', note: '性能开关' },
+  { file: '_perf_test.mjs', note: '性能回归：能力探测缓存 / 失败短 TTL / 探活与队列缓存配置（防重复请求浪费算力；2026-11-20 覆盖缺口审计补登记）' },
   { file: '_vae_spectrum_test.mjs', note: 'VAE 分块 + Spectrum 跳步节点图' },
   { file: '_gpu_vendor_test.mjs', note: '显卡判定 + Mac 面板' },
   { file: '_manifest_test.mjs', note: 'manifest 一致性' },
