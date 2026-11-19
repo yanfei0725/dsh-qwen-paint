@@ -42,7 +42,7 @@ ok('★ 空/坏 files 不抛', Object.keys(preprocessFileLabels(null)).length ==
 // ---- 3. 接线（两端规则同口径，别各写一套） ----
 const host = read('lib/model-label.js')
 const client = read('lib/client.js')
-const idx = read('lib/index.js')
+const idx = read('lib/index.js') + read('lib/misc-endpoints.js') // ★ 2026-11-20 capsHandler 外置——调用点随迁合并读（意图不变）
 ok('★ host 侧纯函数不 import 任何模块（无循环依赖）', !/^\s*import\s/m.test(host))
 ok('★ 前端有同口径本地兜底（旧 host 不下发时也不露裸名）',
   client.includes('splitModelLabelLocal') && client.includes('MODEL_PARAM_RE'))

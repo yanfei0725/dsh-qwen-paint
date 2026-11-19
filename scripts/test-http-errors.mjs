@@ -56,12 +56,15 @@ const readSrc = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
 
 // ── 2. 一处闸门覆盖全库 ────────────────────────────────────────────────────
 {
-  const idx = readSrc('lib/index.js')
+  // ★ 2026-11-20 misc 七端点外置 lib/misc-endpoints.js（第二刀轻量变体）——failBody
+  //   收敛计数改为 index.js + misc-endpoints.js 合并（意图不变：全库无手写错误体）。
+  const idx = readSrc('lib/index.js') + readSrc('lib/misc-endpoints.js')
   ok(idx.includes('JSON.stringify(sanitizeBody(body))'), '★★ respondJson 是唯一消毒出口')
   ok(readSrc('lib/http-errors.js').includes('if (!needs) return body'),
     '★★ 未命中错误字段时原样返回（热路径零展开）')
   const other = ['lib/reference-endpoints.js', 'lib/ui-edit-endpoints.js',
-    'lib/video-frames-endpoints.js', 'lib/cpu-endpoints.js', 'lib/integration-endpoints.js']
+    'lib/video-frames-endpoints.js', 'lib/cpu-endpoints.js', 'lib/integration-endpoints.js',
+    'lib/misc-endpoints.js']
     .map(readSrc).join('\n')
   ok(!other.includes('function respondJson'), '★ 外置端点没有私造 respondJson（都注入同一个）')
   ok(idx.includes("from './http-errors.js'") && idx.includes('sanitizeBody'),
