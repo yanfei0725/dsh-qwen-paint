@@ -20,6 +20,7 @@ import {
   VIDEO_SEED_OFFSET_MIN, VIDEO_SEED_OFFSET_MAX,
   resetVideoSeed, getLastVideoSeed, resolveVideoParams,
 } from '../lib/video-workflow.js'
+import { planWanAccel } from '../lib/accel-profiles.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const read = (rel) => readFileSync(path.join(ROOT, rel), 'utf8')
@@ -137,8 +138,8 @@ ok('★★ 视频等待读 gifs（VHS_VideoCombine 的产物在 gifs，不在 im
 ok('★ 视频超时下限 30 分钟（冷启动装模型很久，别用生图的 10 分钟掐）',
   idxSrc.includes('30 * 60 * 1000'))
 ok('★ 速度%/画幅控制项真的被视频链消费', idxSrc.includes('videoParamsForSpeed') && idxSrc.includes('widthForAspect'))
-ok('★ 加速档走 pick(installed)，没有 Wan 对应节点时**不注入**（不假装加速）',
-  idxSrc.includes('pickAccelProfile') && idxSrc.includes('accelProfile.wanNode'))
+ok('★ 加速档走 planWanAccel 纯判定，没有 Wan 对应节点时**不注入**（不假装加速）',
+  idxSrc.includes('planWanAccel({ caps, frames: plan.frames })') && idxSrc.includes('accel.canInject'))
 ok('工具数仍是 8（selftest 那边同步过）', idxSrc.includes("name: 'generate_video'"))
 // ★ 2026-11-13：工具描述集中到 lib/tool-descriptions.js，断言改读新文件（不是删/放宽）。
 ok('★ 工具描述如实写"短片段，做不了 60 秒长片"（不承诺做不到的事）',
@@ -201,5 +202,36 @@ console.log('— B10 视频种子继承')
   resetVideoSeed()
 }
 
+/* ---------------- planWanAccel：加速注入纯判定（runVideo 同源，2026-11-20 抽出直测） ---------------- */
+console.log('— planWanAccel 纯判定')
+{
+  const all = {
+    nodes: { EasyCache: true, SpectrumQwenPatch: true, PatchSageAttentionKJ: true, WanVideoMemoryEfficientSageAttentionPatch: true },
+    gpu: { vendor: 'nvidia' },
+  }
+  const r1 = planWanAccel({ caps: all, frames: 25 })
+  ok('★ N 卡全装 → 厂商专属 sage 最优先（vendor 门控）', r1.id === 'sage', r1.id)
+  ok('★ Wan 对应 patch 本机也在 → canInject true（真的接得上）',
+    r1.canInject === true && r1.profile.wanNode === 'WanVideoMemoryEfficientSageAttentionPatch')
+  const r2 = planWanAccel({
+    caps: { nodes: { ...all.nodes, WanVideoMemoryEfficientSageAttentionPatch: false }, gpu: { vendor: 'nvidia' } },
+    frames: 25,
+  })
+  ok('★ 选了 sage 但 Wan 对应节点不在 → 如实 canInject false（不假装能注入）',
+    r2.id === 'sage' && r2.canInject === false, JSON.stringify({ id: r2.id, canInject: r2.canInject }))
+  const r3 = planWanAccel({ caps: { nodes: all.nodes, gpu: { vendor: 'amd' } }, frames: 25 })
+  ok('★ A 卡跳过 N 卡专属档 → spectrum（wanNode 空 → 不注入）', r3.id === 'spectrum' && r3.canInject === false)
+  const r4 = planWanAccel({ caps: { nodes: { EasyCache: true }, gpu: { vendor: 'amd' } }, frames: 150 })
+  ok('★ 长任务（>100 帧）easycache 提到最前', r4.id === 'easycache' && r4.canInject === false)
+  const rAlias = planWanAccel({
+    caps: { nodes: { SageAttention: true, WanVideoMemoryEfficientSageAttentionPatch: true }, gpu: { vendor: 'nvidia' } },
+    frames: 25,
+  })
+  ok('★ sage 走别名节点名（SageAttention）也能被探测 → canInject true',
+    rAlias.id === 'sage' && rAlias.canInject === true, JSON.stringify({ id: rAlias.id, ci: rAlias.canInject }))
+  const r5 = planWanAccel({ caps: { nodes: {}, gpu: { vendor: 'amd' } }, frames: 25 })
+  ok('★ 什么都没装 → id null + canInject false', r5.id === null && r5.canInject === false)
+}
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项）`)
 process.exit(fail === 0 ? 0 : 1)
+
