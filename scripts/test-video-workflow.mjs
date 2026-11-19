@@ -89,6 +89,37 @@ console.log('— 工作流图')
     !r.notes.some((n) => n.includes('缺节点')))
 }
 ok('空提示词直接报错', (() => { try { buildVideoWorkflow(fullCaps(), { prompt: '  ' }); return false } catch { return true } })())
+{
+  /* ★ gguf 主模型分支锁（2026-11-20 补 ede38e7-② 咬合）：uiState.unetVideo 指向 .gguf 时节点 2 必须切
+     UnetLoaderGGUF（GGUF loader 没有 weight_dtype 参数，硬塞 UNETLoader 会在 ComfyUI 直接报错）。
+     注入口 = DSH_HOME 环境变量（config.js uiStatePath 每次调用都读 env，import 缓存不影响活性）。 */
+  const os = await import('node:os')
+  const fsp = await import('node:fs')
+  const tmpHome = fsp.mkdtempSync(path.join(os.tmpdir(), 'dsh-gguf-test-'))
+  const uiFile = path.join(tmpHome, 'qwen-paint-ui.json')
+  const oldHome = process.env.DSH_HOME
+  process.env.DSH_HOME = tmpHome
+  try {
+    fsp.writeFileSync(uiFile, JSON.stringify({ unetVideo: 'loom-Q4_K_M.gguf' }), 'utf8')
+    const { workflow: wfG } = buildVideoWorkflow(fullCaps(), { prompt: 'x', frames: 25, fps: 24, height: 480 })
+    ok('★ gguf 主模型 → 节点 2 切 UnetLoaderGGUF（unet_name 跟随、无 weight_dtype）',
+      wfG[2].class_type === 'UnetLoaderGGUF'
+      && wfG[2].inputs.unet_name === 'loom-Q4_K_M.gguf'
+      && !Object.prototype.hasOwnProperty.call(wfG[2].inputs, 'weight_dtype'),
+      JSON.stringify(wfG[2]))
+    fsp.writeFileSync(uiFile, JSON.stringify({}), 'utf8')
+    const { workflow: wfS } = buildVideoWorkflow(fullCaps(), { prompt: 'x', frames: 25, fps: 24, height: 480 })
+    ok('★ 非 gguf 主模型 → 节点 2 保持 UNETLoader + weight_dtype=default（两半边互斥）',
+      wfS[2].class_type === 'UNETLoader'
+      && wfS[2].inputs.unet_name === WAN_ASSETS.unet
+      && wfS[2].inputs.weight_dtype === 'default',
+      JSON.stringify(wfS[2]))
+  } finally {
+    if (oldHome === undefined) delete process.env.DSH_HOME
+    else process.env.DSH_HOME = oldHome
+    fsp.rmSync(tmpHome, { recursive: true, force: true })
+  }
+}
 
 /* ---------------- 对齐规则 ---------------- */
 console.log('— 对齐')
