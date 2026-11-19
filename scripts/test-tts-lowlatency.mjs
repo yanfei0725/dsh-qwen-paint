@@ -156,6 +156,52 @@ section('③b 外接执行链 speakViaExternalTts（gsv 真契约，假 fetch �
       refAudioPath: 'X:/ref/a.wav', promptText: 'x', fetchFn: sigFetch, signal: aborter.signal })
     ok('调用方 signal 已取消 → 请求立即中止不永等',
       ab.ok === false && /取消|abort/i.test(ab.reason), JSON.stringify(ab))
+    // ★ 2026-11-20 取证补锁（ac889ad 反向核查抓到两缺口）：
+    //  ① 中途取消路（pre-aborted 之外）：挂死 fetch + 30ms 后真 abort —— 且断言
+    //     reason 浮出调用方具体取消原因（修复前恒为通用 "This operation was aborted"）。
+    //  ② listener 泄漏：计数 fake signal —— add/remove 必须配对（撤 removeEventListener 旧版不红）。
+    {
+      const aborter = new AbortController()
+      const hangFetch = async (url, init = {}) => {
+        if (String(url).endsWith('/health')) {
+          return { ok: true, status: 200, text: async () => '{"engine":"ready","ok":true}' }
+        }
+        return new Promise((resolve, reject) => {
+          init.signal?.addEventListener('abort', () => {
+            const e = new Error('This operation was aborted')
+            e.name = 'AbortError'
+            reject(e)
+          }, { once: true })
+          // 挂死：外接服务进程在但不回包
+        })
+      }
+      setTimeout(() => aborter.abort(new Error('用户取消')), 30)
+      const mid = await speakViaExternalTts({ service: gsv, text: 'hi', filePathBase: tmpBase,
+        refAudioPath: 'X:/ref/a.wav', promptText: 'x', fetchFn: hangFetch, signal: aborter.signal })
+      ok('★ 中途取消 → 秒级返回且 reason 浮出「用户取消」（不再吞成通用 aborted）',
+        mid.ok === false && mid.reason.includes('用户取消'),
+        JSON.stringify(mid))
+      let added = 0
+      let removed = 0
+      const countingSignal = () => {
+        const listeners = new Map()
+        return {
+          get aborted() { return false },
+          addEventListener(name, fn) { added += 1; listeners.set(fn, name) },
+          removeEventListener(name, fn) { if (listeners.delete(fn)) removed += 1 },
+        }
+      }
+      const cs = countingSignal()
+      await speakViaExternalTts({ service: gsv, text: 'hi', filePathBase: tmpBase,
+        refAudioPath: 'X:/ref/a.wav', promptText: 'x',
+        fetchFn: async (url) => String(url).endsWith('/health')
+          ? { ok: true, status: 200, text: async () => '{"engine":"ready","ok":true}' }
+          : { ok: true, status: 200, headers: { get: () => 'audio/wav' },
+              arrayBuffer: async () => new TextEncoder().encode('RIFF-x').buffer },
+        signal: cs })
+      ok('★ listener 配对摘除（add/remove 计数相等且 >0——撤 removeEventListener 旧版不红的缺口补上）',
+        added > 0 && added === removed, JSON.stringify({ added, removed }))
+    }
   }
   fs.rmSync(tmpBase + ".wav", { force: true })
 }

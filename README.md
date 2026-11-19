@@ -219,7 +219,7 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 ### 联动护栏与回归
 - 全量 **133 套 / 断言项全绿**。`main` + DSH 双独立审计：4 项发现逐条回代码定性（3 误报 + 1 真回归已修）；真回归补了**根因护栏**（直接读 schema-defaults 真值 + 词法级悬空注释检查，并经「改坏→变红→逐字恢复 md5 一致」反向核查）。清理 5 个零引用死执行器；`local-portrait.js` 路径围栏加 realpath 复验挡 junction/symlink 穿透；Windows VRAM 探针改数组 argv 直调 Python，不再拼命令外壳；BGM 缓存键字段与真实指纹逐字对齐。
 - `lib/index.js` 191,013 B / 余量 **65,131 B**（红线 262,144 B）。
-- 当前 **146 个 `lib/*.js`** / 合计 **2,073,609 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径）。
+- 当前 **146 个 `lib/*.js`** / 合计 **2,074,170 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径）。
 
 ### 文档
 - `package.json`（description + meta.description）/ README 首段 / 两份 llms 首段 / `pyproject.toml` / `docs/index.html` / `给DSH安装的话.md` 全部同步到 1.2.4；`scripts/test-release-metadata.mjs` 的唯一真相源口径同步校验，一处改、多处一起校验。
