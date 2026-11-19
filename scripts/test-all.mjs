@@ -105,6 +105,8 @@ const SUITES = [
   { file: 'test-orphan-tools.mjs', note: 'orphan-extras 工厂（plan_timeline 12 段上限/privacy_summary external 按真实 URL 清单算——注入咬合已验）' },
   // ★ 2026-11-20 零触及清单：hipfire 前置校验错误路径（零 mock——校验段全在 I/O 之前）
   { file: 'test-hipfire-guard.mjs', note: 'hipfire guard（空 prompt/negative 诚实条款拒/回环 URL 校验/cli 无 exe 如实报错，注入咬合已验）' },
+  // ★ 2026-11-20 零触及复扫（双口径）：graph-audit pruneGraph 直测（lib 内零接线孤儿导出，价值最高项）
+  { file: 'test-graph-audit-prune.mjs', note: 'graph-audit pruneGraph（无输出守护不删用户图/孤儿剔除/mutate 两态/outputs 白名单透传/isLink 语义，注入咬合已验）' },
   { file: 'test-audio-workflows.mjs', note: '语音克隆 + 音轨合成（真机节点契约/上传/降级）' },
   // ★ 2026-11-14 A1：工作流 JSON 化第一步 —— 清单 / 双轨一致性 / 校验器 / 发布物完整性
   { file: 'test-workflow-manifest.mjs', note: '工作流声明式清单（双轨逐字节一致 / 校验器真抓错 / files 白名单）' },
