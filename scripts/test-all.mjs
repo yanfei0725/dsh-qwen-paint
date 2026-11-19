@@ -85,6 +85,8 @@ const SUITES = [
   { file: 'test-asr-status-behavior.mjs', note: 'asr-status 行为层（未配置推荐/隐私脱敏/探测失败/路由围栏，零 mock 全真跑）' },
   // ★ 2026-11-20 覆盖缺口②（勘察报告 #14）：official-turbo 单一判定入口门矩阵（纯函数零 mock）
   { file: 'test-official-turbo.mjs', note: 'official-turbo 门矩阵（模型×节点×4 让位门×优先序×大小写）' },
+  // ★ 2026-11-20 覆盖缺口④（勘察报告 #14）：hipfire-img 纯函数直测（零 I/O 无 mock）
+  { file: 'test-hipfire-pure.mjs', note: 'hipfire 纯函数（parseSizeString 全角乘号/extractJsonPath 末行优先，注入咬合已验）' },
   { file: 'test-audio-workflows.mjs', note: '语音克隆 + 音轨合成（真机节点契约/上传/降级）' },
   // ★ 2026-11-14 A1：工作流 JSON 化第一步 —— 清单 / 双轨一致性 / 校验器 / 发布物完整性
   { file: 'test-workflow-manifest.mjs', note: '工作流声明式清单（双轨逐字节一致 / 校验器真抓错 / files 白名单）' },
