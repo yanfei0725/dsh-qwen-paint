@@ -605,7 +605,7 @@ section('EasyCache 步级复用（本机真实节点契约 / 默认零漂移）'
     && read('lib/config.js').includes("easyCache: up('easyCache')"))
   ok('面板开关与配置端点已接线（key=easycache）',
     read('lib/describe.js').includes("key: 'easycache'")
-    && read('lib/index.js').includes("['easycache', 'easyCacheEnabled', 'EasyCache 步级复用']"))
+    && read('lib/status-handler.js').includes("['easycache', 'easyCacheEnabled', 'EasyCache 步级复用']"))
   ok('注意力后端接的是 EasyCache 之后的模型链尾',
     read('lib/config.js').includes('model: [nodeAfterEasyCache, 0]'))
 }
@@ -702,7 +702,7 @@ section('分块重绘：核心节点逐块采样 + 正弦羽化合并（默认�
   ok('面板开关与默认值已接线',
     DEFAULTS.tileInpaintEnabled === false
     && DEFAULTS.tileInpaintSize === 1024 && DEFAULTS.tileInpaintOverlap === 128
-    && read('lib/index.js').includes("['tileinpaint', 'tileInpaintEnabled', '分块重绘']")
+    && read('lib/status-handler.js').includes("['tileinpaint', 'tileInpaintEnabled', '分块重绘']")
     && read('lib/describe.js').includes("key: 'tileinpaint'"))
 }
 

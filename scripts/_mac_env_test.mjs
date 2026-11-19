@@ -30,7 +30,7 @@ const { buildPosixLaunchCommand, DEFAULTS } = mod.__internal
 // ★ 根因护栏：直接读 schema-defaults 的真值，绕开 index.__internal（曾被假值兜底蒙蔽）。
 const schemaDefaults = await import(pathToFileURL(path.join(ROOT, 'lib', 'schema-defaults.js')).href)
 const SCHEMA_SRC = readFileSync(path.join(ROOT, 'lib', 'schema-defaults.js'), 'utf8')
-const HOST = ['index.js', 'config.js', 'describe.js', 'comfy-accel.js', 'comfy-launch.js', 'diag.js']
+const HOST = ['index.js', 'status-handler.js', 'config.js', 'describe.js', 'comfy-accel.js', 'comfy-launch.js', 'diag.js']
   .map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8'))
   .join('\n')
 
@@ -232,7 +232,7 @@ ok('★ 两个开关名与端点参数对得上（applempsfallback / applempsunl
   HOST.includes("['applempsfallback', 'appleMpsFallback'")
   && HOST.includes("['applempsunlimited', 'appleMpsUnlimitedMem'"))
 ok('★ 端点对非 macOS **拒绝**改这两个开关（护栏，与 SageAttention 同一条原则）',
-  /key === 'appleMpsFallback' \|\| key === 'appleMpsUnlimitedMem'\) && !IS_MAC/u.test(HOST))
+  /key === 'appleMpsFallback' \|\| key === 'appleMpsUnlimitedMem'\) && !isMac/u.test(HOST))
 ok('★ 默认值：回退兜底开、水位上限关',
   DEFAULTS.appleMpsFallback === true && DEFAULTS.appleMpsUnlimitedMem === false)
 // ★ 根因护栏（2026-11-19 双审计发现）：schema-defaults 的 DEFAULTS 曾被注释外置脚本

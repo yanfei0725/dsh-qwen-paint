@@ -183,12 +183,13 @@ ok('listTtsBackends 认出 qwen3_tts 内置可用', listTtsBackends({ installed:
 console.log('status 权重校验：缓存复用接线（防孤儿）')
 {
   const idxSrc = readFileSync(path.join(ROOT, 'lib', 'index.js'), 'utf8')
+  const shSrc = readFileSync(path.join(ROOT, 'lib', 'status-handler.js'), 'utf8')
   ok('index.js import weightFilesFromObjectInfo',
     /weightFilesFromObjectInfo,?\s*\} from '\.\/comfy-catalog\.js'/u.test(idxSrc))
   ok('status handler 先取全量 objectInfo 缓存再 weightFilesFromObjectInfo',
-    /loadObjectInfoFor\(cfg, null\)[\s\S]{0,120}weightFilesFromObjectInfo\(info\)/u.test(idxSrc))
+    /loadObjectInfoFor\(cfg, null\)[\s\S]{0,120}weightFilesFromObjectInfo\(info\)/u.test(shSrc))
   ok('拿不到（wf === null）才回退 probeCapabilities（白名单不松）',
-    /if \(wf === null\) \{\s*const caps = await probeCapabilities\(cfg, log, null\)/u.test(idxSrc))
+    /if \(wf === null\) \{\s*const caps = await probeCapabilities\(cfg, log, null\)/u.test(shSrc))
   ok('comfy-catalog 零漂移：仍导出全量缓存入口 loadObjectInfo',
     /export async function loadObjectInfo\(/u.test(readFileSync(path.join(ROOT, 'lib', 'comfy-catalog.js'), 'utf8')))
 }

@@ -13,6 +13,7 @@ import { describeOptimization } from '../lib/describe.js'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const indexSrc = readFileSync(path.join(ROOT, 'lib/index.js'), 'utf8')
+const shSrc = readFileSync(path.join(ROOT, 'lib/status-handler.js'), 'utf8')
 const describeSrc = readFileSync(path.join(ROOT, 'lib/describe.js'), 'utf8')
 const panelSrc = readFileSync(path.join(ROOT, 'assets/panel.js'), 'utf8')
 
@@ -108,7 +109,7 @@ ok('★ 可装载技能标题带中文引导（请装载美术 / 画风 / 配色
 ok('★ 没装 skill 时仍给出「先装载美术/画风」引导',
   panelSrc.includes('请先装载美术、画风、配色相关的 skill'))
 ok('★ describe.js 有视频加速档可见项', describeSrc.includes("key: 'vidaccel'"))
-ok('★ 状态端点把 pick() 结果喂给优化面板', indexSrc.includes('videoAccel: videoAccelOf(caps)'))
+ok('★ 状态端点把 pick() 结果喂给优化面板', shSrc.includes('videoAccel: videoAccelOf(caps)'))
 
 console.log('— 视频加速档：行为验证')
 const mod = await import(pathToFileURL(path.join(ROOT, 'lib/index.js')).href)

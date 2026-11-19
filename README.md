@@ -218,8 +218,8 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 
 ### 联动护栏与回归
 - 全量 **120 套 / 断言项全绿**。`main` + DSH 双独立审计：4 项发现逐条回代码定性（3 误报 + 1 真回归已修）；真回归补了**根因护栏**（直接读 schema-defaults 真值 + 词法级悬空注释检查，并经「改坏→变红→逐字恢复 md5 一致」反向核查）。清理 5 个零引用死执行器；`local-portrait.js` 路径围栏加 realpath 复验挡 junction/symlink 穿透；Windows VRAM 探针改数组 argv 直调 Python，不再拼命令外壳；BGM 缓存键字段与真实指纹逐字对齐。
-- `lib/index.js` 226,158 B / 余量 **35,986 B**（红线 262,144 B）。
-- 当前 **145 个 `lib/*.js`** / 合计 **2,066,732 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径）。
+- `lib/index.js` 191,013 B / 余量 **65,131 B**（红线 262,144 B）。
+- 当前 **146 个 `lib/*.js`** / 合计 **2,071,357 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径）。
 
 ### 文档
 - `package.json`（description + meta.description）/ README 首段 / 两份 llms 首段 / `pyproject.toml` / `docs/index.html` / `给DSH安装的话.md` 全部同步到 1.2.4；`scripts/test-release-metadata.mjs` 的唯一真相源口径同步校验，一处改、多处一起校验。
@@ -274,8 +274,8 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 - 全量 **120 套 / 断言项全绿**（并发约束层 19 锁 / 测试并行化三方向：heavy 精确标记 + Worker 池真跑 + `--only`·`--phase` 筛选；对话链 4 锁、外接链 12 锁、样本库恢复 4 锁等）。
 
 > 注：并行化去重后，4 个重测试此前被重复登记两次（light 一遍 + heavy 一遍），现只保留 heavy 一遍，故套数由 119 → 115；本轮再补 3 套专项（配置 argv / 视频后处理 / 社区发现）回到 118。`--worker` 模式把"空壳 Worker 池"重写成真能跑：每套测试独立 Worker（patch `process.exit` 为记录退出码、短宽限收尾）避免全局污染，且与 spawnSync **共用同一判定口径**（`judgeFrom`），两种模式逐套断言数实测一致（0 差异）。诚实边界：**实测 Worker 模式没有提速**（51.7 s vs spawnSync 43.4 s，线程创建 + IPC 抵消了收益），其价值是"派生进程被沙箱拒绝时仍可跑"的降级路径与并发入口，不宣称"30s→8s"。
-- `lib/index.js` 226,158 B / 余量 **35,986 B**（红线 262,144 B）。
-- 当前 **145 个 `lib/*.js`** / 合计 **2,066,732 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径）。
+- `lib/index.js` 191,013 B / 余量 **65,131 B**（红线 262,144 B）。
+- 当前 **146 个 `lib/*.js`** / 合计 **2,071,357 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径）。
 
 ### 文档
 - `package.json`（description + meta.description）/ README 首段 / 两份 llms 首段 / `pyproject.toml` / `docs/index.html` / `给DSH安装的话.md` 全部同步到 1.2.4，并把 PPT 生成提升到主功能句；`scripts/test-release-metadata.mjs` 的唯一真相源口径同步升级为含 PPT，一处改、多处一起校验。

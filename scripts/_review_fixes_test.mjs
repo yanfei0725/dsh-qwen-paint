@@ -24,7 +24,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const mod = await import(pathToFileURL(path.join(ROOT, 'lib', 'index.js')).href)
 const { safeStem, DEFAULTS, GPU_PROFILES } = mod.__internal
-const HOST = ['index.js', 'config.js', 'describe.js', 'comfy-accel.js', 'comfy-launch.js', 'diag.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
+const HOST = ['index.js', 'status-handler.js', 'config.js', 'describe.js', 'comfy-accel.js', 'comfy-launch.js', 'diag.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
 const CLIENT = readFileSync(path.join(ROOT, 'lib', 'client.js'), 'utf8')
 const HIPFIRE = readFileSync(path.join(ROOT, 'lib', 'hipfire-img.js'), 'utf8')
 
@@ -529,7 +529,7 @@ console.log('\n=== 21. 隐患排查所修 9 条（★ 2026-10-11） ===')
 
   // ⑦ 状态端点对 sagesa 有服务端护栏
   ok('21.⑦ 已确认没装时服务端拒绝打开 sagesa',
-    HOST.includes("key === 'nvidiaSageAttention' && want && SAGE_READY === false"))
+    HOST.includes("key === 'nvidiaSageAttention' && want && sageReady() === false"))
 
   // ⑧ MODEL_TIERS 无死字段
   // ⚠ 2026-10-12：档位表整个撤了（`MODEL_TIERS` 已不存在），这条断言随之作废 ——
@@ -659,7 +659,7 @@ console.log('\n=== 23. 自定义输出目录（用户要求：能选、能校验
   //   ★ 2026-10-19 更新：AUTH001 之后写操作一律走 POST + JSON body，
   //     参数从 body 填进 `queryLc`（key 小写），不再是 `query.searchParams.get('outputDir')`。
   //     这条断言原来找的是旧写法，属于**测试过期**（不是功能坏了）。
-  const HOST23 = ['index.js', 'config.js', 'describe.js', 'comfy-accel.js', 'comfy-launch.js', 'diag.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
+  const HOST23 = ['index.js', 'status-handler.js', 'config.js', 'describe.js', 'comfy-accel.js', 'comfy-launch.js', 'diag.js'].map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8')).join('\n')
   ok('23. 状态端点处理 outputDir（POST body → queryLc）', HOST23.includes("queryLc.get('outputdir')"))
   ok('23. 端点里的校验与启动时同一套（resolveOutputDir）',
     HOST23.includes('const r = resolveOutputDir(wantDir, log)'))

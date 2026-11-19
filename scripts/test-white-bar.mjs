@@ -18,6 +18,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => readFileSync(path.join(ROOT, p), 'utf8')
 
 const IDX = read('lib/index.js')
+const SH = read('lib/status-handler.js') // ★ 节点⑧第一刀：makeStatusHandler 已外置，体内锁改读新文件（意图不变）
 const CLIENT = read('lib/client.js')
 const PANEL = read('assets/panel.js')
 const LAB = read('assets/lab.js')
@@ -37,18 +38,18 @@ function ok(label, cond, detail = '') {
 console.log('=== 1. P0：拒绝必须回传，前端不许报喜 ===')
 {
   ok('后端把「被拒选择」收进 choiceRejections',
-    IDX.includes('const choiceRejections = []') && IDX.includes('const rejectChoice = (label, value, reason) => {'))
+    SH.includes('const choiceRejections = []') && SH.includes('const rejectChoice = (label, value, reason) => {'))
   ok('★ 主模型 / LoRA / ControlNet 白名单拒绝会调 rejectChoice（不再只 log warn）',
-    /rejectChoice\(label, val, why\)/u.test(IDX)
-    && /if \(wf === null \|\| allowed\.length === 0 \|\| !allowed\.includes\(val\)\)/u.test(IDX))
+    /rejectChoice\(label, val, why\)/u.test(SH)
+    && /if \(wf === null \|\| allowed\.length === 0 \|\| !allowed\.includes\(val\)\)/u.test(SH))
   ok('★ 拒绝原因区分「清单不可用」与「候选已删」两种情况',
-    IDX.includes('本机模型清单此刻不可用') && IDX.includes('可能是缓存里的旧候选'))
+    SH.includes('本机模型清单此刻不可用') && SH.includes('可能是缓存里的旧候选'))
   ok('★ 视频主模型返回值 false 不再被丢弃（旧代码直接丢）',
-    /persistVideoModelChoice\(\{ val: wanted, wf, log \}\) === false/u.test(IDX)
-    && IDX.includes("rejectChoice('视频主模型', wanted"))
+    /persistVideoModelChoice\(\{ val: wanted, wf, log \}\) === false/u.test(SH)
+    && SH.includes("rejectChoice('视频主模型', wanted"))
   ok('响应新增 choiceResult，且顶层 ok 语义保持不变（三处轮询依赖它）',
-    /choiceResult: \{\s*ok: choiceRejections\.length === 0,\s*rejections: choiceRejections,\s*\}/u.test(IDX)
-    && IDX.includes('ok: true,'))
+    /choiceResult: \{\s*ok: choiceRejections\.length === 0,\s*rejections: choiceRejections,\s*\}/u.test(SH)
+    && SH.includes('ok: true,'))
   ok('前端按 j.choiceResult 判成功，拒绝时写「未生效」',
     PANEL.includes('var cr = j && j.choiceResult')
     && /if \(cr && cr\.ok === false && mine\)/u.test(PANEL)
@@ -187,17 +188,17 @@ console.log('\n=== 6. 审计补丁：所有写参数都诚实回传，total 不�
 {
   // ② 档位等遗留路径也进 choiceResult（不再只 log warn）
   ok('★ idleminutes 非法值也回传拒绝',
-    /rejectChoice\('空闲关停分钟数', rawMinutes,/u.test(IDX))
+    /rejectChoice\('空闲关停分钟数', rawMinutes,/u.test(SH))
   ok('★ flowstyle / preset / drawtrigger 非法值都回传拒绝',
-    /rejectChoice\('生图动画', rawStyle,/u.test(IDX)
-    && /rejectChoice\('出图预设', rawPreset,/u.test(IDX)
-    && /rejectChoice\('生图判断策略', rawTrigger,/u.test(IDX))
+    /rejectChoice\('生图动画', rawStyle,/u.test(SH)
+    && /rejectChoice\('出图预设', rawPreset,/u.test(SH)
+    && /rejectChoice\('生图判断策略', rawTrigger,/u.test(SH))
   ok('★ VAE 分块 / SageAttention 未安装 / MPS 非 Mac 都回传拒绝',
-    /rejectChoice\('VAE 大图分块解码', v,/u.test(IDX)
-    && /rejectChoice\(label, v, '自检确认 sageattention 未安装/u.test(IDX)
-    && /rejectChoice\(label, v, 'MPS 只在 macOS 有意义/u.test(IDX))
+    /rejectChoice\('VAE 大图分块解码', v,/u.test(SH)
+    && /rejectChoice\(label, v, '自检确认 sageattention 未安装/u.test(SH)
+    && /rejectChoice\(label, v, 'MPS 只在 macOS 有意义/u.test(SH))
   ok('★ 显存/精度/文本控制三档非法值也回传拒绝',
-    /rejectChoice\(label, raw, `取值不在白名单内/u.test(IDX))
+    /rejectChoice\(label, raw, `取值不在白名单内/u.test(SH))
   ok('前端按 label 认领自己的拒绝，不张冠李戴',
     PANEL.includes('var mine = rejects.filter(function (r) {')
     && PANEL.includes('def.label.indexOf(r.label) >= 0 || r.label.indexOf(def.label) >= 0')

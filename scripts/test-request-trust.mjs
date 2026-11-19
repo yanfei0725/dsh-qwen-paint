@@ -88,12 +88,13 @@ console.log('\n[6] 回归锁：写状态必须走 POST（源码级）')
   const { fileURLToPath } = await import('node:url')
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
   const idx = fs.readFileSync(path.join(root, 'lib/index.js'), 'utf8')
+  const sh = fs.readFileSync(path.join(root, 'lib/status-handler.js'), 'utf8')
   const cli = fs.readFileSync(path.join(root, 'lib/client.js'), 'utf8')
 
   // 服务端：GET 必须只读 —— 存在只读白名单 + 405 拒绝分支
-  ok(/READ_ONLY_PARAMS\s*=\s*new Set\(\[[^\]]*\]\)/u.test(idx), '服务端有 READ_ONLY_PARAMS 只读白名单')
+  ok(/READ_ONLY_PARAMS\s*=\s*new Set\(\[[^\]]*\]\)/u.test(sh), '服务端有 READ_ONLY_PARAMS 只读白名单')
   ok(/写操作必须用 POST/u.test(idx), '服务端对 GET 带写参数会 405 拒绝')
-  ok(/const queryLc = new Map\(\)[\s\S]{0,400}?if \(isWriteReq\)/u.test(idx),
+  ok(/const queryLc = new Map\(\)[\s\S]{0,400}?if \(isWriteReq\)/u.test(sh),
     'queryLc 只在 POST 分支里填充（GET 时为空 ⇒ 所有写分支自然失效）')
   ok(/isTrustedRequest/u.test(idx) && /sec-fetch-site/u.test(idx), '服务端判定含 Sec-Fetch-Site 检查')
 
