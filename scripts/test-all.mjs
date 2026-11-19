@@ -79,6 +79,8 @@ const SUITES = [
   { file: 'test-pipeline-core.mjs', note: '控制层内核四件（缓存/加速档/水位/pass 管线）' },
   // ★ 视频链：Wan 2.2 / XT-5B 工作流图 + generate_video 接线
   { file: 'test-video-workflow.mjs', note: '视频链工作流契约（节点/参数/对齐/接线）' },
+  // ★ 2026-11-20 覆盖缺口③（勘察报告 #14）：status-handler 行为层（源码锁之外的第二道防线）
+  { file: 'test-status-handler-behavior.mjs', note: 'status-handler 行为层（跨站 403 / ping 膨胀口双封顶，不依赖源码字面量）' },
   { file: 'test-audio-workflows.mjs', note: '语音克隆 + 音轨合成（真机节点契约/上传/降级）' },
   // ★ 2026-11-14 A1：工作流 JSON 化第一步 —— 清单 / 双轨一致性 / 校验器 / 发布物完整性
   { file: 'test-workflow-manifest.mjs', note: '工作流声明式清单（双轨逐字节一致 / 校验器真抓错 / files 白名单）' },
