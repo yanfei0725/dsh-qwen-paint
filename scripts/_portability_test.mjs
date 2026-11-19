@@ -125,12 +125,11 @@ assert('★ apple 档案注入 MPS 算子回退环境变量（PYTORCH_ENABLE_MPS
 }
 assert('有 macOS 显存探测（PyTorch MPS）',
   src.includes('GPU_VRAM_PROBE_PY_MAC') && src.includes('recommended_max_memory'))
-// ★ 2026-10-11 修的真 bug：显存探测那行原来**没有平台闸** ——
-//   `&` 是 PowerShell 的调用运算符，在 POSIX 的 sh 里是**后台运算符** ⇒ Linux/macOS 上语法错、
-//   被 catch 吞掉 ⇒ vramGB 恒为 0 ⇒ 驻留参数永不生效。
-assert('★ 显存探测按平台分叉（POSIX 下 `&` 是后台运算符，会语法错）',
+// ★ 2026-11-19 再修：Windows 连 PowerShell 调用运算符都不再经过，直接数组 argv 调 python；
+//   POSIX 仍用 shq 引号包裹。旧的 `& "${py}"` 字符串拼接已被移除（命令注入面）。
+assert('★ 显存探测按平台分叉（Windows 直接 argv，POSIX 用 shq）',
   src.includes('const pyProbe = IS_MAC ? GPU_VRAM_PROBE_PY_MAC : GPU_VRAM_PROBE_PY')
-  && src.includes('? `& "${py}" -c "${pyProbe}"`')
+  && src.includes('? await runPython(py, pyProbe, 30000)')
   && src.includes('${shq(py)} -c ${shq(pyProbe)}'))
 // macOS **没有 setsid** —— 启动路径必须是"能力探测 + nohup 兜底"，不能硬用 setsid
 assert('★ 启动路径对 macOS 安全（setsid 走能力探测，没有就退回 nohup）',

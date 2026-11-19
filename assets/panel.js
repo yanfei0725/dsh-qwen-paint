@@ -58,6 +58,10 @@
   var REFERENCE_PATH = qpApiUrl('api/comfy-pipeline/reference')
   var REFERENCE_PREFER_PATH = qpApiUrl('api/comfy-pipeline/reference/prefer')
   var REFERENCE_SEARCH_PATH = qpApiUrl('api/comfy-pipeline/reference/search')
+  // ★ 2026-11-19.3：三个内置工具的真实端点，全部走插件宿主 origin。
+  var VIDEO_TRIM_PATH = qpApiUrl('api/qwen-paint/video/trim-crop')
+  var VIDEO_PRORES_PATH = qpApiUrl('api/qwen-paint/video/prores-export')
+  var COMMUNITY_PROBE_PATH = qpApiUrl('api/qwen-paint/community/probe')
   var FALLBACK_TIERS = [25, 50, 75, 100]
 
   // 默认与「本地没探到 modes 端点」一致：图/视频可用、混合禁用。
@@ -135,6 +139,83 @@
   /** 进度轮询间隔：连续空列表降频，避免面板开着就每 1.5s 白刷一次接口。 */
   function pollIntervalMs(idleTicks) {
     return idleTicks >= 4 ? 5000 : 1500
+  }
+
+  /* ---------- 2026-11-19.3：三个内置工具的载荷纯函数（离线可测） ----------
+   * 空字符串 = 不给这个可选参数；非法数字保留 NaN，由 hasInvalidNumber 拦在发请求前。
+   * 这样既不把「abc」悄悄吞成 0，也不伪造服务端没收到的字段。
+   */
+  function optionalToolNumber(v) {
+    var s = String(v == null ? '' : v).trim()
+    if (s === '') return undefined
+    var n = Number(s)
+    return Number.isFinite(n) ? n : NaN
+  }
+
+  function hasInvalidNumber(v) {
+    if (typeof v === 'number') return !Number.isFinite(v)
+    if (v && typeof v === 'object') {
+      var keys = Object.keys(v)
+      for (var i = 0; i < keys.length; i += 1) {
+        if (hasInvalidNumber(v[keys[i]])) return true
+      }
+    }
+    return false
+  }
+
+  function buildVideoTrimPayload(raw) {
+    raw = raw || {}
+    var payload = { source: String(raw.source == null ? '' : raw.source).trim() }
+    var target = String(raw.target == null ? '' : raw.target).trim()
+    if (target !== '') payload.target = target
+    var start = optionalToolNumber(raw.start)
+    if (start !== undefined) payload.start = start
+    var end = optionalToolNumber(raw.end)
+    if (end !== undefined) payload.end = end
+    var cropRaw = raw.crop || {}
+    var crop = {}
+    var keys = ['w', 'h', 'x', 'y']
+    for (var i = 0; i < keys.length; i += 1) {
+      var n = optionalToolNumber(cropRaw[keys[i]])
+      if (n !== undefined) crop[keys[i]] = n
+    }
+    if (Object.keys(crop).length > 0) payload.crop = crop
+    if (raw.force_reencode === true) payload.force_reencode = true
+    return payload
+  }
+
+  function buildProresPayload(raw) {
+    raw = raw || {}
+    var payload = { source: String(raw.source == null ? '' : raw.source).trim() }
+    var target = String(raw.target == null ? '' : raw.target).trim()
+    if (target !== '') payload.target = target
+    var profile = String(raw.profile == null ? '' : raw.profile).trim()
+    payload.profile = profile === '' ? 'standard' : profile
+    return payload
+  }
+
+  function buildCommunityPayload(raw) {
+    return { feature: String((raw && raw.feature) || 'vae_dtype') }
+  }
+
+  function toolResultText(prefix, j) {
+    if (!j) return prefix + '失败：空响应'
+    if (j.ok === true) {
+      var extra = j.degraded === true ? '（降级，未生成文件：' + (j.reason || '未知') + '）' : ''
+      return prefix + '完成：' + (j.path || '（未给路径）') + extra
+    }
+    if (Array.isArray(j.command) && j.command.length > 0) {
+      return prefix + '未生成文件：' + (j.reason || '已降级') + '；参数预览：' + j.command.join(' ')
+    }
+    return prefix + '失败：' + (j.reason || '未知原因')
+  }
+
+  function postToolJson(path, payload) {
+    return fetch(path, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(function (r) { return r.json() })
   }
 
   // ★ 2026-11-16 二次报障：内存 TTL 缓存刷新 DSH 页面就清零 ⇒ 首次展开下拉仍是
@@ -900,7 +981,7 @@
   //   ★ 2026-11-17.1：加速链卡片分组修复（强特征优先，档位三按钮不再被语音组折叠）+
   //   错误文案区分（本机服务离线 vs 服务返回异常）。构建号必须 bump，否则 client.js
   //   按 PANEL_JS_ID 去重、真机不刷新 DSH 页面就永远加载旧脚本，用户自证无锚点。
-  var UI_BUILD = '2026-11-19.2'
+  var UI_BUILD = '2026-11-19.3'
   var TAP_EVENTS = ['click', 'pointerup', 'mouseup', 'touchend']
   var TAP_COOLDOWN_MS = 300
 
@@ -1290,6 +1371,122 @@
       swap.appendChild(swStatus)
       panel.appendChild(swap)
     }
+
+    // ★ 2026-11-19.3：三个内置工具的面板入口。独立折叠卡 + 独立语义类名，
+    //   不复用 .cp-ref-search，也不塞进被回归锁死的 .cp-field 计数。
+    //   三按钮都走 bindTap 四事件（宿主 pointerdown preventDefault 时仍能点）。
+    var tools = foldCard('内置工具（视频后处理 / 社区发现）', 'cp-tools', false)
+    tools.appendChild(el('p', 'cp-hint',
+      '这三项都内置可跑：视频裁剪/ProRes 导出用真 media-exec.js；社区项只读发现，不下载模型、不装付费节点。'
+      + '源视频填出图目录内的文件名或绝对路径，越界路径会被后端拒绝。'))
+    // ① video_trim_crop
+    var trimBlock = el('div', 'cp-tools-block')
+    trimBlock.appendChild(el('div', 'cp-field-label', '① 按秒裁剪 / 矩形裁剪（video_trim_crop）'))
+    var trimSrc = el('input', 'cp-input cp-vtrim-source')
+    trimSrc.type = 'text'
+    trimSrc.placeholder = '源视频，例：out/demo.mp4'
+    trimBlock.appendChild(trimSrc)
+    var trimTarget = el('input', 'cp-input cp-vtrim-target')
+    trimTarget.type = 'text'
+    trimTarget.placeholder = '输出文件名（留空自动 <原名>_post.mp4）'
+    trimBlock.appendChild(trimTarget)
+    var trimRow = el('div', 'cp-tools-row')
+    var trimStart = el('input', 'cp-input cp-vtrim-start')
+    trimStart.type = 'number'; trimStart.min = '0'; trimStart.step = '0.1'; trimStart.placeholder = '起始秒（默认 0）'
+    var trimEnd = el('input', 'cp-input cp-vtrim-end')
+    trimEnd.type = 'number'; trimEnd.min = '0'; trimEnd.step = '0.1'; trimEnd.placeholder = '结束秒（留空到结尾）'
+    trimRow.appendChild(trimStart); trimRow.appendChild(trimEnd)
+    trimBlock.appendChild(trimRow)
+    var trimCrop = el('div', 'cp-tools-row')
+    var trimW = el('input', 'cp-input cp-vtrim-w')
+    trimW.type = 'number'; trimW.min = '1'; trimW.step = '1'; trimW.placeholder = '裁宽 w'
+    var trimH = el('input', 'cp-input cp-vtrim-h')
+    trimH.type = 'number'; trimH.min = '1'; trimH.step = '1'; trimH.placeholder = '裁高 h'
+    var trimX = el('input', 'cp-input cp-vtrim-x')
+    trimX.type = 'number'; trimX.min = '0'; trimX.step = '1'; trimX.placeholder = 'x'
+    var trimY = el('input', 'cp-input cp-vtrim-y')
+    trimY.type = 'number'; trimY.min = '0'; trimY.step = '1'; trimY.placeholder = 'y'
+    trimCrop.appendChild(trimW); trimCrop.appendChild(trimH); trimCrop.appendChild(trimX); trimCrop.appendChild(trimY)
+    trimBlock.appendChild(trimCrop)
+    var trimMode = el('select', 'cp-select cp-vtrim-mode')
+    var optCopy = el('option', null, '快切 -c copy（按关键帧，近似）'); optCopy.value = 'copy'
+    var optExact = el('option', null, '重编码精裁（libx264 CRF18）'); optExact.value = 'reencode'
+    trimMode.appendChild(optCopy); trimMode.appendChild(optExact)
+    trimBlock.appendChild(trimMode)
+    var trimBtn = el('button', 'cp-vtrim-go', '裁剪视频')
+    trimBtn.type = 'button'
+    bindTap(trimBtn, function () {
+      var payload = buildVideoTrimPayload({
+        source: trimSrc.value, target: trimTarget.value, start: trimStart.value, end: trimEnd.value,
+        crop: { w: trimW.value, h: trimH.value, x: trimX.value, y: trimY.value },
+        force_reencode: trimMode.value === 'reencode',
+      })
+      if (!payload.source) { trimStatus.textContent = '请先填源视频（未发起请求）'; return }
+      if (hasInvalidNumber(payload)) { trimStatus.textContent = '数字填错了：秒数/裁剪值必须是数字（未发起请求）'; return }
+      trimStatus.textContent = '正在裁剪视频…'
+      postToolJson(VIDEO_TRIM_PATH, payload)
+        .then(function (j) { trimStatus.textContent = toolResultText('裁剪：', j) })
+        .catch(function (err) { trimStatus.textContent = '请求失败：' + (err && err.message ? err.message : err) })
+    })
+    var trimStatus = el('p', 'cp-hint cp-vtrim-status', '留空即走默认值；裁剪框四个值要一起填。')
+    trimBlock.appendChild(trimBtn); trimBlock.appendChild(trimStatus)
+    tools.appendChild(trimBlock)
+    // ② video_prores_export
+    var proresBlock = el('div', 'cp-tools-block')
+    proresBlock.appendChild(el('div', 'cp-field-label', '② 导出 ProRes MOV（video_prores_export）'))
+    var proresSrc = el('input', 'cp-input cp-vprores-source')
+    proresSrc.type = 'text'
+    proresSrc.placeholder = '源视频，例：out/demo.mp4'
+    proresBlock.appendChild(proresSrc)
+    var proresTarget = el('input', 'cp-input cp-vprores-target')
+    proresTarget.type = 'text'
+    proresTarget.placeholder = '输出 MOV 文件名（留空自动 <原名>_post.mov）'
+    proresBlock.appendChild(proresTarget)
+    var proresSel = el('select', 'cp-select cp-vprores-profile')
+    ;['proxy', 'lt', 'standard', 'hq', '4444'].forEach(function (p) {
+      var o = el('option', null, p); o.value = p; proresSel.appendChild(o)
+    })
+    proresSel.value = 'standard'
+    proresBlock.appendChild(proresSel)
+    var proresBtn = el('button', 'cp-vprores-go', '导出 ProRes')
+    proresBtn.type = 'button'
+    bindTap(proresBtn, function () {
+      var payload = buildProresPayload({ source: proresSrc.value, target: proresTarget.value, profile: proresSel.value })
+      if (!payload.source) { proresStatus.textContent = '请先填源视频（未发起请求）'; return }
+      proresStatus.textContent = '正在导出 ProRes…'
+      postToolJson(VIDEO_PRORES_PATH, payload)
+        .then(function (j) { proresStatus.textContent = toolResultText('导出：', j) })
+        .catch(function (err) { proresStatus.textContent = '请求失败：' + (err && err.message ? err.message : err) })
+    })
+    var proresStatus = el('p', 'cp-hint cp-vprores-status', '编码器随本机 ffmpeg 而定；缺失会如实降级，不伪造 MOV。')
+    proresBlock.appendChild(proresBtn); proresBlock.appendChild(proresStatus)
+    tools.appendChild(proresBlock)
+    // ③ probe_community_features
+    var probeBlock = el('div', 'cp-tools-block')
+    probeBlock.appendChild(el('div', 'cp-field-label', '③ 只读发现社区能力（probe_community_features）'))
+    var probeSel = el('select', 'cp-select cp-probe-feature')
+    ;[['vae_dtype', 'VAE dtype 输入'], ['comfy_mcp', 'ComfyUI 原生 API'], ['wan22_5b', 'Wan2.2 5B 轻量模型']]
+      .forEach(function (pair) {
+        var o = el('option', null, pair[1]); o.value = pair[0]; probeSel.appendChild(o)
+      })
+    probeBlock.appendChild(probeSel)
+    var probeBtn = el('button', 'cp-probe-go', '只读探测')
+    probeBtn.type = 'button'
+    bindTap(probeBtn, function () {
+      var payload = buildCommunityPayload({ feature: probeSel.value })
+      probeStatus.textContent = '正在只读探测…'
+      postToolJson(COMMUNITY_PROBE_PATH, payload)
+        .then(function (j) {
+          probeStatus.textContent = !j
+            ? '探测失败：空响应'
+            : ('可用：' + (j.available === true ? '是' : '否') + ' · ' + (j.reason || '') + '\n指引：' + (j.guide || ''))
+        })
+        .catch(function (err) { probeStatus.textContent = '探测失败：' + (err && err.message ? err.message : err) })
+    })
+    var probeStatus = el('p', 'cp-hint cp-probe-status', '不会下载模型、不会装节点、不执行社区工作流。')
+    probeBlock.appendChild(probeBtn); probeBlock.appendChild(probeStatus)
+    tools.appendChild(probeBlock)
+    panel.appendChild(tools)
 
     var note = el('p', 'cp-note', '')
     panel.appendChild(note)
@@ -1952,6 +2149,20 @@
         fire: tapFire,
         events: TAP_EVENTS,
         cooldownMs: TAP_COOLDOWN_MS,
+      },
+      // ★ 2026-11-19.3：三个内置工具的载荷纯函数，供离线回归直接断言。
+      tools: {
+        paths: {
+          trim: VIDEO_TRIM_PATH,
+          prores: VIDEO_PRORES_PATH,
+          probe: COMMUNITY_PROBE_PATH,
+        },
+        optionalNumber: optionalToolNumber,
+        hasInvalidNumber: hasInvalidNumber,
+        buildVideoTrim: buildVideoTrimPayload,
+        buildProres: buildProresPayload,
+        buildCommunity: buildCommunityPayload,
+        resultText: toolResultText,
       },
       geom: {
         panelWidth: geomPanelWidth,

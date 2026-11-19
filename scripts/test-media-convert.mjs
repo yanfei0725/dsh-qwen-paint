@@ -476,6 +476,15 @@ console.log('=== 8. 生成物自动后转码：组合钩子不覆盖日志、fir
       c({})
       return n === 1
     })())
+  ok('后转码异步抛错会 warn 不再静默吞', await (async () => {
+    const warns = []
+    const c = composeGenerationHook(null, async () => { throw new Error('async-boom') }, {
+      log: (lv, msg) => warns.push(lv + ':' + msg),
+    })
+    c({})
+    await new Promise((resolve) => setImmediate(resolve))
+    return warns.length === 1 && warns[0].startsWith('warn:') && warns[0].includes('async-boom')
+  })())
 
   const events = []
   const eventLog = { append: (e) => { events.push(e); return { ok: true } } }

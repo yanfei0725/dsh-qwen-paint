@@ -131,13 +131,15 @@ check('注册了 draw_image（apply 直接注册，不经 root.inject）', tool.
 //   全部走 lib/tool-registry.js 外置注册，index.js 不逐个 import（体积红线只剩 19 B）。
 // 2026-11-15：+ convert_media（媒体格式转换）19 → 20；同样走外置注册，index.js 零增长。
 // 2026-11-15 收尾：+ 5 个孤儿模块接线工具（口语入口 / 时间轴 / 资源声明 / 数据流 / 产出短引用）20 → 25。
+// 2026-11-19：+ video_trim_crop / video_prores_export（视频后处理内置最小实现），仍走外置注册。
 const EXPECTED_TOOLS = [
   'batch_draw', 'check_acceleration', 'compose_prompt', 'compose_video', 'convert_media', 'convert_to_gif',
   'cutout_image', 'describe_resource_needs', 'doctor', 'draw_image', 'enhance_audio',
   'generate_hybrid', 'generate_music', 'generate_speech', 'generate_video', 'inpaint_image', 'iterate_image',
   'layout_frame', 'list_available_models', 'list_generated_images', 'list_tts_backends', 'make_pptx', 'manage_jobs', 'manage_workers',
-  'manual_upscale', 'mix_narration', 'outpaint_image', 'plan_storyboard', 'plan_timeline', 'privacy_summary', 'query_history',
+  'manual_upscale', 'mix_narration', 'outpaint_image', 'plan_storyboard', 'plan_timeline', 'privacy_summary', 'probe_community_features', 'query_history',
   'remove_image', 'render_frame', 'resolve_entry', 'resolve_produce_ref', 'run_dag', 'split_audio', 'transcribe_audio', 'upscale_image', 'vectorize_image',
+  'video_prores_export', 'video_trim_crop',
 ]
 check('注册的工具集合逐字等于预期（新增工具须显式登记）',
   registered.map((t) => t.name).slice().sort().join(' , ') === EXPECTED_TOOLS.join(' , '),

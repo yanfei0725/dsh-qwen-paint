@@ -97,7 +97,7 @@ section('③ §7 装配计划')
     segments: [{ segmentId: 's1' }, { segmentId: 's2' }, { segmentId: 's3' }],
     completedSegmentIds: ['s1', 's3'],
   })
-  ok('缓存键字段含 §7 七字段', ['prompt', 'neg_prompt', 'bpm', 'seed', 'segment_id', 'loop_allowed', 'quality'].every((x) => plan.cacheKeyFields.includes(x)))
+  ok('缓存键字段与 musicPlanFingerprint 实际入键一致', ['model', 'prompt', 'negPrompt', 'bpm', 'seed', 'durationSec', 'segmentId', 'loopAllowed', 'quality', 'nodes'].every((x) => plan.cacheKeyFields.includes(x)))
   ok('ducking 标可用（sidechaincompress 已落生产）', plan.ducking.available === true && plan.ducking.method === 'sidechaincompress')
   ok('断点续推只复用完整段', JSON.stringify(plan.resume.reusable) === JSON.stringify(['s1', 's3']) && JSON.stringify(plan.resume.pending) === JSON.stringify(['s2']))
   ok('embedding 缓存标 planned 但 unavailable', plan.embeddingCache.planned === true && plan.embeddingCache.available === false)

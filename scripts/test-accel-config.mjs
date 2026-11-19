@@ -192,6 +192,9 @@ console.log('=== 5. 外置接线与体积红线 ===')
     // ★ 2026-11-18 未发布批次：人物替换 3 端点（能力发现 / 素材登记 / CPU 预演合成）。
     '/api/qwen-paint/portrait/capabilities', '/api/qwen-paint/portrait/register',
     '/api/qwen-paint/portrait/compose',
+    // ★ 2026-11-19 未发布批次：视频后处理 + 社区能力只读发现。
+    '/api/qwen-paint/video/trim-crop', '/api/qwen-paint/video/prores-export',
+    '/api/qwen-paint/community/probe',
   ]
   ok('★ 端点集合逐字等于白名单（新增端点必须显式登记）',
     extras.routes.map((r) => r.path).sort().join(',') === [...NEW_ROUTE_PATHS].sort().join(','),

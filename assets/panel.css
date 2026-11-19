@@ -347,15 +347,18 @@
 }
 .cp-ref-query::placeholder { color: var(--cp-dim); }
 .cp-ref-query:focus { border-color: var(--cp-accent-line); }
-.cp-ref-search, .cp-pptx-go, .cp-swap-go {
+.cp-ref-search, .cp-pptx-go, .cp-swap-go,
+.cp-vtrim-go, .cp-vprores-go, .cp-probe-go {
   display: inline-block; min-height: 32px; padding: 7px 13px;
   border: 1px solid var(--cp-accent-line); border-radius: var(--cp-r-ctl);
   background: var(--cp-accent-wash); color: var(--cp-text);
   font: 500 12px/1.3 var(--cp-font); cursor: pointer;
   transition: color 140ms var(--cp-ease), background 140ms var(--cp-ease), border-color 140ms var(--cp-ease);
 }
-.cp-ref-search:hover:not(:disabled), .cp-pptx-go:hover:not(:disabled), .cp-swap-go:hover:not(:disabled) { border-color: var(--cp-accent); }
-.cp-ref-search:disabled, .cp-pptx-go:disabled, .cp-swap-go:disabled { opacity: .55; cursor: default; }
+.cp-ref-search:hover:not(:disabled), .cp-pptx-go:hover:not(:disabled), .cp-swap-go:hover:not(:disabled),
+.cp-vtrim-go:hover:not(:disabled), .cp-vprores-go:hover:not(:disabled), .cp-probe-go:hover:not(:disabled) { border-color: var(--cp-accent); }
+.cp-ref-search:disabled, .cp-pptx-go:disabled, .cp-swap-go:disabled,
+.cp-vtrim-go:disabled, .cp-vprores-go:disabled, .cp-probe-go:disabled { opacity: .55; cursor: default; }
 .cp-hint.cp-ref-status { color: var(--cp-muted); }
 .cp-hint.cp-ref-result { color: var(--cp-warn); word-break: break-word; }
 .cp-hint.cp-ref-candidates {
@@ -364,6 +367,21 @@
   font: 400 11px/1.6 var(--cp-mono); white-space: pre-wrap; word-break: break-all;
 }
 .cp-hint.cp-ref-candidates:empty { display: none; }
+
+/* ---- 2026-11-19.3 内置工具卡：视频裁剪 / ProRes / 社区发现 ----
+ * 独立类名，不复用 .cp-ref-search；输入行只做等宽排列，不改面板几何。 */
+.cp-tools-block {
+  padding-top: 10px;
+  border-top: 1px solid var(--cp-line);
+}
+.cp-tools-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.cp-tools-row .cp-input { flex: 1 1 0; min-width: 0; }
+.cp-hint.cp-vtrim-status, .cp-hint.cp-vprores-status { color: var(--cp-muted); word-break: break-word; }
+.cp-hint.cp-probe-status { color: var(--cp-dim); white-space: pre-wrap; word-break: break-word; }
 
 /* ---- 键盘焦点：统一可见环 ---- */
 .cp-fab:focus-visible,
@@ -389,6 +407,7 @@
   .cp-field input[type="range"]::-webkit-slider-thumb,
   .cp-select, .cp-textarea, .cp-field input[type="number"],
   .cp-ref-query, .cp-ref-search, .cp-pptx-go, .cp-swap-go,
+  .cp-vtrim-go, .cp-vprores-go, .cp-probe-go,
   .cp-ticks span, .cp-skill-tag, .cp-skill-dot, .cp-progress-fill {
     transition: none;
   }

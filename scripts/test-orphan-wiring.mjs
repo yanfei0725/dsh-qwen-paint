@@ -409,6 +409,9 @@ console.log('\n=== 8. 全量可达性：lib/*.js 要么从 index.js 可达，要
   const ALLOWED_UNREACHABLE = {
     'client.js': '前端包：由 DSH 直接加载到浏览器侧，不经后端 import',
     'workflow-fingerprint.js': '回归期图结构指纹工具：只被 scripts/* 引用，不参与运行时构图',
+    'db-constraints.js': '多 Agent 并发约束库：独立基础设施（供外部脚本/agent 显式 import，对齐桌面 dsh-db.py），test-db-constraints.mjs 覆盖；不进插件运行时、不经 index.js',
+    'test-worker-pool.js': '测试并行化 Worker 池：由 test-all.mjs --worker 模式动态 import（await import），静态边扫描看不到动态 import 故列入；非插件运行时模块',
+    'test-worker-runner.js': 'Worker 线程内测试执行器：由 test-worker-pool.js 以 Worker(RUNNER) 加载（非 import 边），静态扫描看不到故列入；与主线程共用判定口径',
   }
 
   const orphans = libFiles.filter((f) => !reachable.has(f) && !(f in ALLOWED_UNREACHABLE))

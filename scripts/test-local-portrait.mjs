@@ -36,6 +36,34 @@ ok('目录外的绝对路径被拒', isInsideOutputDir('C:/Windows/x.png', OUT) 
 ok('空路径被拒', isInsideOutputDir('', OUT) === false)
 ok('就是目录本身被拒', isInsideOutputDir(OUT, OUT) === false)
 
+console.log('=== 1b. realpath 复验（链接 / 尚未生成的输出） ===')
+{
+  const mockFs = (map, exists = () => true) => {
+    const fn = (x) => map[String(x)] || String(x)
+    fn.native = fn
+    return { existsSync: exists, realpathSync: fn }
+  }
+  const rootKey = path.normalize(OUT)
+  const junc = path.join(OUT, 'junc', 'secret.png')
+  ok('junction 指向外部被拒', isInsideOutputDir(junc, OUT, {
+    fsMod: mockFs({ [rootKey]: rootKey, [path.normalize(junc)]: 'C:/Windows/secret.png' }),
+  }) === false)
+  const nested = path.join(OUT, 'newdir', 'x.png')
+  ok('不存在的输出按最近已存在祖先复验：根内放行', isInsideOutputDir(nested, OUT, {
+    fsMod: mockFs({ [rootKey]: rootKey }, (x) => path.normalize(x) === rootKey),
+  }) === true)
+  const link = path.join(OUT, 'link.png')
+  ok('符号链接文件指向外部被拒', isInsideOutputDir(link, OUT, {
+    fsMod: mockFs({ [rootKey]: rootKey, [path.normalize(link)]: 'C:/Windows/system32/x.png' }),
+  }) === false)
+  ok('outputDir 自身是链接：按真实根判定，内部路径仍放行', isInsideOutputDir(nested, OUT, {
+    fsMod: mockFs({ [rootKey]: 'D:/real/out' }, (x) => path.normalize(x) === rootKey),
+  }) === true)
+  ok('realpathSync 缺失时拒绝而不是放行', isInsideOutputDir(path.join(OUT, 'x.png'), OUT, {
+    fsMod: { existsSync: () => true },
+  }) === false)
+}
+
 console.log('=== 2. box 归一化 ===')
 ok('越界值夹进 0..1', (() => { const b = normalizeBox({ x: -1, y: 2, w: 0.5, h: 0.4 }); return b.x === 0 && b.y === 1 })())
 ok('w/h>0 判 ok', normalizeBox({ w: 0.3, h: 0.6 }).ok === true)

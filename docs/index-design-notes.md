@@ -1339,7 +1339,7 @@
 
 <!-- 由 scripts/slim-comments.mjs 自动外置；源码只留锚点，逐字内容见此。 -->
 
-### index-note-001（原 lib/index.js L1401-1404）
+### index-note-085（原 lib/index.js L1401-1404）
 
 ```js
           // ★ 2026-11-13 B3：与独立的 generate_speech 共用同一条 TTS 段，不再有两份实现。
@@ -1353,7 +1353,7 @@
 
 <!-- 由 scripts/slim-comments.mjs 自动外置；源码只留锚点，逐字内容见此。 -->
 
-### index-note-001（原 lib/index.js L2033-2037）
+### index-note-086（原 lib/index.js L2033-2037）
 
 ```js
       // ★ 2026-11-13：写生成历史（SQLite）。与上面的 JSONL 并列，互不替代：
@@ -1363,7 +1363,7 @@
       //   记录的是真的进了图的东西，不是面板的"当前选择"（并发下两者可能不一致）。
 ```
 
-### index-note-002（原 lib/index.js L3003-3007）
+### index-note-087（原 lib/index.js L3003-3007）
 
 ```js
           // M4：ControlNet 预处理（Canny / Depth / OpenPose）+ 产物缓存。

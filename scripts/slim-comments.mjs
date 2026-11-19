@@ -29,6 +29,46 @@ const DEFAULT_TARGET = 'lib/index.js'
 const LIMIT_FILE = 262144
 const MIN_BYTES = 400
 
+/** 增量模式：只处理 git diff 涉及的文件 + 依赖反向索引 */
+export function getIncrementalTargets() {
+  try {
+    const { stdout } = spawnSync('git', ['diff', '--name-only', 'HEAD'], {
+      cwd: ROOT, encoding: 'utf8'
+    })
+    const changed = stdout.trim().split('\n').filter(f => f.startsWith('lib/') && f.endsWith('.js'))
+    if (changed.length === 0) return []
+    
+    // 依赖反向索引：找出被这些文件 import 的其他 lib 文件
+    const allLibFiles = fs.readdirSync(path.join(ROOT, 'lib'))
+      .filter(f => f.endsWith('.js'))
+      .map(f => 'lib/' + f)
+    
+    const depGraph = new Map()
+    for (const f of allLibFiles) {
+      const content = fs.readFileSync(path.join(ROOT, f), 'utf8')
+      const imports = [...content.matchAll(/from ['"](\.\/[^'"]+\.js)['"]/gu)]
+        .map(m => path.resolve(path.join(ROOT, 'lib'), m[1]))
+        .filter(p => p.startsWith(path.join(ROOT, 'lib')))
+      for (const imp of imports) {
+        const rel = path.relative(ROOT, imp)
+        if (!depGraph.has(rel)) depGraph.set(rel, new Set())
+        depGraph.get(rel).add(f)
+      }
+    }
+    
+    // 反向：找出依赖 changed 文件的文件
+    const affected = new Set(changed)
+    for (const f of changed) {
+      const deps = depGraph.get(f)
+      if (deps) for (const d of deps) affected.add(d)
+    }
+    
+    return [...affected].sort()
+  } catch {
+    return []
+  }
+}
+
 /** 含功能语义或被测试字面量依赖的注释——绝不外置。改这里必须同步 test-slim-comments.mjs。 */
 export const KEEP_PATTERNS = Object.freeze([
   /index-design-notes\.md/u,   // 文件头索引说明
@@ -240,8 +280,60 @@ function processTarget(file, { apply }) {
 
 function main() {
   const apply = process.argv.includes('--apply')
-  const files = process.argv.filter((a) => a.startsWith('--file=')).map((a) => a.slice('--file='.length))
-  if (files.length === 0) files.push(DEFAULT_TARGET)
+  const incremental = process.argv.includes('--incremental')
+  let files = process.argv.filter((a) => a.startsWith('--file=')).map((a) => a.slice('--file='.length))
+  
+  if (incremental) {
+    const incFiles = getIncrementalTargets()
+    if (incFiles.length === 0) {
+      console.log('[incremental] 无变更文件，跳过')
+      return
+    }
+    files = incFiles
+    console.log('[incremental] 处理文件：', files.join(', '))
+  } else if (files.length === 0) {
+    files.push(DEFAULT_TARGET)
+  }
+
+  // ★ 2026-11-20：CI 预检模式 —— 不写盘，只做锚点编号一致性断言
+  //   用法：node scripts/slim-comments.mjs --ci-check [--file=lib/x.js ...]
+  //   退出码：0=通过 / 1=有冲突/跳号/接续号错误
+  const ciCheck = process.argv.includes('--ci-check')
+  if (ciCheck) {
+    let hasError = false
+    for (const f of files) {
+      const opts = targetOpts(f)
+      const next = nextAnchorNumber(f, opts)
+      const docAbs = path.join(ROOT, opts.docPath)
+      if (!fs.existsSync(docAbs)) continue
+      const doc = fs.readFileSync(docAbs, 'utf8')
+      const re = new RegExp(opts.anchorPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '-(\\d{3,})', 'gu')
+      const used = [...doc.matchAll(re)].map((m) => Number(m[1]))
+      if (used.length === 0) continue
+      const maxUsed = Math.max(...used)
+      const expectedNext = maxUsed + 1
+      if (next !== expectedNext) {
+        console.error(`✗ ${f}: 接续号错误 —— 文档最大 ${maxUsed.toString().padStart(3, '0')}，下一个应为 ${expectedNext.toString().padStart(3, '0')}，nextAnchorNumber 返回 ${next.toString().padStart(3, '0')}`)
+        hasError = true
+      }
+      // 重号检测
+      const dupes = used.filter((n, i) => used.indexOf(n) !== i)
+      if (dupes.length > 0) {
+        console.error(`✗ ${f}: 文档里有重复锚点编号：${[...new Set(dupes)].map(n => String(n).padStart(3, '0')).join(', ')}`)
+        hasError = true
+      }
+      // 跳号检测（连续性）
+      const sorted = [...new Set(used)].sort((a, b) => a - b)
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i] !== sorted[i - 1] + 1) {
+          console.error(`✗ ${f}: 锚点编号跳号 —— ${String(sorted[i - 1]).padStart(3, '0')} → ${String(sorted[i]).padStart(3, '0')} 中间缺失`)
+          hasError = true
+        }
+      }
+    }
+    process.exit(hasError ? 1 : 0)
+  }
+
   for (const f of files) {
     if (!apply) console.log('')
     processTarget(f, { apply })

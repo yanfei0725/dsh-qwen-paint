@@ -27,6 +27,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const mod = await import(pathToFileURL(path.join(ROOT, 'lib', 'index.js')).href)
 const { buildPosixLaunchCommand, DEFAULTS } = mod.__internal
+// ★ 根因护栏：直接读 schema-defaults 的真值，绕开 index.__internal（曾被假值兜底蒙蔽）。
+const schemaDefaults = await import(pathToFileURL(path.join(ROOT, 'lib', 'schema-defaults.js')).href)
+const SCHEMA_SRC = readFileSync(path.join(ROOT, 'lib', 'schema-defaults.js'), 'utf8')
 const HOST = ['index.js', 'config.js', 'describe.js', 'comfy-accel.js', 'comfy-launch.js', 'diag.js']
   .map((f) => readFileSync(path.join(ROOT, 'lib', f), 'utf8'))
   .join('\n')
@@ -232,6 +235,22 @@ ok('★ 端点对非 macOS **拒绝**改这两个开关（护栏，与 SageAtten
   /key === 'appleMpsFallback' \|\| key === 'appleMpsUnlimitedMem'\) && !IS_MAC/u.test(HOST))
 ok('★ 默认值：回退兜底开、水位上限关',
   DEFAULTS.appleMpsFallback === true && DEFAULTS.appleMpsUnlimitedMem === false)
+// ★ 根因护栏（2026-11-19 双审计发现）：schema-defaults 的 DEFAULTS 曾被注释外置脚本
+//   吞掉结尾 */，连累 4 个字段（comfyAttentionBackend/appleMpsFallback/
+//   appleMpsUnlimitedMem/vaeTiling）落进块注释、真机默认值丢失；index.__internal
+//   当时用假值兜底让本测试假绿。这里直接读源模块真值 + 查悬空注释，双保险。
+ok('★★ DEFAULTS 真值四个字段齐全（不经过 __internal 假值兜底）',
+  schemaDefaults.DEFAULTS.comfyAttentionBackend === 'auto'
+  && schemaDefaults.DEFAULTS.appleMpsFallback === true
+  && schemaDefaults.DEFAULTS.appleMpsUnlimitedMem === false
+  && schemaDefaults.DEFAULTS.vaeTiling === 'auto')
+ok('★★ schema-defaults 无悬空块注释吞字段（词法级：/* 与 */ 配平）',
+  (() => {
+    // 粗筛够用：源码里 /* 与 */ 应严格相等；残缺注释会让字段落进注释。
+    const opens = SCHEMA_SRC.split('/*').length - 1
+    const closes = SCHEMA_SRC.split('*/').length - 1
+    return opens === closes
+  })())
 ok('★ 注入用的是 `gpu.env`（档案级默认），不是散落的硬编码',
   /Object\.entries\(gpu\.env \?\? \{\}\)/u.test(HOST))
 

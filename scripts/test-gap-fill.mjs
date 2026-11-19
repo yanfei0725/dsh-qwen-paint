@@ -205,7 +205,7 @@ section('H3 视频尾帧 endImage（双轨构图对称）')
   ok('manifest 带条件补丁（nonEmpty 才 set）',
     JSON.stringify(JSON.parse(read('workflows/video-wan22.json')).patches.find((p) => p.id === 'i2v-end-image')).includes('nonEmpty'))
   ok('index.js 有 end_image 契约门禁（0.39.0 无此槽 → 如实报错）',
-    read('lib/index.js').includes("getNodeSchema(cfg, 'Wan22ImageToVideoLatent', signal)") && read('lib/index.js').includes('end_image'))
+    read('lib/index.js').includes("getNodeSchema(cfg, WAN_I2V_NODE, signal)") && read('lib/index.js').includes('end_image'))
   ok('generate_video 参数表已登记 endImage 且写明 0.39.0 限制', read('lib/index.js').includes('尾帧参考图的本地绝对路径'))
 }
 

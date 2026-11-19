@@ -22,6 +22,7 @@ import { MODE_PLANS } from '../lib/mode-schema.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const SRC = readFileSync(path.join(ROOT, 'assets', 'panel.js'), 'utf8')
+const CSS = readFileSync(path.join(ROOT, 'assets', 'panel.css'), 'utf8')
 
 let pass = 0
 let fail = 0
@@ -110,6 +111,7 @@ const posted = []
 const libraryPosts = []
 const referencePosts = []       // POST /reference/prefer：只该有 strategy 一个字段
 const referenceSearchPosts = [] // POST /reference/search：必须逐次显式 consent
+const toolPosts = []            // POST 三个内置工具端点：面板按钮真发出去的载荷
 const document = {
   readyState: 'loading', // 自挂载只登记监听，测试自己决定什么时候 mount
   body,
@@ -265,6 +267,17 @@ const fetch = (url, init) => {
       }),
     })
   }
+  // ★ 2026-11-19.3：三个内置工具端点，记录面板真发出的 payload。
+  if (String(url).includes('qwen-paint/video/trim-crop')
+    || String(url).includes('qwen-paint/video/prores-export')
+    || String(url).includes('qwen-paint/community/probe')) {
+    const bodyJson = init && init.body ? JSON.parse(init.body) : null
+    if (init && init.method === 'POST') toolPosts.push({ url, init, body: bodyJson })
+    return Promise.resolve({ ok: true, json: () => Promise.resolve({
+      ok: true, path: String(url).includes('trim-crop') ? '/out/clip.mp4' : '/out/clip.mov',
+      available: true, reason: '测试端点', guide: '测试指引', degraded: false,
+    }) })
+  }
   return Promise.resolve({ ok: false, json: () => Promise.resolve(null) })
 }
 
@@ -338,6 +351,89 @@ ok('★ 点整块 Tag 会落盘 skills', libraryPosts.length === 1
   JSON.stringify(libraryPosts))
 ok('★ 面板源码里零 checkbox（防止哪天又退回原生方块）',
   SRC.indexOf("cb.type = 'checkbox'") < 0)
+
+// ---- 2026-11-19.3：三个内置工具的可见入口 + 真派发 ----
+console.log('\n=== 内置工具面板入口（2026-11-19.3）===')
+const toolsApi = api.tools
+ok('三工具纯函数已导出（离线可测载荷形状）', Boolean(toolsApi)
+  && typeof toolsApi.buildVideoTrim === 'function'
+  && typeof toolsApi.buildProres === 'function'
+  && typeof toolsApi.buildCommunity === 'function'
+  && typeof toolsApi.hasInvalidNumber === 'function')
+ok('★ 空白可选秒数不写进 payload，非法数字被标记',
+  !('start' in toolsApi.buildVideoTrim({ source: 'a', start: '' }))
+  && toolsApi.hasInvalidNumber(toolsApi.buildVideoTrim({ source: 'a', start: 'abc' })))
+ok('★ 未知字段不进 payload（后端 additionalProperties:false）',
+  !('evil' in toolsApi.buildVideoTrim({ source: 'a', evil: 1 })))
+ok('★ 降级响应不谎称已生成文件',
+  /未生成文件/u.test(toolsApi.resultText('裁剪：', {
+    ok: false, degraded: true, reason: 'ffmpeg 缺席', command: ['-y'],
+  })))
+
+const toolsCard = panelEl.querySelector('.cp-tools')
+ok('★ 面板里有独立的内置工具折叠卡', Boolean(toolsCard)
+  && /内置工具/.test(toolsCard.querySelector('summary')?.textContent || ''))
+const trimBtn = toolsCard?.querySelector('.cp-vtrim-go')
+const proresBtn = toolsCard?.querySelector('.cp-vprores-go')
+const probeBtn = toolsCard?.querySelector('.cp-probe-go')
+
+ok('★ 三个按钮都有独立语义类名（没有复用 .cp-ref-search）',
+  Boolean(trimBtn) && Boolean(proresBtn) && Boolean(probeBtn)
+  && trimBtn !== proresBtn && proresBtn !== probeBtn)
+const tapEvents = panel.api.tap.events
+ok('★★ 三个按钮都绑了四种抬起事件（宿主 preventDefault 也能点）',
+  [trimBtn, proresBtn, probeBtn].every((b) => tapEvents.every((t) => (b.listeners[t] || []).length === 1)),
+  [trimBtn, proresBtn, probeBtn].map((b) => tapEvents.map((t) => `${t}:${(b?.listeners[t] || []).length}`).join(',')).join(' | '))
+ok('CSS 给三个新按钮独立样式（不靠继承蒙混过关）',
+  ['.cp-vtrim-go', '.cp-vprores-go', '.cp-probe-go', '.cp-tools-row'].every((c) => CSS.includes(c)))
+
+toolsCard.querySelector('.cp-vtrim-source').value = 'out/demo.mp4'
+toolsCard.querySelector('.cp-vtrim-target').value = 'clip_out.mp4'
+toolsCard.querySelector('.cp-vtrim-start').value = '1.5'
+toolsCard.querySelector('.cp-vtrim-end').value = '3'
+toolsCard.querySelector('.cp-vtrim-w').value = '640'
+toolsCard.querySelector('.cp-vtrim-h').value = '360'
+toolsCard.querySelector('.cp-vtrim-x').value = '10'
+toolsCard.querySelector('.cp-vtrim-y').value = '20'
+toolsCard.querySelector('.cp-vtrim-mode').value = 'reencode'
+trimBtn.listeners.click[0]({})
+await new Promise((r) => setTimeout(r, 0))
+const trimPost = toolPosts.find((p) => String(p.url).includes('trim-crop'))
+ok('★★ 点裁剪按钮真发 POST，载荷字段与工具契约一致', Boolean(trimPost)
+  && trimPost.init.method === 'POST'
+  && trimPost.body.source === 'out/demo.mp4'
+  && trimPost.body.target === 'clip_out.mp4'
+  && trimPost.body.start === 1.5 && trimPost.body.end === 3
+  && trimPost.body.crop.w === 640 && trimPost.body.crop.h === 360
+  && trimPost.body.crop.x === 10 && trimPost.body.crop.y === 20
+  && trimPost.body.force_reencode === true,
+  JSON.stringify(trimPost?.body))
+ok('★ 裁剪结果显示输出路径（不是空提示）',
+  /\/out\/clip\.mp4/u.test(toolsCard.querySelector('.cp-vtrim-status').textContent))
+
+toolsCard.querySelector('.cp-vprores-source').value = 'out/demo.mp4'
+toolsCard.querySelector('.cp-vprores-target').value = 'clip_out.mov'
+toolsCard.querySelector('.cp-vprores-profile').value = 'hq'
+proresBtn.listeners.pointerup[0]({})
+await new Promise((r) => setTimeout(r, 0))
+const proresPost = toolPosts.find((p) => String(p.url).includes('prores-export'))
+ok('★★ pointerup 也能触发 ProRes 导出（非 click 事件真派发）', Boolean(proresPost)
+  && proresPost.body.source === 'out/demo.mp4'
+  && proresPost.body.target === 'clip_out.mov'
+  && proresPost.body.profile === 'hq',
+  JSON.stringify(proresPost?.body))
+
+toolsCard.querySelector('.cp-probe-feature').value = 'vae_dtype'
+probeBtn.listeners.touchend[0]({})
+await new Promise((r) => setTimeout(r, 0))
+const probePost = toolPosts.find((p) => String(p.url).includes('community/probe'))
+ok('★★ touchend 也能触发只读探测，且 feature 白名单来自 UI', Boolean(probePost)
+  && probePost.body.feature === 'vae_dtype'
+  && /可用：是/u.test(toolsCard.querySelector('.cp-probe-status').textContent),
+  JSON.stringify(probePost?.body))
+ok('三条请求全部是 JSON POST（Content-Type 正确）',
+  [trimPost, proresPost, probePost].every((p) => p
+    && p.init.headers['content-type'] === 'application/json'))
 
 const tabs = panelEl.querySelectorAll('.cp-tab')
 ok('四个模式 tab 都在', tabs.length === 4, String(tabs.length))

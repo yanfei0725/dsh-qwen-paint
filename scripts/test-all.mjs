@@ -24,9 +24,14 @@
  *
  * ## 用法
  *
- *   node scripts/test-all.mjs              # 跑全部
+ *   node scripts/test-all.mjs              # 跑全部（heavy 串行 + light 每 6 套并行，spawnSync）
  *   node scripts/test-all.mjs --only=net   # 只跑名字里含 net 的
+ *   node scripts/test-all.mjs --phase=fast # 按阶段跑：fast/heavy/contract/ui/video/tool/core
+ *   node scripts/test-all.mjs --worker     # Worker 线程模式（每套独立 Worker，判定口径与默认一致）
  *   node scripts/test-all.mjs --quiet      # 只打结论和失败详情
+ *
+ * 两种执行后端（--worker 与否）共用 judgeFrom 判定，逐套断言数实测一致。
+ * --worker 不提速（线程创建+IPC 抵消收益），价值在于沙箱拒绝派生进程时的降级路径。
  */
 import { spawnSync } from 'node:child_process'
 import path from 'node:path'
@@ -36,10 +41,25 @@ import { fileURLToPath } from 'node:url'
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '..')
 
+/** 命令行参数解析（必须在最前，供后续逻辑使用） */
+const argv = process.argv.slice(2)
+const useWorker = argv.includes('--worker')
+const only = (argv.find((a) => a.startsWith('--only=')) ?? '').slice('--only='.length).toLowerCase()
+const quiet = argv.includes('--quiet')
+const phase = (argv.find((a) => a.startsWith('--phase=')) ?? '').slice('--phase='.length).toLowerCase()
+
 /**
  * 回归清单。新增测试脚本时**必须**登记到这里，否则等于没写。
  * `heavy: true` 的排在最后（跑得久，失败时不必等它）。
  */
+/**
+ * 并行分批策略：
+ * - heavy: true 的套件单独串行跑（跑得久、资源独占）
+ * - 其余按 6 个一组并行跑（CPU 核心数适配，避免端口/文件冲突）
+ * - 每批用 Promise.allSettled，一批全完再开下一批
+ */
+const PARALLEL_BATCH_SIZE = 6
+
 const SUITES = [
   // —— 三大主力（项数最多，覆盖面最广）——
   { file: 'test-net-guard.mjs', note: '网络边界 + URL 规范化（双斜杠坑）' },
@@ -75,6 +95,8 @@ const SUITES = [
   { file: 'test-ast-split.mjs', note: 'A 线 derive-slots + C 线零依赖源码 AST 零漂移验证器' },
   // ★ 2026-11-16 体积红线根治：注释外置减压工具（字符串状态机 / 语义注释保护 / 逐字可逆 / 幂等）
   { file: 'test-slim-comments.mjs', note: '注释外置减压：状态机不误判字符串 / 语义注释不误删 / 零漂移可逆 / 真实源码减压达标与幂等' },
+  // ★ 2026-11-20：注释外置锚点编号 CI 预检（无重号/无跳号/接续号正确）
+  { file: 'slim-comments.mjs', note: '注释外置锚点编号 CI 预检（无重号/无跳号/接续号正确）', args: ['--ci-check'] },
   // ★ 模型无关「角色参考」适配层 + 联网参考图硬同意门（两套都是纯 JS / 注入 fetch，不联网不派生子进程）
   //   新增测试必须登记进本清单，否则等于没写：这两套不登记就永远不会被 npm test 跑到。
   { file: 'test-reference-strategy.mjs', note: '角色参考：能力协商 / 模型无关查槽 / 零漂移 / I2V 起始帧契约' },
@@ -109,7 +131,6 @@ const SUITES = [
   { file: 'test-runtime-guards.mjs', note: '运行期护栏：显存建议只建议不改配置（B4）/ 会话级模型驻留（B5）/ 幂等保护含并发合并与失败不记账（C16）/ 工作流图结构指纹（A1）/ 草图台端点三道闸（D25）' },
   // ★ 2026-11-14 第五批续：五条「诚实边界」收口（A1 契约 / D19 ASR 真通路 / E27 自校准 / B5 全覆盖 / 三模式差异化）
   { file: 'test-contract-asr-eta.mjs', note: '边界收口：契约对账全 diff.kind 与真 buildWorkflow 过契约含 turbo alternates（A1）/ ASR 真通路全分支（D19）/ 本机秒数自校准与不跨档借用（E27）/ 三模式差异化计划一致性（UI）' },
-  { file: 'test-pipeline-panel.mjs', note: '控制面板行为回归（渲染 / 请求 / 禁用项 / 三模式差异化：生图隐藏视频组、混合出 TTS 卡）' },
   // ★ 2026-11-16 UI 性能：选模型卡一下 / 渲染占资源 —— model-options TTL 缓存 / 下拉增量回填 / 轮询降频 / lab /health 懒加载（全离线 vm+假 DOM）
   { file: 'test-ui-perf.mjs', note: 'UI 性能：model-options 缓存命中/TTL/失败不缓存 / 下拉增量回填只改 value / 轮询空列表降频 / lab health 懒加载与强制刷新 / 源码接线防孤儿' },
   { file: 'test-perf-config.mjs', note: '提示词模板（F28 渲染无残渣/无重复后缀）/ 显存与缓存档位语义（B7/B8）/ 缓存命中摘要口径（B9）/ 进度分级日志过滤（G35）/ 一键恢复默认改名不删（G34）' },
@@ -120,8 +141,6 @@ const SUITES = [
   { file: 'test-js-lexer.mjs', note: '零依赖 JS 词法分析器（四类隔离/模板插值根/运算符排除）' },
   { file: '_opt_status_test.mjs', note: '状态机与状态端点' },
   { file: '_portability_test.mjs', note: '可移植性' },
-  { file: '_launch_args_test.mjs', note: '启动参数' },
-  { file: '_mac_env_test.mjs', note: 'macOS/MPS 环境变量注入' },
   { file: '_perf_tweaks_test.mjs', note: '性能开关' },
   { file: '_vae_spectrum_test.mjs', note: 'VAE 分块 + Spectrum 跳步节点图' },
   { file: '_gpu_vendor_test.mjs', note: '显卡判定 + Mac 面板' },
@@ -158,6 +177,8 @@ const SUITES = [
   { file: 'test-ui-tap.mjs', note: 'UI 点按专项：四事件假 DOM 真派发 / 300ms 冷却 / 拖动抑制 / 叉叉 render 内重绑 / fab 补绑 click 与宿主合成 click 联动 / UI_BUILD 自证' },
   // ★ 2026-11-15 媒体格式转换批次（图片/视频/音频 11 种 + 动图转视频 + 生成物预设后转码 + Agent 调用）
   { file: 'test-media-convert.mjs', note: '媒体格式转换：11 种格式唯一真相源 / 同类互转与跨类拒绝 / ffmpeg 参数纯构建 / 输入输出双围栏 / ffmpeg 探测与诚实降级 / 生成完成钩子自动后转码（组合不覆盖日志）/ 端点预设 / 七处联动与孤儿扫描（全离线）' },
+  { file: 'test-video-post-tools.mjs', note: '视频后处理内置最小实现：按秒裁剪/矩形裁剪 argv（-c copy 快切与重编码精裁）/ ProRes profile→pixel_format / 双围栏 / ffmpeg 缺席与执行失败诚实降级 / 两条本机 POST / 六处接线（全离线假执行器）' },
+  { file: 'test-community-features.mjs', note: '社区三项只读发现：VAE dtype 输入 / ComfyUI 原生 API / Wan2.2 5B；没证据明确需实测，不下载模型/不装付费节点/不 patch 第三方；工具端点与六处接线（全离线）' },
   // ★ 2026-11-15 本地能力批次（未发布）：TTS 后端 / 音频样本 / 统一协议 / 音乐 BGM /
   //   手动超分 / Worker 分级保活 / 模型下载源 / 七处接线与孤儿扫描（全离线）
   { file: 'test-creative-models.mjs', note: '本地能力批次：GPT-SoVITS v5 dev/turbo 与 IndexTTS2 / 拖入音频样本 / 统一输入输出协议 / ACE-Step 1.5 与 YuE2 / 手动超分 / Worker 热温冷分级保活 / 下载源权威值校验与断点续传 / 七处联动与孤儿扫描（全离线）' },
@@ -175,13 +196,14 @@ const SUITES = [
   { file: 'test-transcribe.mjs', note: '音频转文字：能力探测诚实分支 / schema / 未配 ASR 先报缺件 / 路径围栏 / 成功收口白名单（不吐 key/路径）/ 端点围栏 / 七处接线孤儿扫描（全离线假 fetch）' },
   { file: 'test-vulkan-upscale.mjs', note: 'Vulkan 直跑超分：资产与许可事实（MIT / 权威字节数）/ argv 构造与逐项 clamp / 探测诚实降级 / 计划与执行边界（未安装绝不谎称）/ 文档与描述点名同步（全离线）' },
   { file: 'test-orphan-wiring.mjs', note: '孤儿模块接线：口语入口别名 / 参考图色调端点（像素上限与方法守卫）/ 时间轴·资源·数据流·产出短引用四工具 / 清单与 UI 入口同步 / 拆掉接线变红反向核查（全离线）' },
+  { file: 'test-db-constraints.mjs', note: '多层并发约束层：零依赖 node:sqlite / 原子抢锁与互斥 / 释放与 owner 校验 / 租约过期接管 / 撞题认领 / legacy 镜像同步 / UTC 时间格式对齐 Python / WriterQueue 串行（全离线临时库）' },
+  { file: 'test-config-exec-args.mjs', note: '配置子进程参数化：Windows VRAM 探针改直接 argv / 保留 filteredEnv 与超时 / 旧命令拼接移除 / Unix shell 分支保留（全离线静态源码护栏）' },
   // ★ 2026-11-16 全量审计：六套一直没进回归清单的历史测试（纯 JS / 零联网 / 零子进程，全部真绿）
   //   教训原话：「不在回归清单里的测试 = 等于没有测试」。它们各自锁着真实修过的 bug。
   { file: '_abort_fix_test.mjs', note: '取消原因规范化：非 Error 对象不再泄漏成 [object Object]（toError / cancelReason）' },
   { file: '_adapt_test.mjs', note: '三厂商自适应 + 生图链路自适应（纯函数断言，不联网）' },
   { file: '_init_abort_test.mjs', note: '初始化链路：宿主 API 不全 / 可选服务缺失时不掐死 + 状态端点真注册' },
   { file: '_wrapper_policy_test.mjs', note: '互斥 wrapper 按尺寸自动选（小尺寸 TE-Speed / 大尺寸 BlockCache T8）' },
-  { file: '_vram_patch_test.mjs', note: 'detectGpuProfile 真拿得到显存（锁「vramGB 恒为 0 / 驻留参数静默失效」）' },
   { file: '_toggle_field_check.mjs', note: 'BlockCache T8 项必须带 toggle 字段（前端靠它渲染开关）' },
   { file: '_draw_smoke_test.mjs', note: '生图链路 smoke：comfyUrl 指向必然连不上的端口，验降级路径不假装成功' },
   { file: '_intent_test.mjs', note: '生图意图判定四档语义差异 + 未知值安全回落 auto + 插件总开关' },
@@ -198,20 +220,59 @@ const SUITES = [
   { file: 'test-render-backends.mjs', note: '渲染后端发现模式+动画缓存最小版：硬件编码择优(真跑探测/降级/不谎称) / resvg光栅探测 / 中文字体空白帧自检 / 瓦片缓存+可插拔后端接口 / tool-registry生产接线（全离线假执行器）' },
   { file: 'test-bgm-opt.mjs', note: 'BGM三块优化：音乐计划缓存(指纹/往返/字节自校验/篡改降级) + ducking缝合缓存(文件身份指纹/命中跳过ffmpeg/关缓存强制真跑) + §7装配计划(缓存键/ducking/断点续推/blocked诚实) + 三处生产接线非孤儿（全离线假执行器）' },
   { file: 'test-tts-lowlatency.mjs', note: '外部TTS低延迟编排（抄通用思路非抄代码）：语义分块降首音延迟 / 回环围栏(拒外部host) / gsv+openai两种API格式 / 探活结构化降级 / 许可证合规边界(GSV=MIT,AnifLive=禁商用) / 工具+端点+UI生产接线非孤儿（全离线假fetch）' },
-  { file: 'test-local-portrait.mjs', note: '人物替换：Rust CPU 合成底座存在性 / 路径围栏 / box 归一化 / 请求组装与结果解析 / 身份保持节点发现 / 假执行器行为级成功与降级 / 二次围栏 / 端点注册与生产接线非孤儿（全离线）' },
+  { file: 'test-local-portrait.mjs', note: '人物替换：Rust CPU 合成底座存在性 / 路径围栏 realpath 复验（junction/符号链接/未生成输出的祖先链）/ box 归一化 / 请求组装与结果解析 / 身份保持节点发现 / 假执行器行为级成功与降级 / 二次围栏 / 端点注册与生产接线非孤儿（全离线）' },
   // —— 最重的一套放最后 ——
   { file: 'selftest.mjs', note: '全量自测（最重，项数最多）', heavy: true },
+  { file: '_vram_patch_test.mjs', note: 'VRAM 补丁真跑（含 ComfyUI 启动等待）', heavy: true },
+  { file: '_launch_args_test.mjs', note: '启动参数端到端（真起 ComfyUI）', heavy: true },
+  { file: '_mac_env_test.mjs', note: 'macOS MPS 环境变量注入（真跑子进程）', heavy: true },
+  { file: 'test-pipeline-panel.mjs', note: '面板渲染端到端（vm + 假 DOM + 挂载 + 三工具按钮真派发）', heavy: true },
 ]
 
-const argv = process.argv.slice(2)
-const only = (argv.find((a) => a.startsWith('--only=')) ?? '').slice('--only='.length).toLowerCase()
-const quiet = argv.includes('--quiet')
+// ★ slim-comments --ci-check 不需要 ComfyUI 在线，标记为 light（非 heavy）
+SUITES.find(s => s.file === 'slim-comments.mjs').heavy = false
 
-const picked = only === '' ? SUITES : SUITES.filter((s) => s.file.toLowerCase().includes(only))
+/** CI 阶段筛选 */
+function filterByPhase(suites, phase) {
+  if (!phase) return suites
+  const phaseMap = {
+    'fast': s => !s.heavy && s.file.startsWith('test-'),           // 快速单测
+    'heavy': s => s.heavy,                                         // 重测试
+    'contract': s => s.file.includes('contract') || s.file.includes('manifest') || s.file.includes('schema'), // 契约类
+    'ui': s => s.file.includes('ui') || s.file.includes('fab') || s.file.includes('style'), // UI 类
+    'video': s => s.file.includes('video') || s.file.includes('audio') || s.file.includes('hybrid'), // 视频/音频
+    'tool': s => s.file.includes('tool') || s.file.includes('speech') || s.file.includes('slim'), // 工具类
+    'core': s => s.file.includes('core') || s.file.includes('pipeline') || s.file.includes('workflow'), // 核心逻辑
+  }
+  const filter = phaseMap[phase]
+  if (!filter) {
+    console.error(`✗ 未知阶段: ${phase}，可用: ${Object.keys(phaseMap).join(', ')}`)
+    process.exit(2)
+  }
+  return suites.filter(filter)
+}
+
+const picked = filterByPhase(
+  only === '' ? SUITES : SUITES.filter((s) => s.file.toLowerCase().includes(only)),
+  phase
+)
 
 if (picked.length === 0) {
-  console.error(`✗ 没有匹配 --only=${only} 的套件`)
+  console.error(`✗ 没有匹配 --only=${only} --phase=${phase} 的套件`)
   process.exit(2)
+}
+
+/** Worker 池初始化（--worker 启用，需在筛选后、运行前） */
+let workerPool = null
+if (useWorker) {
+  try {
+    const { TestWorkerPool } = await import('../lib/test-worker-pool.js')
+    workerPool = new TestWorkerPool({ size: PARALLEL_BATCH_SIZE })
+    console.log(`[Worker Pool] 已启动，${PARALLEL_BATCH_SIZE} 个 Worker`)
+  } catch (e) {
+    console.warn(`[Worker Pool] 启动失败，回退 spawnSync: ${e.message}`)
+    workerPool = null
+  }
 }
 
 const STDIO_DENIED = new Set(['EBUSY', 'EPERM', 'EACCES', 'EAGAIN', 'ENOENT'])
@@ -243,66 +304,133 @@ console.log(`dsh-qwen-paint 回归 —— 共 ${picked.length} 套${only === '' 
 console.log(`工作目录：${ROOT}`)
 console.log('')
 
-for (const suite of picked) {
-  const script = path.join(HERE, suite.file)
-  const startedAt = Date.now()
-  const run = spawnSync(process.execPath, [script], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    timeout: suite.heavy ? 300_000 : 180_000,
-    maxBuffer: 32 * 1024 * 1024,
-  })
-  const ms = Date.now() - startedAt
-  const out = `${run.stdout ?? ''}${run.stderr ?? ''}`
-
-  let verdict
-  let detail = ''
-  if (run.error !== undefined && run.error !== null) {
-    const code = String(run.error.code ?? '')
-    if (STDIO_DENIED.has(code)) {
-      verdict = 'SKIP'
-      detail = `环境不允许派生进程（${code}）—— 不是测试写错，换个环境再跑`
-    } else {
-      verdict = 'FAIL'
-      detail = `派生失败：${run.error.message ?? run.error}`
+/**
+ * 统一判定：spawnSync 与 --worker 两种模式共用，保证同一口径、杜绝假绿。
+ * @param {object} o
+ * @param {string} o.mode       'spawn' | 'worker'
+ * @param {object} [o.run]      spawnSync 返回对象
+ * @param {object} [o.wr]       Worker 池返回的 {exitCode,out,ms}
+ * @param {boolean} o.isSlimCi
+ */
+function judgeFrom(mode, run, wr, isSlimCi) {
+  let ms, out, verdict, detail = ''
+  if (mode === 'worker') {
+    ms = wr.ms
+    out = wr.out
+    const code = Number(wr.exitCode) || 0
+    if (code === 124) {
+      verdict = 'FAIL'; detail = 'Worker 超时（退出码 124）'
+    } else if (code !== 0) {
+      verdict = 'FAIL'; detail = `退出码 ${code}`
     }
-  } else if (run.signal !== null && run.signal !== undefined) {
-    verdict = 'FAIL'
-    detail = `被信号 ${run.signal} 终止（大概率超时）`
-  } else if ((run.status ?? 1) !== 0) {
-    verdict = 'FAIL'
-    detail = `退出码 ${run.status}`
-  } else if (crossCount(out) > 0) {
-    verdict = 'FAIL'
-    detail = `退出码 0 但输出里有 ${crossCount(out)} 行 ✗（该套件忘了 process.exit(1)）`
-  } else if (declaresSkip(out)) {
-    verdict = 'SKIP'
-    detail = '套件自己声明 SKIP（环境不具备）'
-  } else if (tickCount(out) === 0 && !declaresSuccess(out)) {
-    // ★★★ 2026-10-19：**一条断言都没有、也没有成功总结** —— 大概率是"根本没跑"，
-    //   绝不能因为 exit 0 就当通过。这条是为了堵住假阳性。
-    verdict = 'FAIL'
-    detail = '没有输出任何断言标记，也没有成功总结 —— 无法确认它真的跑了'
-  } else if (tickCount(out) === 0) {
-    verdict = 'PASS'
-    detail = '通过（该套件无逐条断言输出，仅凭成功总结判定）'
   } else {
-    verdict = 'PASS'
-    detail = `${tickCount(out)} 项断言通过`
+    ms = run.ms
+    out = `${run.stdout ?? ''}${run.stderr ?? ''}`
+    if (run.error !== undefined && run.error !== null) {
+      const code = String(run.error.code ?? '')
+      if (STDIO_DENIED.has(code)) {
+        return { ms, out, verdict: 'SKIP', detail: `环境不允许派生进程（${code}）—— 不是测试写错，换个环境再跑` }
+      }
+      return { ms, out, verdict: 'FAIL', detail: `派生失败：${run.error.message ?? run.error}` }
+    }
+    if (run.signal !== null && run.signal !== undefined) {
+      return { ms, out, verdict: 'FAIL', detail: `被信号 ${run.signal} 终止（大概率超时）` }
+    }
+    const code = run.status ?? 1
+    if (code !== 0) {
+      return { ms, out, verdict: 'FAIL', detail: `退出码 ${code}` }
+    }
+  }
+  // ↓ 两种模式共用的输出判定
+  if (crossCount(out) > 0) {
+    return { ms, out, verdict: 'FAIL', detail: `退出码 0 但输出里有 ${crossCount(out)} 行 ✗` }
+  }
+  if (isSlimCi) return { ms, out, verdict: 'PASS', detail: '锚点编号一致性检查通过' }
+  if (declaresSkip(out)) return { ms, out, verdict: 'SKIP', detail: '套件自己声明 SKIP（环境不具备）' }
+  if (tickCount(out) === 0 && !declaresSuccess(out)) {
+    return { ms, out, verdict: 'FAIL', detail: '没有输出任何断言标记，也没有成功总结 —— 无法确认它真的跑了' }
+  }
+  if (tickCount(out) === 0) {
+    return { ms, out, verdict: 'PASS', detail: '通过（该套件无逐条断言输出，仅凭成功总结判定）' }
+  }
+  return { ms, out, verdict: 'PASS', detail: `${tickCount(out)} 项断言通过` }
+}
+
+/** 单套执行器（两种模式统一走 judgeFrom） */
+function runSuite(suite) {
+  const isSlimCi = suite.file === 'slim-comments.mjs'
+  const script = path.join(HERE, suite.file)
+  const args = suite.args || (isSlimCi ? ['--ci-check'] : [])
+  const timeout = suite.heavy ? 300_000 : (isSlimCi ? 60_000 : 180_000)
+
+  if (workerPool) {
+    return workerPool.run(script, { timeout, args })
+      .then((wr) => ({ ...suite, ...judgeFrom('worker', null, wr, isSlimCi) }))
+      .catch((e) => ({ ...suite, verdict: 'FAIL', detail: `Worker 抛错: ${e.message}`, ms: 0, out: '' }))
   }
 
-  results.push({ ...suite, verdict, detail, ms, out })
+  return new Promise((resolve) => {
+    const startedAt = Date.now()
+    const run = spawnSync(process.execPath, [script, ...args], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      timeout,
+      maxBuffer: 32 * 1024 * 1024,
+    })
+    const judged = judgeFrom('spawn', { ...run, ms: Date.now() - startedAt }, null, isSlimCi)
+    resolve({ ...suite, ...judged })
+  })
+}
 
-  const mark = verdict === 'PASS' ? '✓' : verdict === 'SKIP' ? '⤼' : '✗'
-  console.log(`${mark} ${suite.file.padEnd(30)} ${String(ms).padStart(6)} ms  ${detail}`)
-  if (!quiet && verdict !== 'PASS' && suite.note !== '') console.log(`    ${suite.note}`)
-
-  // 失败的套件立刻把它自己的错误行打出来 —— 不然还得再跑一遍才知道红在哪
-  if (verdict === 'FAIL') {
-    const bad = out.split('\n').filter((line) => line.trimStart().startsWith('✗')).slice(0, 12)
+/** 打印单套结果 */
+function printResult(r) {
+  const mark = r.verdict === 'PASS' ? '✓' : r.verdict === 'SKIP' ? '⤼' : '✗'
+  console.log(`${mark} ${r.file.padEnd(30)} ${String(r.ms).padStart(6)} ms  ${r.detail}`)
+  if (!quiet && r.verdict !== 'PASS' && r.note !== '') console.log(`    ${r.note}`)
+  if (r.verdict === 'FAIL') {
+    const bad = r.out.split('\n').filter((line) => line.trimStart().startsWith('✗')).slice(0, 12)
     for (const line of bad) console.log(`      ${line.trim()}`)
-    if (bad.length === 0) console.log(`      ${out.trim().split('\n').slice(-3).join('\n      ')}`)
+    if (bad.length === 0) console.log(`      ${r.out.trim().split('\n').slice(-3).join('\n      ')}`)
   }
+}
+
+/** 分批并行执行：heavy 串行、其余每批 PARALLEL_BATCH_SIZE 个并行 */
+async function runAll() {
+  // 先跑 heavy（串行）
+  const heavySuites = picked.filter((s) => s.heavy)
+  const lightSuites = picked.filter((s) => !s.heavy)
+
+  for (const suite of heavySuites) {
+    const r = await runSuite(suite)
+    results.push(r)
+    printResult(r)
+  }
+
+  // light 分批并行
+  for (let i = 0; i < lightSuites.length; i += PARALLEL_BATCH_SIZE) {
+    const batch = lightSuites.slice(i, i + PARALLEL_BATCH_SIZE)
+    const batchResults = await Promise.allSettled(batch.map(runSuite))
+
+    for (const r of batchResults) {
+      if (r.status === 'fulfilled') {
+        results.push(r.value)
+        printResult(r.value)
+      } else {
+        // 极少见：runSuite 自身抛错（不应发生，已兜底）
+        const suite = batch[batchResults.indexOf(r)]
+        const failResult = { ...suite, verdict: 'FAIL', detail: `执行器异常：${r.reason}`, ms: 0, out: '' }
+        results.push(failResult)
+        printResult(failResult)
+      }
+    }
+  }
+}
+
+await runAll()
+
+// 清理 Worker 池
+if (workerPool) {
+  await workerPool.terminate()
 }
 
 const pass = results.filter((r) => r.verdict === 'PASS').length
