@@ -9,7 +9,10 @@
  *
  * 纯离线。
  */
-import { rdna3FaNode } from '../lib/model-chain.js'
+import {
+  rdna3FaNode, loraNode, fluxShiftNode, prefixCacheNode,
+  teSpeedNode, speedupNode, blockCacheNode, easyCacheNode,
+} from '../lib/model-chain.js'
 
 let pass = 0
 let fail = 0
@@ -44,6 +47,39 @@ console.log('— buildWorkflow 半集成（vendor 门 × 槽位 17）')
   const wfNv = buildWorkflow({}, opts, capsNv)
   ok("★ NVIDIA 同条件 → 槽 17 不出现（faGpuOk vendor 门，不留幽灵节点）",
     wfNv['17'] === undefined, JSON.stringify(wfNv['17'] ?? null))
+}
+
+console.log('— 其余工厂直测（2026-11-20 扩展：class_type 逐字 + 默认值/白名单回落）')
+{
+  ok('loraNode：strength 非 finite 回落 1.0 + model 连接形态',
+    (() => { const n = loraNode('9', 'x.safetensors', NaN)
+      return n.class_type === 'LoraLoaderModelOnly' && n.inputs.strength_model === 1.0
+        && JSON.stringify(n.inputs.model) === '["9",0]' })())
+  ok('loraNode：finite strength 透传', loraNode('9', 'x', 0.8).inputs.strength_model === 0.8)
+  ok('fluxShiftNode：width/height Math.round + 非数回落 1024',
+    fluxShiftNode({ maxShift: 1.15, baseShift: 0.5 }, '5', 831.6, NaN).inputs.height === 1024
+    && fluxShiftNode({ maxShift: 1, baseShift: 0.5 }, '5', 831.4, 480).inputs.width === 831)
+  ok('★ prefixCacheNode：白名单外回落（dtype=bf16→int8 / device=SSD→auto；先 toLowerCase 再判，GPU=合法 gpu 值）',
+    prefixCacheNode({ qwenCacheDtype: 'bf16' }, '5').inputs.dtype === 'int8'
+    && prefixCacheNode({ qwenCacheDevice: 'SSD' }, '5').inputs.device === 'auto'
+    && prefixCacheNode({ qwenCacheDevice: 'GPU' }, '5').inputs.device === 'gpu')
+  ok('★ teSpeedNode：默认六件套（attention/step_cache/threshold 0.06/percent 0..1）',
+    (() => { const n = teSpeedNode({}, '7')
+      return n.class_type === 'TESpeedQwenImage21' && n.inputs.attention === 'kitchen_int8'
+        && n.inputs.step_cache === 'te_predictor' && n.inputs.reuse_threshold === 0.06
+        && n.inputs.start_percent === 0.0 && n.inputs.end_percent === 1.0 && n.inputs.verbose === false })())
+  ok('speedupNode：默认阈值 0.30/target 0.05/maxConsecutiveSkips 3',
+    (() => { const n = speedupNode({}, '7')
+      return n.class_type === 'QwenImage21Speedup' && n.inputs.cache_threshold === 0.30
+        && n.inputs.target_error === 0.05 && n.inputs.max_consecutive_skips === 3 })())
+  ok('★ blockCacheNode：默认 device=cpu（cache 落 CPU 省显存）+ threshold 0.03/maxHits 2',
+    (() => { const n = blockCacheNode({}, '7')
+      return n.class_type === 'QwenImage21BlockCacheT8' && n.inputs.cache_device === 'cpu'
+        && n.inputs.residual_diff_threshold === 0.03 && n.inputs.max_consecutive_hits === 2 })())
+  ok('★ easyCacheNode：clampF 夹紧（越界值收到 0..3/0..1 区间而非原样透传）',
+    (() => { const n = easyCacheNode({ easyCacheReuseThreshold: 99, easyCacheStartPercent: -1 }, '7')
+      return n.class_type === 'EasyCache' && n.inputs.reuse_threshold === 3 && n.inputs.start_percent === 0 })()
+    && easyCacheNode({}, '7').inputs.reuse_threshold === 0.2)
 }
 
 console.log(`合计：${pass} 通过 / ${fail} 失败`)
