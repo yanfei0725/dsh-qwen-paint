@@ -97,6 +97,8 @@ const SUITES = [
   { file: 'test-pptx-zip.mjs', note: 'pptx-lite buildZip（魔数/EOCD/offset 累计 + testzip 全量 CRC + 内容 roundtrip，⚠Windows python print CRLF 剥 \r）' },
   // ★ 2026-11-20 缺口⑥：attention-backends 直测（discoverAttentionNodes 专用优先排序 + pickAttentionBackends degrade 矩阵）
   { file: 'test-attention-backends.mjs', note: 'attention-backends（nodePattern 过滤/priorityPattern 专用优先/preferred 去重/kinds 过滤/诚实条款 note 不含数字倍率，注入咬合已验）' },
+  // ★ 2026-11-20 零触及清单：ws-preview createPreviewStore 直测（假时钟驱动 TTL/挤最老/percent 夹紧）
+  { file: 'test-ws-preview-store.mjs', note: 'ws-preview store（percent 夹紧防除零/dataUrl 脱敏不吐 Buffer/TTL 过期删/FIFO 挤最老真实语义锁，注入咬合已验）' },
   { file: 'test-audio-workflows.mjs', note: '语音克隆 + 音轨合成（真机节点契约/上传/降级）' },
   // ★ 2026-11-14 A1：工作流 JSON 化第一步 —— 清单 / 双轨一致性 / 校验器 / 发布物完整性
   { file: 'test-workflow-manifest.mjs', note: '工作流声明式清单（双轨逐字节一致 / 校验器真抓错 / files 白名单）' },
