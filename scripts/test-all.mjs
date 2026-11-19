@@ -89,6 +89,8 @@ const SUITES = [
   { file: 'test-hipfire-pure.mjs', note: 'hipfire 纯函数（parseSizeString 全角乘号/extractJsonPath 末行优先，注入咬合已验）' },
   // ★ 2026-11-20 覆盖缺口⑤（勘察报告 #14）：comfy-launch 纯函数（🐛抓到 nohup cmd 尾 & 使 full 重定向失效的真缺陷已修）
   { file: 'test-comfy-launch-pure.mjs', note: 'comfy-launch 纯函数（stderr 摘要尾 3 行/POSIX 命令双层转义/& 收尾形态，注入咬合已验）' },
+  // ★ 2026-11-20 勘察报告 #16：model-chain 工厂运行时断言（rdna3FaNode 零触及补防 + vendor 门集成）
+  { file: 'test-model-chain.mjs', note: 'model-chain 工厂（rdna3FaNode 连接契约/透传/buildWorkflow vendor 门×槽 17，注入咬合已验）' },
   { file: 'test-audio-workflows.mjs', note: '语音克隆 + 音轨合成（真机节点契约/上传/降级）' },
   // ★ 2026-11-14 A1：工作流 JSON 化第一步 —— 清单 / 双轨一致性 / 校验器 / 发布物完整性
   { file: 'test-workflow-manifest.mjs', note: '工作流声明式清单（双轨逐字节一致 / 校验器真抓错 / files 白名单）' },
