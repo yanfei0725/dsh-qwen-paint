@@ -96,6 +96,23 @@ console.log('\n=== 2. 节点真的插进模型链末端 ===')
   const untouched = applyAttentionNodes({ 1: {} }, buildAttentionWorkflowPatch({ installed: NODES }), '1')
   ok('未启用时 unchanged:true、节点表不变',
     untouched.unchanged === true && untouched.modelRef === '1' && !('40' in untouched.nodes))
+  // ★ 2026-11-20 勘察报告 #16 额外发现：startId 是调用方槽位控制权（turbo-workflow.js:95 显式传 40）。
+  //   dc4a38b 的 40 撞车虫在 turbo 链是第二潜伏点（当前 turbo 无 ControlNet stack 不撞，未来加则复发）
+  //   —— 锁死 startId 语义：显式传参生效 + 多节点逐号占用 + modelRef 推进到链尾。
+  const r50 = applyAttentionNodes({ 1: {} }, patch, '1', 50)
+  ok('★ 显式 startId 生效（节点落 50 不落默认 40——调用方控制槽位避开已占区）',
+    r50.nodes['50']?.class_type === 'SageAttentionPatch' && !('40' in r50.nodes) && r50.modelRef === '50',
+    JSON.stringify({ ids: Object.keys(r50.nodes), ref: r50.modelRef }))
+  const multi = applyAttentionNodes(
+    { 1: {} },
+    { nodes: [{ class_type: 'FakeA', inputs: {} }, { class_type: 'FakeB', inputs: {} }] },
+    '1', 50,
+  )
+  ok('★ 多节点 patch → startId+i 逐号占用（50/51）且 51 吃 50 的输出、modelRef 推进到链尾',
+    multi.nodes['50']?.class_type === 'FakeA' && multi.nodes['51']?.class_type === 'FakeB'
+    && JSON.stringify(multi.nodes['51'].inputs.model) === '["50",0]'
+    && multi.modelRef === '51' && multi.applied.length === 2,
+    JSON.stringify({ ids: Object.keys(multi.nodes), b51: multi.nodes['51'].inputs.model, ref: multi.modelRef }))
 }
 
 console.log('\n=== 3. 并进已有加速链（不再只有 image / tts 两段）===')
