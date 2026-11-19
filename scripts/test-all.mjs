@@ -93,6 +93,8 @@ const SUITES = [
   { file: 'test-model-chain.mjs', note: 'model-chain 工厂（rdna3FaNode 连接契约/透传/buildWorkflow vendor 门×槽 17，注入咬合已验）' },
   // ★ 2026-11-20 勘察报告 #14 零触及清单：music-models 选型直测（pickMusicModel degrade 矩阵）
   { file: 'test-music-models.mjs', note: 'music-models 选型（默认回落/未知 id/节点探测 degrade/nodePattern+savePattern 匹配，注入咬合已验）' },
+  // ★ 2026-11-20 零触及清单：pptx-lite buildZip 直测（字节级结构 + python zipfile 标准解析器实解终验）
+  { file: 'test-pptx-zip.mjs', note: 'pptx-lite buildZip（魔数/EOCD/offset 累计 + testzip 全量 CRC + 内容 roundtrip，⚠Windows python print CRLF 剥 \r）' },
   { file: 'test-audio-workflows.mjs', note: '语音克隆 + 音轨合成（真机节点契约/上传/降级）' },
   // ★ 2026-11-14 A1：工作流 JSON 化第一步 —— 清单 / 双轨一致性 / 校验器 / 发布物完整性
   { file: 'test-workflow-manifest.mjs', note: '工作流声明式清单（双轨逐字节一致 / 校验器真抓错 / files 白名单）' },
