@@ -217,7 +217,7 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 - 图片 JPG/PNG/WebP、视频 MP4/MKV/MOV/WebM、音频 MP3/AAC/WAV/FLAC 互转不变；媒体路由流式化 + Range 与缓存头口径承接 1.1.2。本版新增的视频裁剪 / ProRes 导出是后处理补充，不改原转换矩阵。
 
 ### 联动护栏与回归
-- 全量 **132 套 / 断言项全绿**。`main` + DSH 双独立审计：4 项发现逐条回代码定性（3 误报 + 1 真回归已修）；真回归补了**根因护栏**（直接读 schema-defaults 真值 + 词法级悬空注释检查，并经「改坏→变红→逐字恢复 md5 一致」反向核查）。清理 5 个零引用死执行器；`local-portrait.js` 路径围栏加 realpath 复验挡 junction/symlink 穿透；Windows VRAM 探针改数组 argv 直调 Python，不再拼命令外壳；BGM 缓存键字段与真实指纹逐字对齐。
+- 全量 **133 套 / 断言项全绿**。`main` + DSH 双独立审计：4 项发现逐条回代码定性（3 误报 + 1 真回归已修）；真回归补了**根因护栏**（直接读 schema-defaults 真值 + 词法级悬空注释检查，并经「改坏→变红→逐字恢复 md5 一致」反向核查）。清理 5 个零引用死执行器；`local-portrait.js` 路径围栏加 realpath 复验挡 junction/symlink 穿透；Windows VRAM 探针改数组 argv 直调 Python，不再拼命令外壳；BGM 缓存键字段与真实指纹逐字对齐。
 - `lib/index.js` 191,013 B / 余量 **65,131 B**（红线 262,144 B）。
 - 当前 **146 个 `lib/*.js`** / 合计 **2,073,609 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径）。
 

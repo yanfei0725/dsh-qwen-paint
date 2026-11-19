@@ -103,6 +103,8 @@ const SUITES = [
   { file: 'test-reference-endpoints.mjs', note: 'reference-endpoints（GET 协商 online 如实/characterLock 分段锁/prefer 零漂移/search 硬同意门 403/adapt 400 校验，注入咬合已验）' },
   // ★ 2026-11-20 零触及清单：orphan-extras 工具工厂行为直测（此前只锁注册接线不锁行为）
   { file: 'test-orphan-tools.mjs', note: 'orphan-extras 工厂（plan_timeline 12 段上限/privacy_summary external 按真实 URL 清单算——注入咬合已验）' },
+  // ★ 2026-11-20 零触及清单：hipfire 前置校验错误路径（零 mock——校验段全在 I/O 之前）
+  { file: 'test-hipfire-guard.mjs', note: 'hipfire guard（空 prompt/negative 诚实条款拒/回环 URL 校验/cli 无 exe 如实报错，注入咬合已验）' },
   { file: 'test-audio-workflows.mjs', note: '语音克隆 + 音轨合成（真机节点契约/上传/降级）' },
   // ★ 2026-11-14 A1：工作流 JSON 化第一步 —— 清单 / 双轨一致性 / 校验器 / 发布物完整性
   { file: 'test-workflow-manifest.mjs', note: '工作流声明式清单（双轨逐字节一致 / 校验器真抓错 / files 白名单）' },
