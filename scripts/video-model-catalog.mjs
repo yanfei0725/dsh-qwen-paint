@@ -83,7 +83,7 @@ export const VIDEO_OPTIMIZATIONS = {
     { id: 'shared-mem', label: '核显共享内存 + 低显存参数', hint: '由插件的 --lowvram 档位落实，见 lib/config.js', verified: true },
   ],
   amd: [
-    { id: 'hummingbird', label: 'Hummingbird 家族（XT / XTX / I2V）', hint: '本机已有则直接用；插件不提供公开下载地址', verified: false },
+    { id: 'hummingbird', label: 'Hummingbird 家族（XT / XTX / I2V）', hint: 'AMD 官方权重在 huggingface.co/amd/HummingbirdXT（2026-11-20 实锤，此前误判 404）；本机已有则直接用', verified: false },
     { id: 'quark', label: 'Quark 混合精度量化', hint: '需 AMD 工具链，插件不代装', verified: false },
     { id: 'fused', label: 'Fused-Softmax / Video Sparse Attention', hint: '属于模型侧算子优化，未在本机验证', verified: false },
   ],
