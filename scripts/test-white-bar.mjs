@@ -17,7 +17,6 @@ import { loadObjectInfo, resetCatalogCache, __testObjectInfo } from '../lib/comf
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => readFileSync(path.join(ROOT, p), 'utf8')
 
-const IDX = read('lib/index.js')
 const SH = read('lib/status-handler.js') // ★ 节点⑧第一刀：makeStatusHandler 已外置，体内锁改读新文件（意图不变）
 const CLIENT = read('lib/client.js')
 const PANEL = read('assets/panel.js')
