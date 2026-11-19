@@ -109,6 +109,7 @@ const SUITES = [
   { file: 'test-video-frames.mjs', note: '视频选帧：时间码↔帧号 / 两种选法归一 / argv 无注入 / 目录边界 / 无 ffmpeg 不假装成功' },
   // ★ 2026-11-13 时间轴增强：缩略图轨道 + 改完的帧回贴
   { file: 'test-video-replace.mjs', note: '帧回贴：区间换算 / overlay argv / 端点围栏 / 前端接线 / 体积红线' },
+  { file: 'test-route-factory.mjs', note: '端点公共工厂契约锁：门序 / 守卫顺序 / before 短路 / catch warn 单条 msg / failText / onlyText（2026-11-20 反向核查补的覆盖缺口锁）' },
   { file: 'test-igpu-profiles.mjs', note: '可选核显型号清单 / 诚实口径 / 可选自动下载默认关闭 / 低配判定回归锁（零联网零硬件探测）' },
   { file: 'test-file-route.mjs', note: '媒体字节路由：穿越拦截 / 大小上限 / MIME 白名单 / nosniff / 只读' },
   { file: 'test-http-errors.mjs', note: '错误响应统一消毒 / 静态资源表驱动外置 / 异常只进本机日志 / 热路径零开销' },
