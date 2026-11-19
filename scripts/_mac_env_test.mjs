@@ -123,8 +123,8 @@ ok('★ 不带环境变量时**不出现** export（不引入多余语句）',
   !String(shellTokens(buildPosixLaunchCommand({
     py: '/usr/bin/python3', args: innerArgs, pidFile, logPath, launchEnv: [], useSetsid: false,
   }).wrapped)[2]).includes('export '))
-ok('★ 两种包装都在：无 setsid → `nohup ... &`；有 setsid → `setsid --fork`',
-  c1.cmd.startsWith('nohup ') && c1.cmd.trimEnd().endsWith('&')
+ok('★ 两种包装都在：无 setsid → `nohup ...`（不带 & —— 2026-11-20 修复：cmd 尾带 & 会让 full 拼接后重定向失效，日志全落 nohup.out）；有 setsid → `setsid --fork`',
+  c1.cmd.startsWith('nohup ') && !c1.cmd.includes('&')
   && buildPosixLaunchCommand({ py: 'x', args: [], pidFile, logPath, useSetsid: true }).cmd.startsWith('setsid --fork sh -c '))
 ok('★ 完整命令带日志重定向与脱离终端（`>log 2>&1 < /dev/null &`）',
   c1.full.includes('2>&1 < /dev/null &'))
