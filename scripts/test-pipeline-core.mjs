@@ -62,8 +62,9 @@ ok('★ 本机实况复刻：>100 帧但只装了 spectrum → spectrum（不再
 ok('>100 帧且有 easycache → 优先 easycache', pick({ frames: 200, vendor: 'amd', installed: ['spectrum', 'easycache'] }) === 'easycache')
 ok('≤100 帧 → 优先 spectrum（不是 easycache）', pick({ frames: 49, vendor: 'amd', installed: ['spectrum', 'easycache'] }) === 'spectrum')
 ok('★ N 卡 + sage 已装 → sage 优先', pick({ frames: 49, vendor: 'nvidia', installed: ['sage', 'spectrum'] }) === 'sage')
-ok('★ A 卡装了 sage 也不选（厂商专属，装了也跑不动）',
-  pick({ frames: 49, vendor: 'amd', installed: ['sage'] }) === null)
+// ★ 2026-11-20 vendor 门放宽：A 卡走 Triton 路径（LightX2V 官方验证 gfx1100）——装了就选
+ok('★ A 卡装了 sage → 可选（Triton 路径，收益 unverified）',
+  pick({ frames: 49, vendor: 'amd', installed: ['sage'] }) === 'sage')
 ok('installed 传数组或 Set 都认', pick({ frames: 49, vendor: 'amd', installed: new Set(['spectrum']) }) === 'spectrum')
 ok('LONG_TASK_FRAMES 即 100，且边界 100 不算长任务',
   LONG_TASK_FRAMES === 100 && pick({ frames: 100, vendor: 'amd', installed: ['spectrum', 'easycache'] }) === 'spectrum')

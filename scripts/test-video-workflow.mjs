@@ -220,7 +220,10 @@ console.log('— planWanAccel 纯判定')
   ok('★ 选了 sage 但 Wan 对应节点不在 → 如实 canInject false（不假装能注入）',
     r2.id === 'sage' && r2.canInject === false, JSON.stringify({ id: r2.id, canInject: r2.canInject }))
   const r3 = planWanAccel({ caps: { nodes: all.nodes, gpu: { vendor: 'amd' } }, frames: 25 })
-  ok('★ A 卡跳过 N 卡专属档 → spectrum（wanNode 空 → 不注入）', r3.id === 'spectrum' && r3.canInject === false)
+  // ★ 2026-11-20 vendor 门放宽：A 卡 Triton 路径可用（LightX2V 官方验证 gfx1100）——
+  //   A 卡全装 → sage 最优先（wanNode 在 → canInject true，真实接线）
+  ok('★ A 卡走 Triton 路径：全装 → sage 且 canInject true', r3.id === 'sage' && r3.canInject === true,
+    JSON.stringify({ id: r3.id, canInject: r3.canInject }))
   const r4 = planWanAccel({ caps: { nodes: { EasyCache: true }, gpu: { vendor: 'amd' } }, frames: 150 })
   ok('★ 长任务（>100 帧）easycache 提到最前', r4.id === 'easycache' && r4.canInject === false)
   const rAlias = planWanAccel({

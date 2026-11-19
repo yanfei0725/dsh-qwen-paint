@@ -44,9 +44,14 @@ const s = (arch, vendor) => routeSageKernels({ arch, vendor })
 ok('Blackwell → auto（构建匹配前提）', s('blackwell', 'nvidia').recommended === 'auto')
 ok('Ada（40 系）→ fp8 建议', s('ada', 'nvidia').recommended === 'fp8')
 ok('Ampere / Turing / Pascal → int8', s('ampere', 'nvidia').recommended === 'int8' && s('turing', 'nvidia').recommended === 'int8' && s('pascal', 'nvidia').recommended === 'int8')
-ok('RDNA3 / 核显 / Arc → unsupported 且 applies:false', s('rdna3', 'amd').recommended === 'unsupported' && s('rdna3', 'amd').applies === false
+// ★ 2026-11-20：rdna3/rdna4 → triton（LightX2V 官方验证 gfx1100/gfx1201）；rdna2/核显/Arc 维持 unsupported
+ok('RDNA3/RDNA4 → triton 且 applies:true（LightX2V 验证 gfx1100/gfx1201）',
+  s('rdna3', 'amd').recommended === 'triton' && s('rdna3', 'amd').applies === true
+  && s('rdna4', 'amd').recommended === 'triton' && s('rdna4', 'amd').applies === true)
+ok('RDNA2 / 核显 / Arc → 维持 unsupported 且 applies:false（验证列表外）',
+  s('rdna2', 'amd').recommended === 'unsupported' && s('rdna2', 'amd').applies === false
   && s('rdna-igpu', 'amd').applies === false && s('xe-arc', 'intel').applies === false)
-ok('节点提供 Triton 变体时如实标注（槽位仍未核实）', s('rdna3', 'amd', ).recommended === 'unsupported')
+ok('节点提供 Triton 变体时如实标注（LightX2V 验证后 rdna3 → triton）', s('rdna3', 'amd', ).recommended === 'triton')
 ok('全部建议 unverified（未实测不承诺）', [s('blackwell', 'nvidia'), s('ada', 'nvidia'), s('ampere', 'nvidia'), s('rdna3', 'amd')].every((x) => x.unverified === true))
 
 /* ---------------- §3 量化内核感知提示（保守口径） ---------------- */
