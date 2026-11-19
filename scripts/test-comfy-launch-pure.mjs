@@ -10,7 +10,7 @@
  *
  * 纯离线。
  */
-import { summarizeLaunchError, buildPosixLaunchCommand } from '../lib/comfy-launch.js'
+import { summarizeLaunchError, buildPosixLaunchCommand, parseImportTimes } from '../lib/comfy-launch.js'
 
 let pass = 0
 let fail = 0
@@ -55,6 +55,29 @@ console.log('— buildPosixLaunchCommand')
   ok("★ useSetsid → setsid --fork 形态（不残留父进程组）", s.cmd.startsWith('setsid --fork'), s.cmd)
   const n = buildPosixLaunchCommand({ py: 'p', args: [], pidFile: 'x', logPath: 'l', launchEnv: [], useSetsid: false })
   ok("无 env → 无 export 段（拼接不留双空格脏串）", !n.wrapped.includes('export'), n.wrapped)
+}
+
+console.log(`合计：${pass} 通过 / ${fail} 失败`)
+if (fail > 0) process.exit(1)
+
+console.log('— parseImportTimes（2026-11-20 零触及复扫补锁）')
+{
+  ok('空串/非字符串 → null', parseImportTimes('') === null && parseImportTimes(null) === null)
+  ok('无「Import times for custom nodes:」标记 → null',
+    parseImportTimes('plain log without marker') === null)
+  const ansi = '[32mImport times for custom nodes:[0m\n' +
+    '  1.5 seconds: C:\\ext\\pack-a\\__init__.py\n' +
+    '  0.3 seconds (IMPORT FAILED): D:\\x\\pack-b\n' +
+    '  4.2 seconds: /opt/pack-c/__init__.py'
+  const r = parseImportTimes(ansi)
+  ok('★ ANSI 清洗 + 3 包解析 + pack 名取路径尾段',
+    r !== null && r.packs === 3 && r.slowest.some((x) => x.pack === '__init__.py')
+    && r.slowest.some((x) => x.pack === 'pack-b'), JSON.stringify(r))
+  ok('★ failed 计数 = 1 + totalSeconds 四舍五入 6.0',
+    r.failed === 1 && r.totalSeconds === 6.0, JSON.stringify({ f: r.failed, t: r.totalSeconds }))
+  ok('★ topN 降序取最慢（默认全出；topN=1 只留 4.2 的 pack-c）',
+    r.slowest[0].seconds === 4.2 && parseImportTimes(ansi, 1).slowest.length === 1
+    && parseImportTimes(ansi, 1).slowest[0].pack === '__init__.py')
 }
 
 console.log(`合计：${pass} 通过 / ${fail} 失败`)

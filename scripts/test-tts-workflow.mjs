@@ -304,3 +304,28 @@ ok('buildDialogueWorkflow：角色名对不上脚本行提前报（节点会静�
 })
 
 console.log(`\n✓ 全部通过（${n} 项）`)
+
+
+/* ---------------- ttsBackendToWorkflowPatch（2026-11-20 零触及复扫补锁） ---------------- */
+{
+  // 本文件 ok 约定 = ok(name, fn)（fn 抛错即崩退非零退出码）；与 dsh 主流 (name, cond) 不同。
+  const { ttsBackendToWorkflowPatch } = await import('../lib/tts-backends.js')
+  const empty = ttsBackendToWorkflowPatch(null)
+  ok('★ selection 空 → 零值 patch（backend 空 + unverified:true + notes 空）', () => {
+    if (!(empty.backend === '' && empty.unverified === true && Array.isArray(empty.notes) && empty.notes.length === 0)) {
+      throw new Error(JSON.stringify(empty))
+    }
+  })
+  const verified = ttsBackendToWorkflowPatch({ selected: { id: 'gsv_cpp', variant: 'v2', unverified: false } })
+  ok('★ verified 后端 → notes 空（无未核实告警）', () => {
+    if (!(verified.backend === 'gsv_cpp' && verified.unverified === false && verified.notes.length === 0)) {
+      throw new Error(JSON.stringify(verified))
+    }
+  })
+  const unv = ttsBackendToWorkflowPatch({ selected: { id: 'index_tts2', variant: '', unverified: true } })
+  ok('★ unverified 后端 → notes 收敛为单条「槽位未经本机核实」', () => {
+    if (!(unv.unverified === true && unv.notes.length === 1 && unv.notes[0].includes('未经本机核实'))) {
+      throw new Error(JSON.stringify(unv.notes))
+    }
+  })
+}
