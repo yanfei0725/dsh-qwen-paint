@@ -124,7 +124,7 @@ console.log('\n=== 5. catch 收口：warn 单条 msg + 固定文案 + failText �
     isLocalRequest: () => true, guardWriteRequest: () => true,
     readJsonBody: async () => ({}), respondJson, log,
   })
-  const boom = route({ path: '/boom', handler: async () => { throw new Error('K:/secret/private.db locked') } })
+  const boom = route({ path: '/boom', handler: async () => { throw new Error('X:/secret/private.db locked') } })
   const res1 = { out: null }
   await boom.handler({ method: 'GET' }, res1)
   ok('默认 catch → 500 处理失败（详见插件日志）',
@@ -132,9 +132,9 @@ console.log('\n=== 5. catch 收口：warn 单条 msg + 固定文案 + failText �
   ok('日志级别 warn（原样板同形；改成 error 在这里变红）', logs.at(-1)?.level === 'warn')
   ok('log 是 (level, msg) 两参签名，错误原文必须拼进单条 msg（三参丢参在这里变红）',
     typeof logs.at(-1)?.msg === 'string' && logs.at(-1).msg.includes('[route /boom]')
-    && logs.at(-1).msg.includes('K:/secret/private.db locked'),
+    && logs.at(-1).msg.includes('X:/secret/private.db locked'),
     JSON.stringify(logs.at(-1)))
-  ok('响应不回吐 error.message（项目私规）', !JSON.stringify(res1.out.body).includes('K:/secret'))
+  ok('响应不回吐 error.message（项目私规）', !JSON.stringify(res1.out.body).includes('X:/secret'))
 
   const custom = route({
     path: '/custom', failText: '历史暂不可用（详见插件日志）',

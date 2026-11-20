@@ -27,9 +27,9 @@ ok('坏格式 → null（单数字 / 非数字 / 缺分隔）',
 
 console.log('— extractJsonPathFromCliOutput')
 ok('★ 纯 JSON 行：output 字段直取',
-  extractJsonPathFromCliOutput('{"output":"K:/a.png"}') === 'K:/a.png')
+  extractJsonPathFromCliOutput('{"output":"X:/a.png"}') === 'X:/a.png')
 ok('★ 混进度输出：取最后一个 JSON 行（早先行带有效 out 也让位末行）',
-  extractJsonPathFromCliOutput('step 1/4\n{"out":"partial.png"}\n{"output":"K:/final.png"}\n') === 'K:/final.png'
+  extractJsonPathFromCliOutput('step 1/4\n{"out":"partial.png"}\n{"output":"X:/final.png"}\n') === 'X:/final.png'
   && extractJsonPathFromCliOutput('{"out":"partial.png"}\n{"out":"final.png"}') === 'final.png',
   extractJsonPathFromCliOutput('{"out":"partial.png"}\n{"out":"final.png"}'))
 ok('字段别名 out/path/file/png 依次兼容',

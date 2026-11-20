@@ -140,26 +140,26 @@ const PNG = 'data:image/png;base64,' + Buffer.from('fake-png-bytes').toString('b
 {
   // ★ 2026-11-20 迁 route-factory 时修齐的泄漏：旧 catch 回吐 error.message 且 recent-images 回 200。
   //   这里把修复后的行为钉住，防止回退。
-  const boom = makeUiEditHandlers({ ...deps, readRecent: async () => { throw new Error('K:/secret/recent.db') } })
+  const boom = makeUiEditHandlers({ ...deps, readRecent: async () => { throw new Error('X:/secret/recent.db') } })
   const r = mkRes()
   await boom.recentImagesHandler(mkReq({}, 'GET'), r)
   ok('★★ recent catch 消毒：500 固定文案、不回吐本机路径',
-    r.status === 500 && r.body.reason === '处理失败（详见插件日志）' && !JSON.stringify(r.body).includes('K:/secret'),
+    r.status === 500 && r.body.reason === '处理失败（详见插件日志）' && !JSON.stringify(r.body).includes('X:/secret'),
     JSON.stringify(r.body))
   ok('★ 异常细节只进本机日志（warn 级）',
-    logs.some((l) => l.level === 'warn' && l.msg.includes('K:/secret')))
+    logs.some((l) => l.level === 'warn' && l.msg.includes('X:/secret')))
 }
 {
   const boomTool = makeUiEditHandlers({
     ...deps,
     getTool: (name) => name === 'upscale_image'
-      ? { execute: async () => { throw new Error('K:/secret/tool.boom') } }
+      ? { execute: async () => { throw new Error('X:/secret/tool.boom') } }
       : deps.getTool(name),
   })
   const r = mkRes()
   await boomTool.quickEditHandler(mkReq({ action: 'upscale', image: '/a/1.png', scale: 2 }), r)
   ok('★★ quickEdit catch 消毒：500 固定文案、不回吐本机路径',
-    r.status === 500 && r.body.reason === '处理失败（详见插件日志）' && !JSON.stringify(r.body).includes('K:/secret'),
+    r.status === 500 && r.body.reason === '处理失败（详见插件日志）' && !JSON.stringify(r.body).includes('X:/secret'),
     JSON.stringify(r.body))
 }
 {
