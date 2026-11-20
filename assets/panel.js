@@ -362,6 +362,13 @@
         out[key] = def.max && def.max > 0 ? raw.slice(0, def.max) : raw
         return
       }
+      // ★ 2026-11-21：下拉控制项（画质档位）走 options 白名单，不做数字 clamp。
+      if (def && def.type === 'select') {
+        var allowed = (def.options || []).map(function (o) { return o && o.value ? String(o.value) : '' })
+        var v = typeof src[key] === 'string' ? src[key] : String(src[key] == null ? '' : src[key])
+        out[key] = allowed.indexOf(v) >= 0 ? v : (def['default'] !== undefined ? def['default'] : '')
+        return
+      }
       out[key] = clampByDef(def, src[key])
     })
     return out
@@ -959,6 +966,35 @@
       scheduleSave()
     })
     wrap._paint = function () { ta.value = String(state[key] != null ? state[key] : '') }
+    return wrap
+  }
+
+  /**
+   * 2026-11-21：下拉控制项（画质档位）。选项来自 schema 的 def.options（白名单），
+   * 值是字符串（如 qualityfix-high），不参与数字 clamp —— 与后端 sanitizeControls 的 select 分支对应。
+   */
+  function selectField(label, key) {
+    var def = defsByKey()[key] || {}
+    var options = Array.isArray(def.options) ? def.options : []
+    var wrap = el('div', 'cp-field')
+    var top = el('div', 'cp-field-top')
+    top.appendChild(el('span', 'cp-label', label))
+    wrap.appendChild(top)
+    var sel = el('select', 'cp-select cp-quality-select')
+    options.forEach(function (o) {
+      var opt = el('option', null, o && o.label ? o.label : String(o && o.value ? o.value : ''))
+      opt.value = o && o.value ? String(o.value) : ''
+      sel.appendChild(opt)
+    })
+    var cur = state[key] !== undefined ? state[key] : (def['default'] !== undefined ? def['default'] : '')
+    sel.value = String(cur == null ? '' : cur)
+    wrap.appendChild(sel)
+    if (def.hint) wrap.appendChild(el('p', 'cp-hint', def.hint))
+    sel.addEventListener('change', function () {
+      state[key] = String(sel.value)
+      scheduleSave()
+    })
+    wrap._paint = function () { sel.value = String(state[key] != null ? state[key] : '') }
     return wrap
   }
 
@@ -1664,6 +1700,8 @@
     //   挂着 disabled 假滑块只会添乱）。旧 schema（无 advShow）→ 全部照旧显示。
     var advShow = plan.advShow || null
     var advDefs = [
+      // ★ 2026-11-21：画质档位下拉（schema 里 type=select，走 selectField 渲染）。
+      ['画质档位', 'preset', { select: true }],
       ['种子（-1 = 每次随机）', 'seed', { hint: '同提示词 + 同种子 = 同一张图；-1 每次都不一样。' }],
       ['采样步数', 'steps', {
         hint: '仅在原生链路（textControl=native）真正按它采样；官方 Turbo 链固定 8/9 步蒸馏，会忽略本值。',
@@ -1679,7 +1717,7 @@
     ]
     advDefs.forEach(function (d) {
       if (advShow && advShow.indexOf(d[1]) === -1) return
-      body.appendChild(field(d[0], d[1], d[2]))
+      body.appendChild(d[2] && d[2].select ? selectField(d[0], d[1]) : field(d[0], d[1], d[2]))
     })
     adv.appendChild(body)
     if (!(plan.cards && plan.cards.advanced === false)) panel.appendChild(adv)
