@@ -150,5 +150,21 @@ ok('摘要把速度标为"吸附档"，不谎称精确档位', /吸附 \d+ 档/.
 ok('quantizeSpeedPercent 与 speedEdge 口径一致（每个 tier 的 edge 不同）',
   new Set(SPEED_TIERS.map((t) => speedEdge(t))).size === SPEED_TIERS.length)
 
+// ---- ⑨ 2026-11-21：画质档位 select 白名单（面板 → 后端链路）----
+ok('★ DEFAULT_CONTROLS 登记了 preset 键（否则 sanitizeControls 丢弃）',
+  Object.prototype.hasOwnProperty.call(DEFAULT_CONTROLS, 'preset') && DEFAULT_CONTROLS.preset === '')
+ok('★ 画质档位 qualityfix-high 通过 select 白名单',
+  sanitizeControls({ preset: 'qualityfix-high' }).preset === 'qualityfix-high')
+ok('★ 画质档位 qualityfix-fast 通过 select 白名单',
+  sanitizeControls({ preset: 'qualityfix-fast' }).preset === 'qualityfix-fast')
+ok('★ 非法画质档位被拒回默认（不进 cfg）',
+  sanitizeControls({ preset: 'evil<script>' }).preset === '')
+ok('★ select 值不被当数字 clamp（不会变 NaN 丢掉）',
+  Number.isNaN(Number('qualityfix-high')) && sanitizeControls({ preset: 'qualityfix-high' }).preset === 'qualityfix-high')
+ok('★ controlsToPref 透传非空画质档位',
+  controlsToPref({ preset: 'qualityfix-high' }).preset === 'qualityfix-high')
+ok('★ 画质档位空值不输出（不压掉其它来源 preset）',
+  !Object.prototype.hasOwnProperty.call(controlsToPref({ preset: '' }), 'preset'))
+
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项）`)
 process.exit(fail === 0 ? 0 : 1)
