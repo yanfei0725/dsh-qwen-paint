@@ -1,6 +1,6 @@
 # dsh-qwen-paint · (绘图)千问（优化版）
 
-DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS / PPT 全能 · 本机运行（QQ 交流群 454707710）。BSL 1.1（BUSL-1.1，非 OSI 开源许可；0.32.1 及更早仍 MIT、不追溯），2030-11-15 转 Apache-2.0。★ 1.2.5：34 笔提交质量收口——修复 5 个真缺陷（后台启动日志重定向失效/ASR 死文案/TTS 取消原因被吞/attention 节点号撞车/A 卡 SageAttention 门+GGUF loader 按后缀）；全量回归 118→135 套、新增 17 套行为护栏全走「存在→登记→注入咬合」；index.js 减重约 40KB（余量升至 76KB），多批端点 handler 外置工厂；不改生成链契约与工具名。★ 1.2.4：双独立审计（main + DSH 背靠背）后落地——修复注释外置误吞 schema-defaults 的 4 个 DEFAULTS 字段（真机默认值丢失，测试曾被假值兜底蒙蔽）的真回归并补根因护栏；新增视频裁剪/ProRes 导出/社区能力发现三工具并接入面板可点；删 5 个零引用死执行器；local-portrait 路径围栏 realpath 复验、Windows VRAM 探针参数化。全量 118 套回归全绿；不改生成链契约与工具名。★ 1.2.3：修复三件真 Bug——宿主升级工具契约后面板 404 大面积报错（extras 整组未注册的真根因：缺 render 自动兜底 + 契约锁，真机验证全 200）、ComfyUI 启动识别 46 秒蒸发（常量漂移）、音色样本重启全丢（index.json 写了从不读回，启动读回 + 逐条校验）；GSV.CPP 外接 TTS 全链路打通——backend=gsv_cpp 直调本机 9880 服务（A 卡 Vulkan 实测全句 2.95 秒 ≈23× 实时速率、221 字长文 4.23 秒；参考音频+转写必填、面板下拉可选、音色样本登记带参考转写、服务挂死 abort 收口）；多音色对话链第一步（本机已装 RoleBank/DialogueInference 节点实锤，buildDialogueWorkflow 纯函数就绪）；slim-comments 修复 $ 替换模式陷阱并把设计注释外置，体积余量回升至 25KB+；不改生成链契约与工具名，全量 114 套回归全绿。★ 1.2.1：许可仍为 BSL 1.1（BUSL-1.1），本版是质量与可诊断性收口补丁——历史库搜索升级 SQLite FTS5 全文索引（1 万条实测 0.023ms vs LIKE 1.012ms，约 44×；短词自动回落 / 旧库自动回填 / 查询注入防护）、doctor 8 项自诊断补齐 4 项真探针（未验证一律标未检测、不谎报 pass）、OOM 建议跟上 ComfyUI v0.37 动态显存与社区 8G 抄作业档、构建期作用域检查升级为零依赖 JS 词法分析器；不改生成链契约与工具名，全量 114 套回归全绿。★ 1.2.0：UI 全折叠 + 双拖拽上传、人物替换（Rust 纯 CPU 底座 + 身份节点发现 / 缺件降级引导）、PPT 讲解图片真写进 OOXML；不捆绑模型、不谎称换脸。★ 0.33.0 起许可改为 BSL 1.1（BUSL-1.1，非 OSI 开源许可）：除托管/代管服务与直接竞品捆绑两类「竞争性使用」外免费生产使用，2030-11-15 转 Apache-2.0；0.32.1 及更早仍 MIT、不追溯。★ 1.1.2：全量审计整改——安全围栏与出站守卫收口（矢量化端点补本机围栏、ASR 端点回环校验、路径防链接越界复验），长任务超时透传、队列生命周期加固，媒体路由流式化＋Range 拖动，探测结果缓存提速分镜合成；API 与工具名零变更。★ 1.1.0：全面提速——内置 resvg 光栅 7.02× / 静态帧去重+VFR 合成 6.58× / 分镜缓存 34.2× / 草稿档 2.10×，TE-Speed 生图链真机 −17.3%，编码择优纠错（x264 排 AMF 前）、BGM 三缓存、Qwen3-TTS attention 可选 + 低延迟分块；未实测的一律不吹倍率。★ 1.0.0：选模型「假成功」根治（拒绝时如实回未生效 + 原因，不再无条件报已选）、优化面板与素材库白条同源修复（持久化缓存 + 占位 + 错误态）、历史筛选分页与重复请求收口、所有写参数拒绝统一 choiceResult。★ 0.35.0：口语入口别名（「风格卡」「批量出图」…）解析成真实工具、参考图色调取样写进提示词、建议时间轴 / 资源需求声明 / 数据流摘要 / 「刚才那张」产出短引用全部接进主链路。★ 0.34.0：SageAttention / Comfy-WaveSpeed 并入加速链并按真实 /object_info 探测、卡片常驻显示；GPT-SoVITS v5 / IndexTTS2 可选 TTS、拖音频零样本克隆、ACE-Step 1.5 / YuE2 音乐 BGM、手动超分、Worker 热温冷保活。0.33.0 新增媒体格式转换（图片 JPG/PNG/WebP、视频 MP4/MKV/MOV/WebM、音频 MP3/AAC/WAV/FLAC，生成物可指定输出格式、动图转视频、自有素材转换，Agent 可直接调用 convert_media）与加速链全景（生图/视频缓存后端 + TTS 加速 + 显存预算 + 配置裁决 + 结构化日志，只列探测到的、未实测不写倍率）、本机能力功能区内嵌进 Comfy 控制面板（展开页恒在悬浮球正上方、边框对齐 DSH 右边框、四事件点按兜底）、GIF 转换 / 运行期自诊断 / 优先级任务队列 / 单图迭代优化 / 自适应 DAG 编排 / 生成历史可删改与冷热分离等本机工具与端点；0.32.1 两轮审计加固：ASR 音频路径围栏（只认出图目录内文件）、按包名安装也能执行引导脚本、草图台四事件点按、错误响应消毒收口；视频链清单化 + 生图/TTS 契约对账（改图自动报差异）；生图/视频/混合三模式界面各不同；批量出图带幂等保护（重试不重出）；Qwen3-TTS 语音克隆与可接 ASR 自动字幕；本机实测秒数；会话级模型驻留、显存建议、参数来源表、预设绑定、加载器盘点等本机端点。文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合、导入音频直接合进成片（音轨合成），文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech，参考音频可复刻音色），模型无关角色参考；GSV.CPP 外接引擎可选（backend=gsv_cpp 直调本机 9880 服务，A 卡 Vulkan 实测 ≈23× 实时速率）；PPT 生成（make_pptx：纯 JS 零依赖零 GPU，大纲级 PPTX 草稿，生成的讲解图片可真写进 PPTX，永远可执行无降级）；草图台手绘参考；生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存；安装入口是常驻的图形化引导面板。对外提供脱敏状态快照与端点目录供外部集成。提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验；音频权重不自动下载，缺件给明确清单。经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。
+DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS / PPT 全能 · 本机运行（QQ 交流群 454707710）。 BSL 1.1（BUSL-1.1，非 OSI 开源许可； 0.32.1 及更早仍 MIT、不追溯），2030-11-15 转 Apache-2.0。 ★ 1.2.6：画质两档预设真正接进生成链+面板可选； 修复 query_history/doctor/run_dag 缺 parameters 致整轮 run 失败； 140 套回归全绿。 ★ 1.2.5：34 笔提交质量收口——修复 5 个真缺陷（后台启动日志重定向失效/ASR 死文案/TTS 取消原因被吞/attention 节点号撞车/A 卡 SageAttention 门+GGUF loader 按后缀）； 全量回归 118→135 套、新增 17 套行为护栏全走「存在→登记→注入咬合」； index.js 减重约 40KB（余量升至 76KB），多批端点 handler 外置工厂； 不改生成链契约与工具名。 ★ 1.2.4：双独立审计（main + DSH 背靠背）后落地——修复注释外置误吞 schema-defaults 的 4 个 DEFAULTS 字段（真机默认值丢失，测试曾被假值兜底蒙蔽）的真回归并补根因护栏； 新增视频裁剪/ProRes 导出/社区能力发现三工具并接入面板可点； 删 5 个零引用死执行器； local-portrait 路径围栏 realpath 复验、Windows VRAM 探针参数化。 全量 118 套回归全绿； 不改生成链契约与工具名。 ★ 1.2.3：修复三件真 Bug——宿主升级工具契约后面板 404 大面积报错（extras 整组未注册的真根因：缺 render 自动兜底 + 契约锁，真机验证全 200）、ComfyUI 启动识别 46 秒蒸发（常量漂移）、音色样本重启全丢（index.json 写了从不读回，启动读回 + 逐条校验）； GSV.CPP 外接 TTS 全链路打通——backend=gsv_cpp 直调本机 9880 服务（A 卡 Vulkan 实测全句 2.95 秒 ≈23× 实时速率、221 字长文 4.23 秒； 参考音频+转写必填、面板下拉可选、音色样本登记带参考转写、服务挂死 abort 收口）； 多音色对话链第一步（本机已装 RoleBank/DialogueInference 节点实锤，buildDialogueWorkflow 纯函数就绪）； slim-comments 修复 $ 替换模式陷阱并把设计注释外置，体积余量回升至 25KB+； 不改生成链契约与工具名，全量 114 套回归全绿。 ★ 1.2.1：许可仍为 BSL 1.1（BUSL-1.1），本版是质量与可诊断性收口补丁——历史库搜索升级 SQLite FTS5 全文索引（1 万条实测 0.023ms vs LIKE 1.012ms，约 44×； 短词自动回落 / 旧库自动回填 / 查询注入防护）、doctor 8 项自诊断补齐 4 项真探针（未验证一律标未检测、不谎报 pass）、OOM 建议跟上 ComfyUI v0.37 动态显存与社区 8G 抄作业档、构建期作用域检查升级为零依赖 JS 词法分析器； 不改生成链契约与工具名，全量 114 套回归全绿。 ★ 1.2.0：UI 全折叠 + 双拖拽上传、人物替换（Rust 纯 CPU 底座 + 身份节点发现 / 缺件降级引导）、PPT 讲解图片真写进 OOXML； 不捆绑模型、不谎称换脸。 ★ 0.33.0 起许可改为 BSL 1.1（BUSL-1.1，非 OSI 开源许可）：除托管/代管服务与直接竞品捆绑两类「竞争性使用」外免费生产使用，2030-11-15 转 Apache-2.0； 0.32.1 及更早仍 MIT、不追溯。 ★ 1.1.2：全量审计整改——安全围栏与出站守卫收口（矢量化端点补本机围栏、ASR 端点回环校验、路径防链接越界复验），长任务超时透传、队列生命周期加固，媒体路由流式化＋Range 拖动，探测结果缓存提速分镜合成； API 与工具名零变更。 ★ 1.1.0：全面提速——内置 resvg 光栅 7.02× / 静态帧去重+VFR 合成 6.58× / 分镜缓存 34.2× / 草稿档 2.10×，TE-Speed 生图链真机 −17.3%，编码择优纠错（x264 排 AMF 前）、BGM 三缓存、Qwen3-TTS attention 可选 + 低延迟分块； 未实测的一律不吹倍率。 ★ 1.0.0：选模型「假成功」根治（拒绝时如实回未生效 + 原因，不再无条件报已选）、优化面板与素材库白条同源修复（持久化缓存 + 占位 + 错误态）、历史筛选分页与重复请求收口、所有写参数拒绝统一 choiceResult。 ★ 0.35.0：口语入口别名（「风格卡」「批量出图」…）解析成真实工具、参考图色调取样写进提示词、建议时间轴 / 资源需求声明 / 数据流摘要 / 「刚才那张」产出短引用全部接进主链路。 ★ 0.34.0：SageAttention / Comfy-WaveSpeed 并入加速链并按真实 /object_info 探测、卡片常驻显示； GPT-SoVITS v5 / IndexTTS2 可选 TTS、拖音频零样本克隆、ACE-Step 1.5 / YuE2 音乐 BGM、手动超分、Worker 热温冷保活。 0.33.0 新增媒体格式转换（图片 JPG/PNG/WebP、视频 MP4/MKV/MOV/WebM、音频 MP3/AAC/WAV/FLAC，生成物可指定输出格式、动图转视频、自有素材转换，Agent 可直接调用 convert_media）与加速链全景（生图/视频缓存后端 + TTS 加速 + 显存预算 + 配置裁决 + 结构化日志，只列探测到的、未实测不写倍率）、本机能力功能区内嵌进 Comfy 控制面板（展开页恒在悬浮球正上方、边框对齐 DSH 右边框、四事件点按兜底）、GIF 转换 / 运行期自诊断 / 优先级任务队列 / 单图迭代优化 / 自适应 DAG 编排 / 生成历史可删改与冷热分离等本机工具与端点； 0.32.1 两轮审计加固：ASR 音频路径围栏（只认出图目录内文件）、按包名安装也能执行引导脚本、草图台四事件点按、错误响应消毒收口； 视频链清单化 + 生图/TTS 契约对账（改图自动报差异）； 生图/视频/混合三模式界面各不同； 批量出图带幂等保护（重试不重出）； Qwen3-TTS 语音克隆与可接 ASR 自动字幕； 本机实测秒数； 会话级模型驻留、显存建议、参数来源表、预设绑定、加载器盘点等本机端点。 文生视频 / 图生视频（Wan 2.2 / XT-5B）与图→音→视频混合、导入音频直接合进成片（音轨合成），文生图与 1–16 张参考图编辑、圈选重绘（羽化 / 边缘融合 / 外扩 / 反选 / 重绘强度可调）/ 元素移除 / 四向扩图 / 高清放大，Qwen3-TTS 语音合成（独立 generate_speech，参考音频可复刻音色），模型无关角色参考； GSV.CPP 外接引擎可选（backend=gsv_cpp 直调本机 9880 服务，A 卡 Vulkan 实测 ≈23× 实时速率）； PPT 生成（make_pptx：纯 JS 零依赖零 GPU，大纲级 PPTX 草稿，生成的讲解图片可真写进 PPTX，永远可执行无降级）； 草图台手绘参考； 生成记录可检索（菜单最上面「历史」，SQLite 索引、软删除不动磁盘文件）。 CPU 也能跑：自动识别 AVX2 / AVX512 / AVX512-BF16 指令集并给五档加速（含 --cpu 强制纯 CPU）、按物理核钉线程，任务结束可选自动卸载模型内存； 安装入口是常驻的图形化引导面板。 对外提供脱敏状态快照与端点目录供外部集成。 提供可选、默认关闭的模型自动下载包：视频模型 --video-models、核显档位 --igpu-download、生图主模型 --tier，按服务器权威 size + sha256 双校验； 音频权重不自动下载，缺件给明确清单。 经本机 ComfyUI 调用，数据仅走 127.0.0.1 回环（联网参考图检索默认拒绝、须逐次同意），无需 API 密钥、零调用费用。 Windows / Linux，NVIDIA / Intel Arc / AMD / 核显共享内存，含 8 GB 低内存档位。
 
 ## Features
 
@@ -37,7 +37,7 @@ DSH 插件 / DeepSeek Harness：视频 / 生图 / TTS / PPT 全能 · 本机运�
 dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 ```
 
-> 使用 `desktop` profile 时须**先完全退出 DSH**。本包在 npm 的包名为 `dsh-qwen-paint`（仓库当前 `1.2.5`），可直接 `dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式仅用于开发或试用未发布改动。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
+> 使用 `desktop` profile 时须**先完全退出 DSH**。本包在 npm 的包名为 `dsh-qwen-paint`（仓库当前 `1.2.6`），可直接 `dsh plugin add dsh-qwen-paint` 按包名安装；本地目录 / 本地包形式仅用于开发或试用未发布改动。完整步骤、profile 选择与排错见下文「安装」及 `INSTALL.md`。
 
 ## Usage
 
@@ -103,7 +103,7 @@ dsh plugin --profile desktop add link:<本插件目录的绝对路径>
 
 > **QQ 交流群**：`454707710`　｜　**反馈 / 提问 / 提需求**都走这里，issue 也欢迎：<https://github.com/yanfei0725/dsh-qwen-paint/issues>
 
-> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：BSL 1.1（BUSL-1.1）　｜　**当前版本**：`1.2.5`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
+> **原作者**：@奇迹与你　｜　**优化版作者**：@yanfei0725　｜　**许可协议**：BSL 1.1（BUSL-1.1）　｜　**当前版本**：`1.2.6`　｜　仓库：<https://github.com/yanfei0725/dsh-qwen-paint>
 
 ---
 
@@ -192,6 +192,39 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 
 
 
+## 1.2.6 更新说明
+
+本版主线：**修掉一个「测试全绿但整轮 run 全失败」的工具契约事故 + 让画质两档预设真正接进生成链与面板**。Don-0017 报的 `query_history` 缺 `parameters` 不只是单工具不可用——宿主在工具表枚举/投影阶段对 undefined 做无损 JSON 快照直接抛错，整轮 run 与其他工具一起挂掉；排查发现同一个漏写共有 3 个工具。画质预设此前只改 steps/cfg/negative，Fix LoRA 强度、sigma、后处理、分段 CFG 从未流到图里；本版把它接成真链路，并给面板加档位下拉。未经真机自证的加速倍率一律沿用旧口径，不新增声明。
+
+### 许可证
+- 维持 **BSL 1.1**（`BUSL-1.1`，非 OSI 开源许可）：自 **0.33.0 起**生效，**Change Date 2030-11-15** 自动转 **Apache-2.0**。**0.32.1 及更早版本仍按 MIT 授权，永久、不可撤销、不追溯**。本版不改许可文本、不新增限制；外部 TTS 服务合规边界不变，官方未提供的加速收益仍标 unverified。
+
+### 新工具与端点
+- 不新增 Agent 工具名（`query_history` / `doctor` / `run_dag` 都是既有工具）。给三者 definition 补齐与各自 `execute()` 实参对齐的 `parameters`，`query_history` 覆盖 15 个过滤字段（含 `kind` enum）。两个画质档位不改端点，只复用 `draw_image` 的 `preset` 参数，schema→渲染→payload→后端白名单→出图参数整链对齐。
+
+### 加速链全景
+- 不改任何倍率结论。TE-Speed / Speedup / BlockCache / 前缀缓存 / resvg 光栅 / 去重 VFR / 分镜缓存等承接 1.2.5；画质档位里的 SageAttention / VAE tiling 只是既有开关的配方选择，不新增驱动层能力，未经本版真机复测的收益沿用旧口径。
+
+### 工作流清单层
+- `chain-manifest` 与图结构指纹基准继续生效，默认路径逐字节不变。high 档用局部配置副本 `planCfg` 强制关闭 `officialTurboEnabled/turbo8Enabled`，避免被官方 Turbo 链吞掉；只接真实节点，缺失节点一律降级并如实回报。
+
+### 结构化运行日志
+- `event-log` 落盘 + 生成完成钩子口径不变；细分耗时官方不提供的保持 `null`。画质接线把生效/降级项写进 `__plan.quality`，可在运行元信息里回查哪几项真正生效；工具契约事故在投影阶段即抛错，这也促成下面的发布前自测护栏。
+
+### UI 与交互
+- 位置口径不变：功能区**内嵌** Comfy 控制面板（不新开浮层），展开页恒在悬浮球**正上方**、**边框对齐** DSH 右边框、小屏**不变形**，四事件点按 + `pointerdown` `preventDefault` 兜底。本版在「高级设置」新增「画质档位」下拉（默认 / 快速预览 / 高质量成品），真机须刷新 DSH 页面自证 build。
+
+### 媒体格式转换
+- 图片 JPG/PNG/WebP、视频 MP4/MKV/MOV/WebM、音频 MP3/AAC/WAV/FLAC 互转不变；媒体路由流式化 + Range 与缓存头承接前版。画质档位只影响生图采样链与解码后处理，不碰格式矩阵。
+
+### 联动护栏与回归
+- 全量 **140 套 / 7833 项断言 / 0 失败**。新增 `test-tool-parameters.mjs`：用宿主同款 `projectToolSchema` 投影逻辑遍历全部 30 个外置工具，任何一个缺 `parameters` 或不可无损 JSON 快照即红（已反向核查：删掉一个字段会红）；新增 `test-quality-wiring.mjs` 32 项覆盖 high 档强制原生链、后处理节点、sigma 接管、分段 CFG 探测与降级、非画质档零副作用；`test-pipeline-panel.mjs` 同步新增画质下拉断言。全部已进回归清单——不进清单的测试等于没测试。
+- `lib/index.js` 186,523 B / 余量 **75,621 B**（红线 262,144 B）。当前 **150 个 `lib/*.js`** / 合计 **2,095,793 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径）。接线层并入 `quality-pipeline.js`，设计说明外置到 `docs/quality-wiring-design-notes.md` 等三份文件，不新增 lib 文件守住体积红线。
+- 画质两档：`preset=qualityfix-fast`（T8 + Fix LoRA 0.75 / 8 步 / CFG=1 / 官方 Turbo sigma / 无后处理）与 `preset=qualityfix-high`（原版 2.1 + Fix LoRA 1.0 / 20 步 / CFG=2.8 / 优化 sigma / 弱 S 曲线 + USM）。后处理只接本机 1686 节点实测存在的 `AdjustBrightness` / `AdjustContrast` / `ImageSharpen`，不编造 class_type；分段 CFG 需自行安装 ComfyUI-Inspire-Pack 的 `ScheduledCFGGuider //Inspire`，未装降级固定 CFG 并如实回报。本机官方八步 `qwen_image_2.1_turbo_int8_convrot.safetensors` 与社区八步 `turbo8_lora_step2500.safetensors` 均已在位，无需额外下载；权重目录登记按服务器权威 size/sha256，默认不下载。
+
+### 文档
+- `package.json`（description + meta.description）/ README 首段 / 两份 llms 首段 / `pyproject.toml` / `docs/index.html` / `给DSH安装的话.md` 全部同步到 1.2.6；`scripts/test-release-metadata.mjs` 的唯一真相源口径同步校验，一处改、多处一起校验。
+
 ## 1.2.5 更新说明
 
 本版主线：**34 笔提交的质量收口——真缺陷修复 + 回归护栏扩容 + 结构瘦身**。这 34 笔来自 zcode 通宵优化接力与 main 接手收尾，全程「存在→登记→注入咬合」验证，未靠堆代码凑消耗。修复的 5 个真缺陷里，nohup 后台日志重定向失效曾让 macOS/Linux 启动诊断全瞎，ASR 死文案让未配置提示被短路吞掉，TTS 取消原因被通用 aborted 掩盖，attention 节点号与 4 路 ControlNet 加载器撞车（默认关故潜伏未爆），A 卡 SageAttention 选档门与 GGUF loader 按后缀切换有官方出处与反向核查。**未经真机自证的能力仍不写「通过」**。
@@ -218,10 +251,8 @@ VAE 优先复用解码节点已有的 `vae` 接线，`denoise` 只改本来就�
 - 图片 JPG/PNG/WebP、视频 MP4/MKV/MOV/WebM、音频 MP3/AAC/WAV/FLAC 互转不变；媒体路由流式化 + Range 与缓存头口径承接 1.1.2。本版的视频裁剪 / ProRes 导出仍是后处理补充，不改原转换矩阵；GGUF loader 后缀切换只影响视频生成链的模型加载，不改用户可见的转换参数。
 
 ### 联动护栏与回归
-- 全量 **135 套 / 断言项全绿**（较 1.2.4 的 118 套新增 17 套）。新增行为护栏覆盖：status-handler 跨站 403 / ping 双封顶、ASR 状态文案、comfy-launch（含 nohup bug 注入）、attention 后端优先级、PPTX zip 字节级 + python zipfile 标准解析、music/model/graph/prune 等纯函数与图结构，均走「缺陷注入→变红→恢复绿」验证。`test-mode-schema` 判据从「源码含 buildSchemaSnapshot」升级为验证真实链路（reg 指向工厂 + 工厂体含该函数），判据升级非放松。
-- `lib/index.js` 185,796 B / 余量 **76,348 B**（红线 262,144 B），较 1.2.4 减重约 40 KB（多批 handler 外置 + 注释外置）。
-- 当前 **147 个 `lib/*.js`** / 合计 **2,074,855 B**（按规范化 LF 字节计，与 git blob / CI checkout 同口径）。
-
+- 全量 **140 套 / 断言项全绿**（较 1.2.4 的 118 套新增 22 套；本轮补登画质修复预设 1 套 = `test-quality-fix.mjs` 32 项、画质管线 1 套 = `test-quality-pipeline.mjs` 39 项、参数桥 1 套 = `test-quality-args.mjs` 18 项、画质接线 1 套 = `test-quality-wiring.mjs` 32 项）。新增行为护栏覆盖：status-handler 跨站 403 / ping 双封顶、ASR 状态文案、comfy-launch（含 nohup bug 注入）、attention 后端优先级、PPTX zip 字节级 + python zipfile 标准解析、music/model/graph/prune 等纯函数与图结构，均走「缺陷注入→变红→恢复绿」验证。`test-mode-schema` 判据从「源码含 buildSchemaSnapshot」升级为验证真实链路（reg 指向工厂 + 工厂体含该函数），判据升级非放松。
+- `lib/index.js` 186,523 B / 余量 **75,621 B**（红线 262,144 B），较 1.2.4 减重约 40 KB（多批 handler 外置 + 注释外置）；画质预设接入 resolveDrawParams + 透传 quality 配方微增约 725 B。
 ### 文档
 - `package.json`（description + meta.description）/ README 首段 / 两份 llms 首段 / `pyproject.toml` / `docs/index.html` / `给DSH安装的话.md` 全部同步到 1.2.5；`scripts/test-release-metadata.mjs` 的唯一真相源口径同步校验，一处改、多处一起校验。测试夹具里的本机 K: 盘占位符统一改成中性 X: 盘，pack 隐私扫描零命中。
 
