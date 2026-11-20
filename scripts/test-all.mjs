@@ -109,6 +109,11 @@ const SUITES = [
   { file: 'test-hipfire-guard.mjs', note: 'hipfire guard（空 prompt/negative 诚实条款拒/回环 URL 校验/cli 无 exe 如实报错，注入咬合已验）' },
   // ★ 2026-11-20 零触及复扫（双口径）：graph-audit pruneGraph 直测（lib 内零接线孤儿导出，价值最高项）
   { file: 'test-graph-audit-prune.mjs', note: 'graph-audit pruneGraph（无输出守护不删用户图/孤儿剔除/mutate 两态/outputs 白名单透传/isLink 语义，注入咬合已验）' },
+  // ★ 2026-11-20 画质修复两档预设（快速 T8+Fix0.75 / 高质量 原版2.1+Fix1.0）+ 权威校验 catalog
+  { file: 'test-quality-fix.mjs', note: 'quality-fix 两档预设参数/蒸馏链 CFG 硬钳/权威 size+sha256 校验/自备不编造 URL（纯函数零 I/O）' },
+  { file: 'test-quality-pipeline.mjs', note: 'quality-pipeline sigma 重采样/分段 CFG 单调/真实后处理节点字段/提示词模板/避开坑护栏（纯函数零 I/O）' },
+  { file: 'test-quality-args.mjs', note: 'quality-args 预设→出图参数映射/steps+CFG+负面覆盖/显式优先/未知预设拒绝（纯函数零 I/O）' },
+  { file: 'test-quality-wiring.mjs', note: 'quality-wiring 画质预设真正接线：后处理节点/sigma 接管/分段CFG探测降级/非画质档零副作用（纯函数零 I/O）' },
   { file: 'test-audio-workflows.mjs', note: '语音克隆 + 音轨合成（真机节点契约/上传/降级）' },
   // ★ 2026-11-14 A1：工作流 JSON 化第一步 —— 清单 / 双轨一致性 / 校验器 / 发布物完整性
   { file: 'test-workflow-manifest.mjs', note: '工作流声明式清单（双轨逐字节一致 / 校验器真抓错 / files 白名单）' },
@@ -167,6 +172,7 @@ const SUITES = [
   { file: 'test-perf-config.mjs', note: '提示词模板（F28 渲染无残渣/无重复后缀）/ 显存与缓存档位语义（B7/B8）/ 缓存命中摘要口径（B9）/ 进度分级日志过滤（G35）/ 一键恢复默认改名不删（G34）' },
   // —— 契约 / 面板 / 步骤 ——
   { file: '_tool_contract_test.mjs', note: '工具契约' },
+  { file: 'test-tool-parameters.mjs', note: '工具 parameters 宿主同款投影校验：全部外置工具必须有可无损 JSON 快照的 parameters（Don-0017 整轮 run 失败根因）' },
   { file: '_step4_dry_test.mjs', note: '4 步干跑' },
   { file: '_client_scope_test.mjs', note: '面板作用域无未声明标识符（token 流引擎）' },
   { file: 'test-js-lexer.mjs', note: '零依赖 JS 词法分析器（四类隔离/模板插值根/运算符排除）' },
