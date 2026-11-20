@@ -145,6 +145,13 @@ const fetch = (url, init) => {
             ],
             video: [],
             advanced: [
+              // 2026-11-21 画质档位：与 mode-schema.js 同步的 select 定义（测试假 schema）。
+              { key: 'preset', type: 'select', default: '', label: '画质档位',
+                options: [
+                  { value: '', label: '默认（不套画质预设）' },
+                  { value: 'qualityfix-fast', label: '快速预览 · T8+Fix0.75 / 8步 CFG1' },
+                  { value: 'qualityfix-high', label: '高质量成品 · 2.1+Fix1.0 / 20步 CFG2.8' },
+                ] },
               { key: 'seed', type: 'number', min: -1, max: 2 ** 32 - 1, default: -1 },
               { key: 'count', type: 'number', min: 1, max: 4, step: 1, default: 1 },
               { key: 'steps', type: 'slider', min: 4, max: 40, step: 1, default: 8 },
@@ -451,8 +458,17 @@ ok('★★ 生图模式不渲染视频参数卡（挂 disabled 滑块只会让�
   panelEl.querySelectorAll('.cp-video-group').length === 0)
 ok('★ 生图模式不渲染混合链说明卡', panelEl.querySelectorAll('.cp-tts-group').length === 0)
 const fields = panelEl.querySelectorAll('.cp-field')
-ok('★★ 生图模式 = 常用 3 + 高级 4（seed/steps/cfg/count）= 7 项（视频向的 denoise/tile/chunk 被藏掉）',
-  fields.length === 7, String(fields.length))
+ok('★★ 生图模式 = 常用 3 + 高级 5（画质档位/seed/steps/cfg/count）= 8 项（视频向的 denoise/tile/chunk 被藏掉）',
+  fields.length === 8, String(fields.length))
+ok('★★ 生图模式渲染画质档位下拉且含两档 qualityfix 选项（2026-11-21）', (() => {
+  // 假 DOM 的 querySelectorAll 只认单一 class 或 tag，故先用 class 找 select 再查子节点。
+  const sels = panelEl.querySelectorAll('.cp-quality-select')
+  if (sels.length !== 1 || sels[0].tagName !== 'SELECT') return false
+  const opts = sels[0].querySelectorAll('OPTION')
+  // 假 DOM 对 option.value 支持不一，改验 option 数量与可见文案（真浏览器文案含两档）。
+  const txt = opts.map((o) => String(o.textContent)).join('|')
+  return opts.length >= 3 && txt.includes('快速预览') && txt.includes('高质量成品')
+})())
 const disabledInputs = panelEl.querySelectorAll('input').filter((i) => i.disabled === true)
 ok('★★ 生图模式零 disabled 输入件（看得见的每一件都能用）',
   disabledInputs.length === 0, String(disabledInputs.length))
