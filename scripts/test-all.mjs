@@ -101,6 +101,8 @@ const SUITES = [
   { file: 'test-ws-preview-store.mjs', note: 'ws-preview store（percent 夹紧防除零/dataUrl 脱敏不吐 Buffer/TTL 过期删/FIFO 挤最老真实语义锁，注入咬合已验）' },
   // ★ 2026-11-20 零触及清单：reference-endpoints 直测（4 端点行为切片，route-factory guard 放行须 truthy 教训在案）
   { file: 'test-reference-endpoints.mjs', note: 'reference-endpoints（GET 协商 online 如实/characterLock 分段锁/prefer 零漂移/search 硬同意门 403/adapt 400 校验，注入咬合已验）' },
+  // ★ 2026-11-20 四端点 handler 外置：schema/controls/library/skills 行为护栏（专治手抄漏分支——controls GET/POST 双分支真断言，反向核查改坏变红）
+  { file: 'test-misc-endpoints.mjs', note: 'misc-endpoints 四 handler 行为（schema GET+403/controls GET+POST+405/library GET+POST+403/skills GET，抄漏分支会红——注入咬合已验）' },
   // ★ 2026-11-20 零触及清单：orphan-extras 工具工厂行为直测（此前只锁注册接线不锁行为）
   { file: 'test-orphan-tools.mjs', note: 'orphan-extras 工厂（plan_timeline 12 段上限/privacy_summary external 按真实 URL 清单算——注入咬合已验）' },
   // ★ 2026-11-20 零触及清单：hipfire 前置校验错误路径（零 mock——校验段全在 I/O 之前）

@@ -77,10 +77,16 @@ ok('ETA 一律标「估算」且公式含 speed/100',
 // ---- 4. 桥接落点：host 注册端点、前端 fetch、零静态 import ----
 const indexSrc = read('lib/index.js')
 const clientSrc = read('lib/client.js')
+const miscSrc = read('lib/misc-endpoints.js')
 const HOST_PATH = '/api/comfy-pipeline/schema'
 const CLIENT_PATH = 'api/comfy-pipeline/schema'
-ok('index.js 注册 GET /api/comfy-pipeline/schema',
-  indexSrc.includes(`reg('${HOST_PATH}'`) && indexSrc.includes('buildSchemaSnapshot'))
+// ★ 2026-11-20 handler 外置：schema handler 体从 index.js 搬到 misc-endpoints.js，
+//   reg 行留守 index.js 指向 miscHandlers.schemaHandler。断言升级为验证整条真实链路：
+//   index 注册 + 指向工厂 + 工厂体内 buildSchemaSnapshot（不是改数字迁就）。
+ok('index.js 注册 GET /api/comfy-pipeline/schema 并指向 miscHandlers',
+  indexSrc.includes(`reg('${HOST_PATH}', miscHandlers.schemaHandler)`)
+  && miscSrc.includes('buildSchemaSnapshot')
+  && miscSrc.includes('schemaHandler'))
 ok('client.js 用 fetch 读同源 schema 并挂 window.ComfyPipelineSchema',
   clientSrc.includes(`fetch('${CLIENT_PATH}'`) && clientSrc.includes('window.ComfyPipelineSchema'))
 ok('client.js 零静态 import/export（非 ESM 单入口硬约束）',
