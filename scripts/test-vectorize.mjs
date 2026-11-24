@@ -64,7 +64,8 @@ ok('未配置 potracePath → 提示用户自备 exe', String(vectorizeExePath('
 /* ---------------- §4 执行边界（注入假 execFile，真 tmp 目录） ---------------- */
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dshqp-vtracer-'))
-fs.writeFileSync(path.join(tmp, 'vtracer.exe'), 'fake-exe')
+const fakeExeName = process.platform === 'win32' ? 'vtracer.exe' : 'vtracer'
+fs.writeFileSync(path.join(tmp, fakeExeName), 'fake-exe')
 var captured = null
 const runOk = await runVectorize({ engineId: 'vtracer', cfg: { vtracerPath: tmp },
   sourcePath: path.join(tmp, 'in.png'), outputPath: path.join(tmp, 'out.svg'),
