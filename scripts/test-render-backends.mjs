@@ -132,11 +132,18 @@ section('③b 内置 resvg + stdin 渲染（真内置）')
   const fail = rb.createRenderProbes({ exec: async () => {}, execStdin: async () => ({ ok: false }),
     builtin: { binPath: 'D:/plugin/assets/bin/resvg.exe', display: '插件内置 resvg.exe', source: '内置' } })
   ok('★ stdin 执行失败降级保留 SVG', (await fail.rasterBackend('<svg></svg>', {})).ok === false)
-  ok('★ 内置 exe 文件真在包内（assets/bin/resvg.exe）', (() => {
-    try { return fs.statSync(path.join(ROOT, 'assets/bin/resvg.exe')).size > 1e6 } catch { return false }
-  })())
-  ok('★ 内置双许可证（Apache-2.0 OR MIT）随包', ['LICENSE-resvg-MIT.txt', 'LICENSE-resvg-APACHE.txt']
-    .every((f) => fs.existsSync(path.join(ROOT, 'assets/bin', f))))
+  // ★ 二进制 / 许可证是本机安装物，不在源码检出里（CI 必然缺）。
+  //   有就验真实体积；没有就验生产代码如实降级为 null —— 绝不把缺件当代码 bug，也绝不假装有。
+  const exePath = path.join(ROOT, 'assets/bin/resvg.exe')
+  if (fs.existsSync(exePath)) {
+    ok('★ 内置 exe 文件真在包内（assets/bin/resvg.exe）', fs.statSync(exePath).size > 1e6)
+    ok('★ 内置双许可证（Apache-2.0 OR MIT）随包', ['LICENSE-resvg-MIT.txt', 'LICENSE-resvg-APACHE.txt']
+      .every((f) => fs.existsSync(path.join(ROOT, 'assets/bin', f))))
+  } else {
+    ok('★ 缺内置二进制时 builtinResvgPath 如实返回 null（CI 源码检出）',
+      rb.builtinResvgPath({ metaUrl: 'file:///D:/plugin/lib/render-backends.js', exists: () => false }) === null)
+    console.log('— 源码检出不含随包二进制 / 许可证，跳过存在性断言（本机装了才会验）')
+  }
 }
 
 section('④ 动画缓存最小版')
