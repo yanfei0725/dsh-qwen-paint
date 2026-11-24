@@ -1050,6 +1050,15 @@ if (TIERS[tier].unet === null) {
 
 let needDownload = 0
 let allOk = true
+/* ★ 首次安装门禁修复：allOk 是「预检时的状态」，只给 --check 早退用（1091/1098 行）。
+   预检发现缺文件就置 false —— 这对「只看不下载」是对的，但对「下载完往下装插件」是错的：
+   三个模型都下载校验通过后，allOk 仍是 false，第③步永远进不去（issue #3）。
+   所以下面两个标志单独记录**下载之后**的真实结果，互不污染：
+     modelsReady —— MODELS 是否全部校验通过；
+     extrasOk    —— 可选补齐（核显模型）是否有失败。
+   最终判定（输出目录 / 第③步）只看这两个，不再复用预检变量。 */
+let modelsReady = true
+let extrasOk = true
 const needGguf = /\.gguf$/iu.test(MODELS[0].name)
 for (const model of MODELS) {
   const dest = path.join(modelsRoot, model.dir, model.name)
@@ -1142,7 +1151,7 @@ if (IGPU_DOWNLOAD && IGPU_PLAN !== null && IGPU_PLAN.downloadable) {
     }
     if (!done) {
       console.error(`  ✗ ${m.sources.length} 个源都没拿到合格文件；未使用任何半成品。`)
-      allOk = false
+      extrasOk = false
     }
   }
 } else if (IGPU_PLAN !== null && IGPU_PLAN.downloadable) {
@@ -1178,14 +1187,14 @@ if (needDownload === 0) {
       console.error(`  ✗ ${urls.length} 个源都失败了。`)
       console.error('    可重复跑本脚本，curl 会断点续传。')
       console.error(`    或者自己下一个 .gguf 放进 ${path.join(modelsRoot, 'unet')}，插件会自动认。`)
-      allOk = false
+      modelsReady = false
       continue
     }
     if (finalSize !== model.size) {
       console.error(`  ✗ 大小不对：${mb(finalSize)}，应为 ${mb(model.size)}`)
       console.error('    ⚠ 按铁律二：校验不过的文件一律删除，不得使用。')
       fs.rmSync(dest, { force: true })
-      allOk = false
+      modelsReady = false
       continue
     }
     process.stdout.write(`    大小对上了，算 SHA256 …`)
@@ -1195,11 +1204,27 @@ if (needDownload === 0) {
       console.log(`    期望 ${model.sha256}`)
       console.log(`    实际 ${digest}`)
       fs.rmSync(dest, { force: true })
-      allOk = false
+      modelsReady = false
       continue
     }
     console.log(`\r  ✓ ${model.name} 校验通过（SHA256 与 ${REPO} 一致）`.padEnd(64))
   }
+}
+
+/* ★ issue #3 第二道闸：下载循环走完后，按磁盘权威值重新核对 MODELS。
+   下载循环里逐条校验已很严，这里再兜一次底（例如某个分支忘了置位、或文件被外部搬走）：
+   只有每个文件都真在、且大小等于服务器权威值，modelsReady 才允许保持 true。
+   --check 早在上面就退出了，这段绝不会在只读模式下跑。 */
+if (!CHECK_ONLY) {
+  const diskOk = MODELS.every((m) => {
+    const p = path.join(modelsRoot, m.dir, m.name)
+    try {
+      return fs.existsSync(p) && fs.statSync(p).size === m.size
+    } catch {
+      return false
+    }
+  })
+  if (!diskOk) modelsReady = false
 }
 
 
@@ -1225,7 +1250,7 @@ if (tier === 'lite' && !CHECK_ONLY) {
  *      （"目录在"不等于"能写"，Windows 上见过 ACL 拒写）。
  */
 const OUTPUT_DIR_ARG = valueOf('--output-dir')
-if (!CHECK_ONLY && allOk && comfyDir !== null) {
+if (!CHECK_ONLY && modelsReady && extrasOk && comfyDir !== null) {
   const base = process.env.XDG_DESKTOP_DIR || path.join(os.homedir(), 'Desktop')
   const norm = (p) => (path.isAbsolute(p) ? path.normalize(p) : path.resolve(base, p))
 
@@ -1413,7 +1438,7 @@ if (!CHECK_ONLY) {
 
 /* ③ 插件本体 */
 console.log('\n③ 把插件挂进 DSH profile …')
-if (!allOk) {
+if (!modelsReady || !extrasOk) {
   console.log('  ⚠ 模型还没齐，先不装插件（模型是我们自己的问题，装上也画不出图）。')
   console.log('  处理完上面的问题再重跑本脚本。')
   process.exit(1)
