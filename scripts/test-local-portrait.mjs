@@ -133,8 +133,18 @@ console.log('=== 6. 行为级：composePortrait（假 runArgv） ===')
 }
 
 console.log('=== 7. 内置 exe 与 Rust 源码存在性 ===')
-ok('assets/bin 内置 exe 存在', fs.existsSync(path.join(ROOT, 'assets/bin', PORTRAIT_EXE)))
-ok('exe 非空（>100KB）', (() => { try { return fs.statSync(path.join(ROOT, 'assets/bin', PORTRAIT_EXE)).size > 100000 } catch { return false } })())
+// 二进制是本机安装物，不在源码检出里（CI 必然缺）：有就验体积，没有就验生产如实降级为 null。
+{
+  const exePath = path.join(ROOT, 'assets/bin', PORTRAIT_EXE)
+  if (fs.existsSync(exePath)) {
+    ok('assets/bin 内置 exe 存在', true)
+    ok('exe 非空（>100KB）', fs.statSync(exePath).size > 100000)
+  } else {
+    ok('缺内置 exe 时 builtinPortraitPath 如实返回 null（CI 源码检出）',
+      builtinPortraitPath({ metaUrl: 'file:///D:/plugin/lib/local-portrait.js', exists: () => false }) === null)
+    console.log('— 源码检出不含随包 exe，跳过存在性断言（本机装了才会验）')
+  }
+}
 ok('Rust 源码可复现构建（main.rs + Cargo.toml）',
   fs.existsSync(path.join(ROOT, 'tools-rust/dshqp-portrait/src/main.rs'))
   && fs.existsSync(path.join(ROOT, 'tools-rust/dshqp-portrait/Cargo.toml')))
