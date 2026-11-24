@@ -158,8 +158,8 @@ const SUITES = [
   // ★ 2026-11-13 CPU 指令集识别 / 加速档：五档参数 + --cpu 互斥裁决 + 三态语义 + 端点围栏
   { file: 'test-cpu-profile.mjs', note: 'CPU 加速档：型号/指令集三态 / 五档真实参数 / --cpu 摘显存与GPU内核 / 互斥组后者胜出 / QwenImage21Cache 覆盖 / 端点围栏与脱敏（全离线）' },
   // ★ 2026-11-13 生成历史：真跑 node:sqlite（库在系统临时目录、跑完即删）+ 端点围栏 + 降级口径
-  { file: 'test-history.mjs', note: '生成历史：相对路径入库 / 重复忽略 / 软删除不动磁盘文件 / SQL 注入不破表 / 无 sqlite 如实降级 / 端点围栏与脱敏 / 前端无 innerHTML 与外部 URL（全离线）' },
-  { file: 'test-history-export.mjs', note: '历史可带走形态：结构化 alt（F30）/ Markdown 引用不泄漏绝对路径（G32）/ 继续编辑候选（G33）/ 缩略图 data_url 三道闸与落盘回滚（G36）' },
+  { file: 'test-history.mjs', note: '生成历史：相对路径入库 / 重复忽略 / 软删除不动磁盘文件 / SQL 注入不破表 / 无 sqlite 如实降级 / 端点围栏与脱敏 / 前端无 innerHTML 与外部 URL（全离线）', requires: 'sqlite' },
+  { file: 'test-history-export.mjs', note: '历史可带走形态：结构化 alt（F30）/ Markdown 引用不泄漏绝对路径（G32）/ 继续编辑候选（G33）/ 缩略图 data_url 三道闸与落盘回滚（G36）', requires: 'sqlite' },
   // ★ 2026-11-14 第四/五批：创作编排、运行期护栏、批量守卫
   { file: 'test-batch-guard.mjs', note: '批量出图守卫：种子×尺寸笛卡尔积 / 单张失败不中断整批 / 失败后队列复位 / 错误可操作化诊断（注入假 runOne，零出图）' },
   { file: 'test-creative-chain.mjs', note: '创作编排：产出短引用 #1 最新（D18）/ 时间轴骨架与末段夹取（D20）/ 资源需求三档且不给秒数（E27）/ 数据流摘要 external 是算出来的（F31）/ 色调提取 HSL 与全灰不硬造色相（F29）' },
@@ -173,6 +173,7 @@ const SUITES = [
   // —— 契约 / 面板 / 步骤 ——
   { file: '_tool_contract_test.mjs', note: '工具契约' },
   { file: 'test-tool-parameters.mjs', note: '工具 parameters 宿主同款投影校验：全部外置工具必须有可无损 JSON 快照的 parameters（Don-0017 整轮 run 失败根因）' },
+  { file: 'test-setup-first-run-gate.mjs', note: '首次安装门禁（issue #3）：预检 allOk 只供 --check，下载后 modelsReady/extrasOk 分开重算 + 磁盘权威复核，首次装完能进第③步' },
   { file: '_step4_dry_test.mjs', note: '4 步干跑' },
   { file: '_client_scope_test.mjs', note: '面板作用域无未声明标识符（token 流引擎）' },
   { file: 'test-js-lexer.mjs', note: '零依赖 JS 词法分析器（四类隔离/模板插值根/运算符排除）' },
@@ -207,7 +208,7 @@ const SUITES = [
   { file: 'test-capability-audit.mjs', note: '清单全面排查联动：显存 MB→GB 修复 / 结构化日志落盘 / 显存预算端点 / TeaCache 装配计划 / TTS 补丁零污染 / doctor 探针契约 / Agent 端点目录 / 新模块孤儿扫描' },
   // ★ 2026-11-15：MEMORY.md 第 11 节「明确待办」六条收口后新增的护栏
   { file: 'test-chain-manifest.mjs', note: '三条链统一声明式清单目录 / 契约+指纹来源真校验 / runtime 唯一 / 预设绑定去 pending' },
-  { file: 'test-generation-log.mjs', note: '生成完成自动落盘结构化日志（实测总耗时 / 脱敏 / 细分耗时 null / 钩子失败不影响出图）' },
+  { file: 'test-generation-log.mjs', note: '生成完成自动落盘结构化日志（实测总耗时 / 脱敏 / 细分耗时 null / 钩子失败不影响出图）', requires: 'sqlite' },
   { file: 'test-draft-pointer.mjs', note: '草图台指针序列离线仿真验收 + smoke.mjs 默认只读 / --submit 显式开关契约' },
   // ★ 2026-11-15：MIT → BSL 1.1（四年后转 Apache-2.0）换证护栏
   { file: 'test-license-bsl.mjs', note: 'BSL 1.1 换证：官方条款正文逐字 + SHA-256 / 五参数 / Change Date 真四年 / 0.32.1 不追溯 / 8 处文档口径 / 第三方许可不误改 / 脱敏' },
@@ -234,7 +235,7 @@ const SUITES = [
   { file: 'test-transcribe.mjs', note: '音频转文字：能力探测诚实分支 / schema / 未配 ASR 先报缺件 / 路径围栏 / 成功收口白名单（不吐 key/路径）/ 端点围栏 / 七处接线孤儿扫描（全离线假 fetch）' },
   { file: 'test-vulkan-upscale.mjs', note: 'Vulkan 直跑超分：资产与许可事实（MIT / 权威字节数）/ argv 构造与逐项 clamp / 探测诚实降级 / 计划与执行边界（未安装绝不谎称）/ 文档与描述点名同步（全离线）' },
   { file: 'test-orphan-wiring.mjs', note: '孤儿模块接线：口语入口别名 / 参考图色调端点（像素上限与方法守卫）/ 时间轴·资源·数据流·产出短引用四工具 / 清单与 UI 入口同步 / 拆掉接线变红反向核查（全离线）' },
-  { file: 'test-db-constraints.mjs', note: '多层并发约束层：零依赖 node:sqlite / 原子抢锁与互斥 / 释放与 owner 校验 / 租约过期接管 / 撞题认领 / legacy 镜像同步 / UTC 时间格式对齐 Python / WriterQueue 串行（全离线临时库）' },
+  { file: 'test-db-constraints.mjs', note: '多层并发约束层：零依赖 node:sqlite / 原子抢锁与互斥 / 释放与 owner 校验 / 租约过期接管 / 撞题认领 / legacy 镜像同步 / UTC 时间格式对齐 Python / WriterQueue 串行（全离线临时库）', requires: 'sqlite' },
   { file: 'test-config-exec-args.mjs', note: '配置子进程参数化：Windows VRAM 探针改直接 argv / 保留 filteredEnv 与超时 / 旧命令拼接移除 / Unix shell 分支保留（全离线静态源码护栏）' },
   // ★ 2026-11-16 全量审计：六套一直没进回归清单的历史测试（纯 JS / 零联网 / 零子进程，全部真绿）
   //   教训原话：「不在回归清单里的测试 = 等于没有测试」。它们各自锁着真实修过的 bug。
@@ -261,8 +262,8 @@ const SUITES = [
   { file: 'test-local-portrait.mjs', note: '人物替换：Rust CPU 合成底座存在性 / 路径围栏 realpath 复验（junction/符号链接/未生成输出的祖先链）/ box 归一化 / 请求组装与结果解析 / 身份保持节点发现 / 假执行器行为级成功与降级 / 二次围栏 / 端点注册与生产接线非孤儿（全离线）' },
   // —— 最重的一套放最后 ——
   { file: 'selftest.mjs', note: '全量自测（最重，项数最多）', heavy: true },
-  { file: '_vram_patch_test.mjs', note: 'VRAM 补丁真跑（含 ComfyUI 启动等待）', heavy: true },
-  { file: '_launch_args_test.mjs', note: '启动参数端到端（真起 ComfyUI）', heavy: true },
+  { file: '_vram_patch_test.mjs', note: 'VRAM 补丁真跑（含 ComfyUI 启动等待）', heavy: true, requires: 'localGpu' },
+  { file: '_launch_args_test.mjs', note: '启动参数端到端（真起 ComfyUI）', heavy: true, requires: 'localGpu' },
   { file: '_mac_env_test.mjs', note: 'macOS MPS 环境变量注入（真跑子进程）', heavy: true },
   { file: 'test-pipeline-panel.mjs', note: '面板渲染端到端（vm + 假 DOM + 挂载 + 三工具按钮真派发）', heavy: true },
 ]
@@ -294,6 +295,23 @@ const picked = filterByPhase(
   only === '' ? SUITES : SUITES.filter((s) => s.file.toLowerCase().includes(only)),
   phase
 )
+
+/**
+ * ★ 2026-11-21 CI 全红根因收口：能力门控。
+ * 真机 GPU / node:sqlite 是**环境能力**，不是代码正确性。CI 没有这些能力时
+ * 明确 SKIP（不是 PASS，也不是 FAIL），本地有能力时照常跑、照常抓真 bug。
+ * 绝不因为 CI 红就把套件从清单里删掉 —— 那等于没测试。
+ */
+const isCi = process.env.CI === 'true'
+let hasNodeSqlite = false
+try { await import('node:sqlite'); hasNodeSqlite = true } catch { /* Node < 22.5：产品走降级路径 */ }
+const gateReason = (s) => {
+  if (s.requires === 'localGpu' && isCi) return 'CI 无本机 GPU / ComfyUI（真机参数不可验证）'
+  if (s.requires === 'sqlite' && !hasNodeSqlite) return 'Node < 22.5 无 node:sqlite（产品按降级路径运行）'
+  return ''
+}
+const gatedSuites = picked.filter((s) => gateReason(s) !== '')
+const runnableSuites = picked.filter((s) => gateReason(s) === '')
 
 if (picked.length === 0) {
   console.error(`✗ 没有匹配 --only=${only} --phase=${phase} 的套件`)
@@ -334,11 +352,14 @@ const tickCount = (text) => text.split('\n').filter((line) => OK_MARK.test(line.
 const declaresSuccess = (text) => /(?:全部通过|结果[：:]\s*通过)/u.test(text)
 /** 套件自己在输出里声明了 SKIP（环境不具备）。**不能当 PASS** —— 否则"没跑"和"跑了绿"混为一谈。 */
 const declaresSkip = (text) =>
-  text.split('\n').some((line) => line.trimStart().startsWith('⤼') || /^SKIP[：:]/u.test(line.trimStart()))
+  text.split('\n').some((line) => line.trimStart().startsWith('⤼') || /^SKIP(?:\s|：|:)/u.test(line.trimStart()))
 
 const results = []
+for (const suite of gatedSuites) {
+  results.push({ ...suite, verdict: 'SKIP', ms: 0, out: '', detail: gateReason(suite) })
+}
 
-console.log(`dsh-qwen-paint 回归 —— 共 ${picked.length} 套${only === '' ? '' : `（筛选：${only}）`}`)
+console.log(`dsh-qwen-paint 回归 —— 共 ${picked.length} 套${gatedSuites.length > 0 ? `（能力门控跳过 ${gatedSuites.length}）` : ''}${only === '' ? '' : `（筛选：${only}）`}`)
 console.log(`工作目录：${ROOT}`)
 console.log('')
 
@@ -426,7 +447,7 @@ function printResult(r) {
   console.log(`${mark} ${r.file.padEnd(30)} ${String(r.ms).padStart(6)} ms  ${r.detail}`)
   if (!quiet && r.verdict !== 'PASS' && r.note !== '') console.log(`    ${r.note}`)
   if (r.verdict === 'FAIL') {
-    const bad = r.out.split('\n').filter((line) => line.trimStart().startsWith('✗')).slice(0, 12)
+    const bad = r.out.split('\n').filter((line) => /^(?:✗|FAIL\b)/u.test(line.trimStart())).slice(0, 12)
     for (const line of bad) console.log(`      ${line.trim()}`)
     if (bad.length === 0) console.log(`      ${r.out.trim().split('\n').slice(-3).join('\n      ')}`)
   }
@@ -434,9 +455,11 @@ function printResult(r) {
 
 /** 分批并行执行：heavy 串行、其余每批 PARALLEL_BATCH_SIZE 个并行 */
 async function runAll() {
+  // 先打印被能力门控跳过的套件（明确可见，不静默吞掉）
+  for (const r of results) printResult(r)
   // 先跑 heavy（串行）
-  const heavySuites = picked.filter((s) => s.heavy)
-  const lightSuites = picked.filter((s) => !s.heavy)
+  const heavySuites = runnableSuites.filter((s) => s.heavy)
+  const lightSuites = runnableSuites.filter((s) => !s.heavy)
 
   for (const suite of heavySuites) {
     const r = await runSuite(suite)
