@@ -97,7 +97,7 @@ ok('探测失败：ok:true + online:false + 空清单 + 原因（≠ 没装模�
 
 // ---- ③ persistVideoModelChoice（真 uiState 文件，DSH_HOME 指到临时目录）----
 console.log('persistVideoModelChoice：动态白名单 + 落盘')
-const home = mkdtempSync(path.join('\x4B:/ai/tmp', 'dsh-mo-'))
+const home = mkdtempSync(path.join(tmpdir(), 'dsh-mo-'))
 process.env.DSH_HOME = home
 // 重新 import 触发 config.js 按新 DSH_HOME 算路径？config.js 每次调用 uiStatePath() 现算 → 改 env 即生效。
 const logs = []
@@ -137,7 +137,7 @@ ok('未知后端拒绝', isKnownTtsBackend('evil_backend') === false)
 // ★ 2026-11-19 外接服务转正（generate_speech 执行链已接通 0b81445）：白名单放行外接 id
 ok('外接服务 id 放行（gsv_cpp/aniflive）',
   isKnownTtsBackend('gsv_cpp') === true && isKnownTtsBackend('aniflive') === true)
-const ttsHome = mkdtempSync(path.join('\x4B:/ai/tmp', 'dsh-tts-'))
+const ttsHome = mkdtempSync(path.join(tmpdir(), 'dsh-tts-'))
 process.env.DSH_HOME = ttsHome
 const tlogs = []
 const tlog = (lvl, msg) => tlogs.push(`${lvl}:${msg}`)
