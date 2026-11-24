@@ -672,7 +672,7 @@ console.log('\n=== 23. 自定义输出目录（用户要求：能选、能校验
   ok('23. setup 有"试建+试写"的校验', ST.includes('.dshqp-write-test-'))
   ok('23. setup 记住选择（写进 cordis.patch.yml）', ST.includes("writeConfigKey(path.join(ROOT, 'cordis.patch.yml'), 'outputDir'"))
   ok('23. setup 有通用的 writeConfigKey', ST.includes('function writeConfigKey'))
-  ok('23. --check 不写不问', ST.includes('if (!CHECK_ONLY && allOk && comfyDir !== null)'))
+  ok('23. --check 不写不问', ST.includes('if (!CHECK_ONLY && modelsReady && extrasOk && comfyDir !== null)'))
 }
 
 console.log(`\n=== 结果：${fail === 0 ? '全部通过' : `${fail} 项失败`} ===`)
