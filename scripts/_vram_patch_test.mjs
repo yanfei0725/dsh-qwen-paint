@@ -3,6 +3,12 @@
 //   它必须能抓出「vramGB 恒为 0」——即驻留参数静默失效。
 import { __internal as I } from '../lib/index.js'
 
+// CI 没有本机 GPU / ComfyUI；真机参数只能在有显卡的本机验证，不能把环境缺失当代码 bug。
+if (process.env.CI === 'true') {
+  console.log('SKIP：CI 无本机 GPU / ComfyUI（真机参数不可验证，请在本地有显卡环境跑）')
+  process.exit(0)
+}
+
 const cfg = { ...I.DEFAULTS }
 const logs = []
 const log = (lv, m) => logs.push(`[${lv}] ${m}`)
