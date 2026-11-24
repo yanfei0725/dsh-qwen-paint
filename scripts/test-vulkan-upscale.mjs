@@ -85,7 +85,8 @@ ok('源穿越在计划层就被拒（围栏沿用）', planBad.ok === false)
 /* ---------------- §5 执行边界（注入假 execFile，真 tmp 目录） ---------------- */
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dshqp-vulkan-'))
-fs.writeFileSync(path.join(tmp, 'realesrgan-ncnn-vulkan.exe'), 'fake-exe')
+const fakeVkExe = process.platform === 'win32' ? 'realesrgan-ncnn-vulkan.exe' : 'realesrgan-ncnn-vulkan'
+fs.writeFileSync(path.join(tmp, fakeVkExe), 'fake-exe')
 fs.mkdirSync(path.join(tmp, 'models'))
 fs.writeFileSync(path.join(tmp, 'models', 'realesrgan-x4plus.param'), 'fake')
 fs.writeFileSync(path.join(tmp, 'models', 'realesrgan-x4plus.bin'), 'fake')
